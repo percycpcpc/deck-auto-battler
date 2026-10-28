@@ -1,0 +1,13 @@
+.charger { animation: reveal .3s; }
+.charger strong { animation: tick .25s; }
+.card { animation: deploy .4s; }
+.card.fx-attack { animation: lunge .35s; }
+.player .card.fx-attack { animation-direction: reverse; }
+.card.fx-damage { animation: damage .2s; }
+.card.fx-death { animation: death .4s; }
+@keyframes reveal { from { transform: translateX(-45px) rotateY(80deg); opacity: 0; } }
+@keyframes tick { 50% { transform: scale(1.25); } }
+@keyframes deploy { 0% { transform: translateY(-60px); opacity: 0; } 75% { transform: translateY(10px); } }
+@keyframes lunge { 50% { transform: translateY(60px); } }
+@keyframes damage { 50% { filter: brightness(2) sepia(1) saturate(5); } }
+@keyframes death { to { filter: grayscale(1); transform: translateY(20px) scale(.8); opacity: 0; } }
