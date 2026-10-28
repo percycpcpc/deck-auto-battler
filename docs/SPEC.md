@@ -71,7 +71,7 @@ Dagger Imp, Sellsword ×2, Brood Wisp, Twinfang, Hex Hurler, Squire, Road Ogre.
 ## Enemies (scripted, escalating)
 - **Fight 1 — Vanilla midrange**: deck of 2/2s and 3/4s. Teaches reveal/charging; beatable by starter deck.
 - **Fight 2 — Token boss**: starts with a boss unit on board: 1/10, "create a 1/1 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
-- **Fight 3 — Aura boss**: starts with a boss unit on board: 1/10, "your units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
+- **Fight 3 — Aura boss**: starts with a boss unit on board: 1/10, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
 - Enemy decks play by the same rules (reveal top card each round, leftmost empty slot, etc.). Bosses are pre-board exceptions.
 
 ## Balance flags (watch in playtests)
