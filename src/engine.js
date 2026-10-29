@@ -82,8 +82,8 @@ export function shuffle(items, rng = Math.random) {
 }
 
 export function enemyDeckFor(fight, rng = Math.random) {
-  let shell = [...Array(5)].map(() => card('enemy_grunt', 'Ash Grunt', 1, 2, 2))
-    .concat([...Array(3)].map(() => card('enemy_brute', 'Camp Brute', 2, 3, 4)));
+  let shell = [...Array(6)].map(() => card('enemy_grunt', 'Ash Grunt', 1, 2, 1))
+    .concat([...Array(2)].map(() => card('enemy_brute', 'Camp Brute', 2, 2, 3)));
   if (fight > 1) shell.splice(Math.floor(rng() * shell.length), 1);
   return shuffle(shell, rng);
 }

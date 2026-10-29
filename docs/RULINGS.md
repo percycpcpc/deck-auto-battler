@@ -43,7 +43,7 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 ## Numeric decisions
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
 - **Stalemate safety valve** (new rule): if both decks are empty and nothing is charging, and a full round passes with no change in total unit count on either side, the fight ends immediately — higher hero HP wins; tie goes to the player.
-- **Enemy decks**: Fight 1 = 5× 2/2 (cost 1) + 3× 3/4 (cost 2), shuffled. Fights 2–3 = same shell minus one card, plus the pre-boarded boss.
+- **Enemy decks**: Fight 1 = 6× 2/1 (cost 1) + 2× 2/3 (cost 2), shuffled. Fights 2–3 = same shell minus one card, plus the pre-boarded boss. (Owner-approved balance fix 2026-10-29: the original 5× 2/2 + 3× 3/4 shell out-statted the starter deck 19/22 vs 12/14 and went 0/500 in simulation; the weaker shell wins ~65%.)
 
 ## Information
 - Owner sees their own charging card's identity only (not the card beneath it). Opponent sees cost dot + counter only.
