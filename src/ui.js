@@ -1,4 +1,4 @@
-import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, startRunFight } from './engine.js';
+import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 
 const app = document.querySelector('#app');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -26,41 +26,42 @@ function showTitle() {
 
 function startRun() { run = createRun(); stopped = false; beginFight(); }
 
-function hero(side) {
+function hero(side, view) {
   const enemyNames = ['raider', 'hivelord', 'dreadlord'];
   const id = side === 'player' ? 'player' : `enemy_${enemyNames[fight.fight - 1]}`;
-  const current = fight[side].hp;
+  const current = view[side].hp;
   return `<div class="hero ${side}"><img src="assets/hero_${id}.png" alt="${side} hero"><div class="hp"><i style="width:${Math.max(0, current / 40 * 100)}%"></i><b>${Math.max(0, current)} / 40</b></div></div>`;
 }
 
-function cardView(unit, side) {
-  const stats = effectiveStats(fight, side, unit);
+function cardView(unit, side, view) {
+  const stats = effectiveStats(view, side, unit);
   const boss = unit.boss ? ' boss' : '';
   const art = unitPortrait(unit);
   const badges = unit.keywords.map(iconFor).filter(Boolean).map(src => `<img src="assets/${src}" alt="">`).join('');
   return `<article class="card${boss}" data-uid="${unit.uid}" data-name="${unit.name}"><img class="art" src="${art}" alt=""><img class="frame" src="${frameFor(CARD_POOL.find(c => c.id === unit.cardId)?.cost || 3)}" alt=""><span class="name">${unit.name}</span><span class="atk">${stats.atk}</span><span class="life">${stats.hp}</span><div class="badges">${badges}</div>${unit.boss ? '<em class="crown">♛</em>' : ''}</article>`;
 }
 
-function chargerView(side) {
-  const ch = fight[side].charger;
+function chargerView(side, view) {
+  const ch = view[side].charger;
   if (!ch) return `<div class="charger empty"><img src="assets/slot_charger.png" alt="Empty charging slot"></div>`;
-  const visible = side === 'player' || fight[side].scouted;
+  const visible = side === 'player' || view[side].scouted;
   const image = visible ? portrait(ch.card.id) : 'assets/card_back.png';
   return `<div class="charger ${visible ? 'known' : 'hidden'}"><img src="${image}" alt="${visible ? ch.card.name : 'Hidden enemy card'}"><span class="cost">${ch.card.cost}</span><strong>${ch.counter}</strong></div>`;
 }
 
-function board(side) {
-  return `<div class="side ${side}">${hero(side)}${chargerView(side)}<div class="board" aria-label="${side} board">${fight[side].board.map(u => cardView(u, side)).join('')}</div></div>`;
+function board(side, view) {
+  return `<div class="side ${side}">${hero(side, view)}${chargerView(side, view)}<div class="board" aria-label="${side} board">${view[side].board.map(u => cardView(u, side, view)).join('')}</div></div>`;
 }
 
-function renderFight() {
-  app.innerHTML = `<section class="battle"><header><b>FIGHT ${fight.fight} / 3</b><span id="phase">ROUND ${fight.round}</span><small>Your deck: ${run.deck.length}</small></header>${board('enemy')}<div class="lane"></div>${board('player')}<aside id="log"></aside></section>`;
+function renderFight(view = fight) {
+  app.innerHTML = `<section class="battle"><header><b>FIGHT ${fight.fight} / 3</b><span id="phase">ROUND ${view.round}</span><small>Your deck: ${run.deck.length}</small></header>${board('enemy', view)}<div class="lane"></div>${board('player', view)}<aside id="log"></aside></section>`;
 }
 
 async function beginFight() {
   fight = startRunFight(run); renderFight(); await wait(500);
   while (!fight.over && !stopped) {
-    runRound(fight); renderFight(); await playEvents(fight.events); await wait(600);
+    const pre = snapshotView(fight); renderFight(pre);
+    runRound(fight); await playEvents(fight.events); await wait(600);
   }
   if (stopped) return;
   finishRunFight(run, fight);
@@ -71,19 +72,23 @@ async function beginFight() {
 
 async function playEvents(events) {
   const timing = { reveal: 300, tick: 250, deploy: 400, attack: 350, damage: 200, death: 400, shift: 300, heroHit: 250 };
-  const log = document.querySelector('#log');
   for (const event of events) {
-    const phase = document.querySelector('#phase'); if (phase) phase.textContent = `${event.phase.toUpperCase()} · ROUND ${fight.round}`;
+    const log = document.querySelector('#log');
+    const phase = document.querySelector('#phase'); if (phase) phase.textContent = `${event.phase.toUpperCase()} · ROUND ${event.round}`;
     if (log && ['deploy', 'death', 'heroHit', 'shield', 'stalemate'].includes(event.type)) {
       log.textContent = event.type === 'heroHit' ? `${event.side} hero takes ${event.amount}` : event.type === 'stalemate' ? `Stalemate: ${event.winner} wins` : `${event.unit || ''} ${event.type}`;
       log.className = `show ${event.type}`;
     }
-    const unit = event.unit ? [...document.querySelectorAll('.card')].find(el => el.dataset.name === event.unit) : null;
-    unit?.classList.add(`fx-${event.type}`);
+    const unit = event.uid ? document.querySelector(`.card[data-uid="${CSS.escape(event.uid)}"]`) : null;
+    const target = unit
+      || (['reveal', 'tick'].includes(event.type) && event.side ? document.querySelector(`.side.${event.side} .charger`) : null)
+      || (['shift', 'heroHit'].includes(event.type) ? document.querySelector('.battle') : null);
+    target?.classList.add(`fx-${event.type}`);
     document.querySelector('.battle')?.classList.toggle('hero-hit', event.type === 'heroHit');
     await wait(timing[event.type] || 55);
-    unit?.classList.remove(`fx-${event.type}`);
+    target?.classList.remove(`fx-${event.type}`);
     log?.classList.remove('show');
+    renderFight(event.state);
   }
 }
 

@@ -102,6 +102,21 @@ test('fight-3 entry buff applies to tokens, not the pre-boarded boss', () => {
   assert.equal(boss.baseAtk, 1); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 2);
 });
 
+test('round events carry post-event view snapshots for deploys and deaths', () => {
+  const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [getCard('sellsword')] });
+  runRound(s);
+  s.over = false; s.winner = null;
+  runRound(s);
+  assert.ok(s.events.length > 0 && s.events.every(event => event.state));
+  const deploy = s.events.find(event => event.type === 'deploy');
+  assert.ok(deploy.state[deploy.side].board.some(unit => unit.uid === deploy.uid));
+  const death = s.events.find(event => event.type === 'death');
+  assert.ok(death && !death.state[death.side].board.some(unit => unit.uid === death.uid));
+  assert.deepEqual(Object.keys(death.state).sort(), ['enemy', 'phase', 'player', 'round']);
+  assert.deepEqual(Object.keys(death.state.player).sort(), ['board', 'charger', 'hp']);
+  assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'charger', 'hp']);
+});
+
 test('full three-fight run victory carries HP and grows deck 8 to 12', () => {
   const run = createRun(() => 0); assert.equal(run.deck.length, 8);
   for (let fight = 1; fight <= 3; fight++) {
