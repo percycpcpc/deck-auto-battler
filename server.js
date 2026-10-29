@@ -1,9 +1,10 @@
 // Zero-dependency static file server for Railway (deployment plumbing only).
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { extname, join, normalize } from 'node:path';
 
-const ROOT = new URL('.', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = process.env.PORT || 8080;
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',

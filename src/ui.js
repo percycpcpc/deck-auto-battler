@@ -30,7 +30,7 @@ function hero(side, view) {
   const enemyNames = ['raider', 'hivelord', 'dreadlord'];
   const id = side === 'player' ? 'player' : `enemy_${enemyNames[fight.fight - 1]}`;
   const current = view[side].hp;
-  return `<div class="hero ${side}"><img src="assets/hero_${id}.png" alt="${side} hero"><div class="hp"><i style="width:${Math.max(0, current / 40 * 100)}%"></i><b>${Math.max(0, current)} / 40</b></div></div>`;
+  return `<div class="hero ${side}"><img src="assets/hero_${id}.png" alt="${side} hero"><div class="hp"><i style="--health:${Math.max(0, Math.min(1, current / 40))}"></i><b>${Math.max(0, current)} / 40</b></div></div>`;
 }
 
 function cardView(unit, side, view) {
@@ -94,7 +94,7 @@ async function playEvents(events) {
 
 function draftCard(def, choose) {
   const el = document.createElement('button'); el.className = 'draft-card';
-  el.innerHTML = `<img class="draft-art" src="${portrait(def.id)}" alt=""><img class="draft-frame" src="${frameFor(def.cost)}" alt=""><strong>${def.name}</strong><span>${def.cost} turn${def.cost > 1 ? 's' : ''}</span><b>${def.atk} ⚔ ${def.hp} ♥</b><small>${tooltip(def)}</small>`;
+  el.innerHTML = `<span class="draft-visual"><img class="draft-art" src="${portrait(def.id)}" alt=""><img class="draft-frame" src="${frameFor(def.cost)}" alt=""></span><strong>${def.name}</strong><span>${def.cost} turn${def.cost > 1 ? 's' : ''}</span><b>${def.atk} ⚔ ${def.hp} ♥</b><small>${tooltip(def)}</small>`;
   el.addEventListener('click', () => choose(def)); return el;
 }
 
