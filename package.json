@@ -1,0 +1,7 @@
+{
+  "name": "deck-auto-battler",
+  "private": false,
+  "type": "module",
+  "scripts": { "start": "node server.js", "test": "node test/engine.test.mjs" },
+  "engines": { "node": ">=20" }
+}
