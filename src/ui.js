@@ -14,7 +14,7 @@ const portrait = id => `assets/portrait_${id}.png`;
 const frameFor = cost => `assets/frame_cost${Math.max(1, Math.min(3, cost || 1))}.png`;
 const iconFor = key => ({ shield: 'icon_ds.png', poisonous: 'icon_poison.png', windfury: 'icon_wf.png', battlecry: 'icon_bc.png', deathrattle: 'icon_dr.png', aura: 'icon_aura.png' }[key]);
 const definitionFor = unit => CARD_POOL.find(card => card.id === unit?.cardId) || unit;
-const unitPortrait = unit => unit?.boss ? portrait(`boss_${unit.boss === 'hive' ? 'hivematron' : 'warherald'}`) : unit?.token ? portrait('brood_wisp') : unit?.cardId === 'enemy_grunt' ? portrait('sellsword') : unit?.cardId === 'enemy_brute' ? portrait('road_ogre') : portrait(unit?.cardId || unit?.id);
+const unitPortrait = unit => unit?.boss ? portrait(`boss_${unit.boss === 'hive' ? 'hivematron' : 'warherald'}`) : unit?.token ? portrait('brood_wisp') : unit?.cardId === 'enemy_grunt' ? portrait('sellsword') : unit?.cardId === 'enemy_brute' ? portrait('road_ogre') : portrait(unit?.portraitId || unit?.cardId || unit?.id);
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
 const img = (className, src, alt = '') => { const node = el('img', className); node.src = src; node.alt = alt; return node; };
 

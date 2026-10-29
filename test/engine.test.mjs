@@ -166,5 +166,5 @@ test('full three-fight run victory carries HP and grows deck 8 to 12', () => {
   assert.equal(run.deck.length, 12); assert.equal(run.won, true); assert.equal(run.hp, HERO_HP - 3);
 });
 
-assert.equal(CARD_POOL.length, 30);
+assert.equal(CARD_POOL.length, 31);
 console.log(`# ${passed} tests passed`);

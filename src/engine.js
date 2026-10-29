@@ -15,6 +15,7 @@ export const CARD_POOL = [
   card('squire', 'Squire', 1, 1, 1, { battlecry: 'squire' }),
   card('spiteful_imp', 'Spiteful Imp', 1, 1, 1, { deathrattle: 'spite' }),
   card('scout', 'Scout', 1, 2, 1, { battlecry: 'scout' }),
+  card('oathbound', 'Oathbound', 1, 2, 4, { portraitId: 'aegis_knight' }),
   card('road_ogre', 'Road Ogre', 2, 3, 4),
   card('aegis_knight', 'Aegis Knight', 2, 2, 4, { keywords: ['shield'] }),
   card('venom_hound', 'Venom Hound', 2, 3, 2, { keywords: ['poisonous'] }),
@@ -35,7 +36,7 @@ export const CARD_POOL = [
   card('cataclysm', 'Cataclysm', 3, 1, 1, { battlecry: 'cataclysm' }),
 ];
 
-export const STARTER_IDS = ['dagger_imp', 'sellsword', 'sellsword', 'brood_wisp', 'twinfang', 'hex_hurler', 'squire', 'road_ogre'];
+export const STARTER_IDS = ['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre'];
 const byId = new Map(CARD_POOL.map(c => [c.id, c]));
 export const getCard = id => ({ ...byId.get(id), keywords: [...(byId.get(id)?.keywords || [])] });
 export const starterDeck = () => STARTER_IDS.map(getCard);
@@ -47,6 +48,7 @@ export function makeUnit(def, side = 'player', extras = {}) {
     cardId: def.id, name: def.name, side, baseAtk: def.atk, baseMaxHp: def.hp,
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
     keywords: [...(def.keywords || [])], battlecry: def.battlecry, deathrattle: def.deathrattle,
+    portraitId: def.portraitId,
     aura: def.aura, onKill: def.onKill, token: !!def.token, boss: extras.boss || null,
     summonedThisAction: false, ...extras,
   };
