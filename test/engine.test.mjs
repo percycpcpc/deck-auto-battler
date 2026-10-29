@@ -31,6 +31,30 @@ test('Windfury performs two full exchanges', () => {
   runRound(s); const attacks = s.events.filter(e => e.type === 'attack' && e.unit === 'Twinfang'); assert.equal(attacks.length, 2);
 });
 
+test('player sweep completes before the first enemy attack', () => {
+  const s = empty();
+  for (let i = 0; i < 2; i++) { summon(s, 'player', { id: `p${i}`, name: `P${i}`, cost: 0, atk: 0, hp: 10 }); summon(s, 'enemy', { id: `e${i}`, name: `E${i}`, cost: 0, atk: 0, hp: 10 }); }
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  const attacks = s.events.map((event, index) => ({ event, index })).filter(({ event }) => event.type === 'attack');
+  assert.ok(Math.max(...attacks.filter(x => x.event.side === 'player').map(x => x.index)) < Math.min(...attacks.filter(x => x.event.side === 'enemy').map(x => x.index)));
+});
+
+test('enemy killed during the player sweep emits no attack', () => {
+  const s = empty(); const doomed = summon(s, 'enemy', { id: 'doomed', name: 'Doomed', cost: 0, atk: 0, hp: 1 });
+  summon(s, 'player', getCard('sellsword')); s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  assert.equal(s.events.some(event => event.type === 'attack' && event.uid === doomed.uid), false);
+});
+
+test('turnStart events flank the two action sweeps', () => {
+  const s = empty(); summon(s, 'player', { id: 'p', name: 'P', cost: 0, atk: 0, hp: 10 }); summon(s, 'enemy', { id: 'e', name: 'E', cost: 0, atk: 0, hp: 10 });
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  const playerTurn = s.events.findIndex(event => event.type === 'turnStart' && event.side === 'player');
+  const playerAttack = s.events.findIndex(event => event.type === 'attack' && event.side === 'player');
+  const enemyTurn = s.events.findIndex(event => event.type === 'turnStart' && event.side === 'enemy');
+  const enemyAttack = s.events.findIndex(event => event.type === 'attack' && event.side === 'enemy');
+  assert.ok(playerTurn < playerAttack && playerAttack < enemyTurn && enemyTurn < enemyAttack);
+});
+
 test('Divine Shield negates one complete damage instance', () => {
   const s = empty(), a = summon(s, 'player', getCard('sellsword')), b = summon(s, 'enemy', getCard('aegis_knight'));
   exchange(s, 'player', a, b); assert.equal(b.damage, 0); assert.equal(b.shield, false);

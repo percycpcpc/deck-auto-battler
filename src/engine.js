@@ -261,8 +261,16 @@ export function runRound(state) {
   state.phase = 'deploy'; deployCharger(state, 'player'); deployCharger(state, 'enemy');
   state.phase = 'action'; const acted = new Set();
   for (const s of ['player', 'enemy']) for (const u of state[s].board) u.summonedThisAction = false;
-  let i = 0;
-  while (!state.over && i < Math.max(state.player.board.length, state.enemy.board.length)) { actionFor(state, 'player', i, acted); if (!state.over) actionFor(state, 'enemy', i, acted); i++; }
+  for (const side of ['player', 'enemy']) {
+    if (state.over) break;
+    emit(state, 'turnStart', { side });
+    let i = 0;
+    while (!state.over && i < state[side].board.length) {
+      const unit = state[side].board[i];
+      actionFor(state, side, i, acted);
+      if (state[side].board[i] === unit) i++;
+    }
+  }
   state.phase = 'cleanup'; emit(state, 'cleanup'); resolveDeaths(state); checkHeroEnd(state);
   const afterUnits = state.player.board.length + state.enemy.board.length;
   if (!state.over && !state.player.deck.length && !state.enemy.deck.length && !state.player.charger && !state.enemy.charger && beforeUnits === afterUnits) {

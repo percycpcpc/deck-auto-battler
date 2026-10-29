@@ -6,13 +6,13 @@ Every ruling below is BINDING for the v0 implementation. Where the spec was ambi
 1. **Reveal**: if a side's charger slot is empty and its deck is non-empty, top card enters the charger with counter = cost.
 2. **Tick**: all charging counters −1.
 3. **Deploy**: any charger at 0 enters the leftmost empty slot; Battlecries resolve (player first). If board full, charger waits at 0 and deploys at the next Deploy step with a free slot.
-4. **Action**: units act P1, E1, P2, E2… by current board position.
+4. **Action (owner test — under evaluation)**: the player side completes a live left-to-right sweep, then the enemy side completes a live left-to-right sweep. Deaths shift the board immediately; later actions use the current board position, and an enemy killed in the player sweep never acts. The previous interleaved ruling is preserved at commit `f5b2fdd`.
 5. **Cleanup**: deaths and Deathrattles resolve.
 
 A card revealed on round N with cost 1 deploys on round N+1 and acts that same round.
 
 ## Damage
-- **Simultaneous = mutual exchange**: when a unit attacks, attacker and defender both deal their ATK to each other. Every attack is an exchange; Windfury = two exchanges. (If playtests show fights ending too fast, the fallback is attacker-only damage — config flag.)
+- **Mutual exchange within sequential sweeps**: when a unit attacks a living defender, attacker and defender both deal their ATK to each other. Every attack is an exchange; Windfury = two exchanges. This supersedes the old within-round interleaving/simultaneous-action interpretation for the owner test, but does not change `exchange`: a defender that survives until its own side's sweep may later initiate its own exchange. (If playtests show fights ending too fast, the fallback is attacker-only damage — config flag.)
 - **Opposite is evaluated at the moment of action**, after any mid-phase shifts. Overkill is lost; it never splashes to the hero (no trample).
 
 ## Death, shift, Deathrattle ordering

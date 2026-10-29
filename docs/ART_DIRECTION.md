@@ -11,7 +11,7 @@ The spec describes reveal, charging, and action phases but never states the orde
 1. **Reveal**: if a side's charger slot is empty and deck is non-empty, its top card enters the charger with counter = cost.
 2. **Tick**: all charging counters −1.
 3. **Deploy**: any charger at 0 enters the leftmost empty slot; Battlecries resolve (player first). If board is full, the charger waits at 0 and deploys in the next Deploy step with a free slot.
-4. **Action**: units act P1, E1, P2, E2… by current board position.
+4. **Action (owner test — under evaluation)**: every surviving player unit acts left-to-right, then every surviving enemy unit acts left-to-right, using current board position at each action. The former interleaved order remains available at commit `f5b2fdd`.
 5. **Cleanup**: deaths and Deathrattles resolve.
 A card revealed on round N with cost 1 deploys on round N+1 and **acts that same round** (bosses "act turn 1" sets the precedent: entering play doesn't cost you your action).
 
@@ -19,7 +19,7 @@ A card revealed on round N with cost 1 deploys on round N+1 and **acts that same
 Reading 1: an attack is a *mutual exchange* — attacker and defender both deal ATK when either one attacks. Since each unit also attacks on its own initiative, a mirrored pair trades damage **twice per round**. Reading 2: only the attacker deals damage; "simultaneous" just means paired deaths resolve together. These produce wildly different fight lengths. *Resolution:* adopt Reading 1 (it matches the literal text "both deal ATK to each other") — every attack is a mutual exchange, and Windfury grants two exchanges. Flag for playtest: if fights end too fast, Reading 2 is the fallback. This is the single highest-leverage balance knob in the prototype.
 
 **3. Mid-phase death and shift-left timing.**
-"Units shift left" doesn't say when, and shifting mid-phase changes which units face each other. *Resolution:* deaths are checked after every individual action; surviving units shift left **immediately**; the acting sequence is re-evaluated by position index, not by a snapshot taken at phase start. Example: if P1's attack kills E1, enemy units shift, and the unit that was E2 is now in column 1 and will act as "E1" when the enemy's next turn comes.
+"Units shift left" doesn't say when, and shifting mid-phase changes which units face each other. *Resolution:* deaths are checked after every individual action; surviving units shift left **immediately**; each side's sweep is re-evaluated by position index, not by a snapshot taken at phase start. Example: if P1's attack kills E1, enemy units shift, and the unit that was E2 is now in column 1 for the enemy sweep. An enemy killed during the player sweep never acts.
 
 **4. Deathrattle ordering on simultaneous death.**
 When an exchange kills both units, DR order matters (Spiteful Imp's DR targeting, Plague Bearer wiping tokens). *Resolution:* in a mutual exchange, resolve the **player's Deathrattles first**, then enemy's; summons from DRs enter the leftmost empty slot *after* the shift-left, and never act in the current action phase.

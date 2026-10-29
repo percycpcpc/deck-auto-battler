@@ -445,11 +445,11 @@ button {
 
 /* War Ledger: all fight geometry is frozen as inline variables at mount. */
 @property --loss-width { syntax:'<percentage>'; inherits:false; initial-value:0%; }
-#battle-screen { --slot-w:216px; --slot-gap:24px; --card-h:324px; --name-size:16px; --name-line:18px; --pip-size:48px; --stat-size:28px; --badge-size:28px; --name-bottom:58px; height:auto; min-height:100vh; display:grid; grid-template-columns:minmax(0,1200px); grid-template-rows:40px auto 32px auto; justify-content:center; align-content:start; gap:8px; padding:24px max(24px,env(safe-area-inset-right)) 24px max(24px,env(safe-area-inset-left)); overflow:visible; background:linear-gradient(#14101cb8,#14101cb8),url(assets/bg_battlefield.png) center/cover fixed; box-shadow:inset 0 0 96px #14101c99; font:500 14px/20px system-ui,sans-serif; }
+#battle-screen { --slot-w:216px; --slot-gap:24px; --card-h:324px; --name-size:16px; --name-line:18px; --pip-size:48px; --stat-size:28px; --badge-size:28px; --name-bottom:58px; height:auto; min-height:100vh; display:grid; grid-template-columns:minmax(0,1200px); grid-template-rows:48px auto 0 auto; justify-content:center; align-content:start; row-gap:0; padding:24px max(24px,env(safe-area-inset-right)) 24px max(24px,env(safe-area-inset-left)); overflow:visible; background:linear-gradient(#14101cb8,#14101cb8),url(assets/bg_battlefield.png) center/cover fixed; box-shadow:inset 0 0 96px #14101c99; font:500 14px/20px system-ui,sans-serif; }
 #battle-screen [hidden] { display:none!important; }
 #battle-screen * { font-variant-numeric:tabular-nums lining-nums; }
 #battle-screen :focus-visible { outline:2px solid var(--gold); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); }
-#battle-screen .battle-header { display:grid; grid-template-columns:180px 1fr auto; align-items:center; padding:0 8px 0 16px; border:1px solid #9a8fa873; background:var(--panel); letter-spacing:0; }
+#battle-screen .battle-header { align-self:start; height:40px; display:grid; grid-template-columns:180px 1fr auto; align-items:center; padding:0 8px 0 16px; border:1px solid #9a8fa873; background:var(--panel); letter-spacing:0; }
 #battle-screen .battle-fight { font:700 18px/24px Georgia,serif; letter-spacing:.06em; }
 #battle-screen .battle-phase { text-align:center; font:600 16px/24px system-ui; letter-spacing:.02em; }
 #battle-screen .header-count { text-align:right; }
@@ -459,6 +459,9 @@ button {
 #battle-screen .speed-control__button:last-child { border-right:0; }
 #battle-screen .speed-control__button[aria-pressed=true] { background:#c99b4a; color:#2a2118; }
 #battle-screen .side { position:relative; container-type:normal; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:108px auto; gap:8px; direction:ltr; }
+#battle-screen .side--player { grid-template-rows:auto 108px; }
+#battle-screen .side--player .side__info { grid-row:2; }
+#battle-screen .side--player .board-scroll { grid-row:1; }
 #battle-screen .side__info { display:flex; gap:24px; align-items:center; min-width:0; position:relative; z-index:2; }
 #battle-screen .side--enemy .side__info { flex-direction:row-reverse; }
 #battle-screen .hero-panel { width:400px; height:96px; flex:none; border-radius:8px; background:var(--panel); position:relative; box-shadow:0 4px 12px #14101ca6; }
@@ -518,13 +521,15 @@ button {
 #battle-screen .lane-arrow--prev { left:0; } #battle-screen .lane-arrow--next { right:0; } #battle-screen .lane-arrow:disabled { color:var(--dim); opacity:.7; }
 #battle-screen .side::before,#battle-screen .side::after { content:''; position:absolute; top:116px; bottom:0; width:16px; pointer-events:none; z-index:3; background:linear-gradient(90deg,#14101c99,transparent); }
 #battle-screen .side::after { right:0; rotate:180deg; }
-#battle-screen .battle-log { position:relative; height:32px; background:var(--panel); z-index:10; border-top:1px solid transparent; border-image:linear-gradient(90deg,#d6455059,#e8c46859,#46c2cb59) 1; }
-#battle-screen .battle-log__history { padding:5px 52px 5px 12px; text-align:center; background:var(--panel); }
+#battle-screen .side--player::before,#battle-screen .side--player::after { top:0; bottom:116px; }
+#battle-screen .side.is-active-turn .board-scroll { box-shadow:inset 0 3px #c99b4a,inset 0 -3px #c99b4a,0 0 12px #c99b4a38; }
+#battle-screen .battle-log { position:relative; height:0; background:transparent; z-index:10; border:0; overflow:visible; }
+#battle-screen .battle-log__history { position:absolute; left:50%; top:0; translate:-50% -50%; width:min(560px,calc(100% - 96px)); padding:4px 52px 4px 12px; text-align:center; background:#1e1830e6; border:1px solid #c99b4a59; border-radius:4px; }
 #battle-screen .battle-log__line { display:none; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #battle-screen .battle-log__line:last-child { display:block; }
 #battle-screen .battle-log.is-expanded .battle-log__history { position:absolute; inset:0 0 auto; max-height:112px; overflow:auto; }
 #battle-screen .battle-log.is-expanded .battle-log__line { display:block; white-space:normal; }
-#battle-screen .log-toggle { position:absolute; right:0; top:-6px; width:44px; height:44px; border:1px solid var(--dim); background:var(--raised); border-radius:8px; font:600 14px system-ui; }
+#battle-screen .log-toggle { position:absolute; right:0; top:-22px; width:44px; height:44px; border:1px solid var(--dim); background:var(--raised); border-radius:8px; font:600 14px system-ui; }
 #battle-screen .battle-detail { position:absolute; inset:0 48px auto 0; min-height:100%; max-height:112px; overflow:auto; background:var(--panel); padding:5px 12px; }
 #battle-screen .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 #battle-screen .flight-layer { position:fixed; inset:0; z-index:20; pointer-events:none; }
@@ -582,3 +587,10 @@ button {
 #battle-screen .side__info { height:100%; }
 #battle-screen .deck-label { text-align:left; padding-left:4px; }
 @media(max-width:760px) { #battle-screen .deck-label { left:-4px; padding-left:0; } }
+@media(max-width:760px) {
+ #battle-screen { grid-template-rows:52px auto 0 auto; }
+ #battle-screen .battle-header { height:44px; }
+ #battle-screen .side--player { grid-template-rows:auto 112px; }
+ #battle-screen .battle-log { height:0; }
+ #battle-screen .log-toggle { top:-22px; }
+}

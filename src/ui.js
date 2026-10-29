@@ -1,7 +1,7 @@
 import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, captionFade: 300, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, scoutFlip: 250, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, captionFade: 300, turnStart: 150, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, scoutFlip: 250, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
 export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
@@ -334,6 +334,11 @@ function scheduleDeath(uid) { const entry = unitEls.get(uid); if (!entry || entr
 async function playShift(event) { const shifting = []; for (const side of SIDES) event.state[side].board.forEach((unit, index) => { const entry = unitEls.get(unit.uid); if (entry && !entry.dying && entry.slotIndex !== index) shifting.push({ entry, index }); }); shifting.sort((a, b) => a.index - b.index).forEach(({ entry, index }, order) => { entry.slotIndex = index; entry.el.style.transitionDuration = `${dur(TIMING.shift)}ms`; entry.el.style.transitionDelay = `${dur(order * TIMING.stagger)}ms`; entry.el.style.transform = `translate3d(${index * slotPitch}px, 0, 0)`; setTimeout(() => { entry.el.style.transitionDelay = '0ms'; }, dur(TIMING.shift + order * TIMING.stagger)); }); reconcile(event.state); await wait(TIMING.shift + Math.max(0, shifting.length - 1) * TIMING.stagger); }
 
 async function playEvent(event, deployUids) {
+  if (event.type === 'turnStart') {
+    for (const side of SIDES) els[side].root.classList.toggle('is-active-turn', side === event.side);
+    setText(els.phase, `ROUND ${event.round} · ${event.side === 'player' ? 'YOUR TURN' : 'ENEMY TURN'}`);
+    await wait(TIMING.turnStart); return;
+  }
   els.phase.textContent = `${event.phase.toUpperCase()} · ROUND ${event.round}`;
   if (event.type === 'reveal') return playReveal(event); if (event.type === 'deploy') return playDeploy(event);
   if (event.type === 'battlecry') return playBattlecry(event);
@@ -346,14 +351,14 @@ async function playEvent(event, deployUids) {
   if (event.type === 'shield') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); damageFloater(target, 'BLOCKED', rect); pulse(getUnitEl(event.uid), 'fx-shield', TIMING.shield); await wait(TIMING.shield); return; }
   if (event.type === 'chargerDestroyed') { pulse(els[event.side].charger, 'fx-shatter', TIMING.chargerDestroyed); await wait(TIMING.chargerDestroyed); clearCharger(event.side); reconcile(event.state); return; }
   if (event.type === 'stalemate') { pulse(els.player.hero.panel, 'fx-stalemate', TIMING.stalemate); pulse(els.enemy.hero.panel, 'fx-stalemate', TIMING.stalemate); appendLog(`Stalemate: ${event.winner} wins`); await wait(TIMING.stalemate); return; }
-  if (event.type === 'cleanup') { await wait(TIMING.cleanup); return; } reconcile(event.state); await wait(TIMING[event.type] || TIMING.cleanup);
+  if (event.type === 'cleanup') { for (const side of SIDES) els[side].root.classList.remove('is-active-turn'); await wait(TIMING.cleanup); return; } reconcile(event.state); await wait(TIMING[event.type] || TIMING.cleanup);
 }
 export async function playEvents(eventStream) {
   const deployUids = new Set(eventStream.filter(event => event.type === 'deploy').map(event => event.uid)); let lastAttack = null;
   for (const event of eventStream) {
     if (event.round > lastRenderedRound) { lastRenderedRound = event.round; await playTurnBanner(event.round); }
     if (event.type === 'attack') { if (lastAttack === event.uid && event.state[event.side].board.find(unit => unit.uid === event.uid)?.keywords.includes('windfury')) await wait(TIMING.windfuryGap); lastAttack = event.uid; }
-    await playEvent(event, deployUids); if (!['attack', 'damage', 'shield', 'heroHit'].includes(event.type)) els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); setText(els.phase, `${event.phase.toUpperCase()} ? ROUND ${event.round}`); appendEventLog(event);
+    await playEvent(event, deployUids); if (!['attack', 'damage', 'shield', 'heroHit'].includes(event.type)) els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); if (event.phase !== 'action' || !els.battle.querySelector('.is-active-turn')) setText(els.phase, `${event.phase.toUpperCase()} · ROUND ${event.round}`); appendEventLog(event);
   }
 }
 
@@ -367,6 +372,7 @@ function appendEventLog(event) {
   if (event.type === 'shield') appendLog(`${who} shield blocks damage`);
   if (event.type === 'chargerDestroyed') appendLog(`${who} charger is destroyed`);
   if (event.type === 'battlecry') appendLog(`${event.unit} — ${battlecryCaption(event)}.`);
+  if (event.type === 'turnStart') appendLog(`— ${event.side === 'player' ? 'Your' : 'Enemy'} turn —`);
 }
 
 async function playTurnBanner(round) {
