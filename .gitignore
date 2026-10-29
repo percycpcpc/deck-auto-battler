@@ -2,3 +2,4 @@ node_modules/
 dist/
 codex-output*.txt
 .hermes/tmp/
+_mobile-harness.html
