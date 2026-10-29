@@ -1,11 +1,15 @@
 import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, attack: 350, damage: 200, death: 400, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, floater: 600 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, captionFade: 300, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, scoutFlip: 250, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
+export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
+const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
+let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
+export const dur = ms => Math.round(ms * 2 / playbackSpeed);
 const SIDES = ['enemy', 'player'];
 const HERO_MAX = 40;
 const app = typeof document === 'undefined' ? null : document.querySelector('#app');
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const wait = ms => new Promise(resolve => setTimeout(resolve, dur(ms)));
 const portrait = id => `assets/portrait_${id}.png`;
 const frameFor = cost => `assets/frame_cost${Math.max(1, Math.min(3, cost || 1))}.png`;
 const iconFor = key => ({ shield: 'icon_ds.png', poisonous: 'icon_poison.png', windfury: 'icon_wf.png', battlecry: 'icon_bc.png', deathrattle: 'icon_dr.png', aura: 'icon_aura.png' }[key]);
@@ -14,7 +18,7 @@ const unitPortrait = unit => unit?.boss ? portrait(`boss_${unit.boss === 'hive' 
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
 const img = (className, src, alt = '') => { const node = el('img', className); node.src = src; node.alt = alt; return node; };
 
-let run, fight, stopped = false, els = null, slotWidth = 128, slotGap = 12, slotPitch = 140, cardHeight = 192, lastSnapshot = null;
+let run, fight, stopped = false, els = null, slotWidth = 128, slotGap = 12, slotPitch = 140, cardHeight = 192, lastSnapshot = null, lastRenderedRound = 0;
 let deckQueues = { player: [], enemy: [] };
 let deckKnown = { player: true, enemy: true };
 
@@ -39,7 +43,18 @@ const BATTLECRY_TEXT = Object.freeze({
   cultist: 'On deploy: devour your leftmost other unit and gain its stats.',
   cataclysm: 'On deploy: deal 2 damage to every unit.',
 });
+const DEATHRATTLE_TEXT = Object.freeze({
+  summon1: 'Deathrattle: summon a 1/1.',
+  summon2x2: 'Deathrattle: summon two 2/2s.',
+  spite: 'Deathrattle: deal 1 damage to the opposing unit.',
+  plague: 'Deathrattle: deal 1 damage to every enemy unit.',
+  oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
+});
+const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
+const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
+const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
 export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
+const descriptorText = card => [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura]].filter(Boolean).join(' ');
 const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${unit.battlecry ? `. ${battlecryText(unit)}` : ''}`;
 function inspect(node, describe) {
   node.tabIndex = 0; node.setAttribute('role', 'group');
@@ -89,7 +104,7 @@ function createHeroPanel(side) {
 function createSide(side) {
   const root = el('div', `side side--${side}`), info = el('div', 'side__info');
   const hero = createHeroPanel(side), deck = createDeckStack(side), charger = el('div', 'charger-slot is-empty');
-  const chargerLabel = el('span', 'charger-label', 'EMPTY'), plaque = el('div', 'deck-plaque'); plaque.id = `deck-detail-${side}`; deck.stack.setAttribute('aria-describedby', plaque.id); charger.append(chargerLabel); info.append(hero.panel, deck.stack, charger, plaque); if (side === 'player') inspect(deck.stack, () => plaque.textContent); deck.stack.setAttribute('aria-label', side === 'player' ? 'Inspect your next card' : 'Enemy next card hidden');
+  const chargerLabel = el('span', 'charger-label', 'EMPTY'), plaque = el('div', 'deck-plaque'); plaque.id = `deck-detail-${side}`; deck.stack.setAttribute('aria-describedby', plaque.id); charger.append(chargerLabel); info.append(hero.panel, deck.stack, charger, plaque); if (side === 'player') { inspect(deck.stack, () => plaque.textContent); bindMouseHover(deck.stack, () => deckQueues.player[0] ? cardTipData(deckQueues.player[0]) : null); bindMouseHover(charger, () => lastSnapshot?.player?.charger ? cardTipData(lastSnapshot.player.charger.card) : null); } deck.stack.setAttribute('aria-label', side === 'player' ? 'Inspect your next card' : 'Enemy next card hidden');
   const scroll = el('div', 'board-scroll'), lane = el('div', 'board-lane'), ghosts = el('div', 'slot-ghosts');
   for (let n = 0; n < 5; n++) ghosts.append(el('div', 'slot-ghost'));
   const empty = el('span', 'board-empty', 'NO UNITS IN LINE');
@@ -119,22 +134,24 @@ function replaceDeckTop(side, card) {
 
 export function mountBattleScreen(initialState, root = app) {
   if (!root) throw new Error('mountBattleScreen requires a root element');
-  unitEls.clear(); root.replaceChildren(); fight = initialState;
+  unitEls.clear(); hideHoverTip(); root.replaceChildren(); fight = initialState; lastRenderedRound = 0;
   deckKnown = { player: true, enemy: true };
   deckQueues = { player: [...(initialState.player?.deck || [])], enemy: [...(initialState.enemy?.deck || [])] };
   const battle = el('section', 'battle'); battle.id = 'battle-screen'; battle.setAttribute('aria-live', 'off');
-  const header = el('header', 'battle-header'), phase = el('span', 'battle-phase', `READY \u00b7 ROUND ${initialState.round || 0}`);
+  const header = el('header', 'battle-header'), phase = el('span', 'battle-phase', `READY · ROUND ${initialState.round || 0}`), speedControl = el('div', 'speed-control'), speedLabel = el('span', 'sr-only', 'Playback speed');
+  speedControl.setAttribute('role', 'group'); speedControl.setAttribute('aria-label', 'Playback speed');
+  for (const value of SPEEDS) { const speedButton = el('button', 'speed-control__button', `${value}x`); speedButton.type = 'button'; speedButton.dataset.speed = String(value); speedButton.setAttribute('aria-pressed', String(value === playbackSpeed)); speedButton.addEventListener('click', () => setPlaybackSpeed(value)); speedControl.append(speedButton); }
   header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / 3`), phase);
-  const headerCount = el('span', 'header-count'); header.append(headerCount);
-  const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer');
-  battle.append(header, enemy.root, log, player.root, flight); root.append(battle);
+  const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
+  const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'); banner.hidden = true;
+  battle.append(header, enemy.root, log, player.root, flight, banner); root.append(battle);
   const history = el('div', 'battle-log__history'), detail = el('div', 'battle-detail'), live = el('span', 'sr-only'), toggle = el('button', 'log-toggle', 'Log');
   detail.hidden = true; live.setAttribute('aria-live', 'polite'); toggle.setAttribute('aria-expanded', 'false'); history.id = 'battle-history'; toggle.setAttribute('aria-controls', history.id);
   for (let i = 0; i < 4; i++) history.append(el('p', 'battle-log__line', i === 3 ? 'Combat proceeds automatically' : ''));
   log.append(history, detail, live, toggle);
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
-  els = { battle, phase, headerCount, log, history, detail, live, flight, enemy, player };
+  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, enemy, player };
   const styles = getComputedStyle(battle);
   slotWidth = parseFloat(styles.getPropertyValue('--slot-w')) || 128; slotGap = parseFloat(styles.getPropertyValue('--slot-gap')) || 12; slotPitch = slotWidth + slotGap; cardHeight = parseFloat(styles.getPropertyValue('--card-h'));
   for (const key of ['--slot-w', '--slot-gap', '--card-h', '--name-size', '--name-line', '--pip-size', '--stat-size', '--badge-size', '--name-bottom']) battle.style.setProperty(key, styles.getPropertyValue(key));
@@ -157,11 +174,18 @@ export function createUnitEl(uid, unit, side, slotIndex, snapshot = lastSnapshot
   const more = el('span', 'card__badge card__badge--more'); badges.append(more);
   card.append(createFace(unit), atk, hp, badges); if (unit.boss) card.append(el('em', 'card__crown', '♛'));
   inspect(card, () => card.getAttribute('aria-label'));
+  bindMouseHover(card, () => { const entry = unitEls.get(uid), current = lastSnapshot?.[side]?.board.find(item => item.uid === uid); return entry && current ? cardTipData(current, { atk: entry.atk, hp: entry.hp, maxHp: effectiveStats(lastSnapshot, side, current).maxHp }) : null; });
 
   els[side].lane.append(card); unitEls.set(uid, { el: card, side, slotIndex, atk: stats.atk, hp: stats.hp, atkEl: atk, hpEl: hp, badgeEls, more, dying: false }); return card;
 }
 export function getUnitEl(uid) { return unitEls.get(uid)?.el || null; }
 export function removeUnitEl(uid) { const entry = unitEls.get(uid); if (entry) { if (els.detail.owner === entry.el) { els.detail.hidden = true; els.detail.textContent = ''; els.detail.owner = null; } entry.el.remove(); unitEls.delete(uid); } }
+
+export function setPlaybackSpeed(value) {
+  if (!SPEEDS.includes(Number(value))) return; playbackSpeed = Number(value);
+  try { localStorage.setItem('dab_speed', String(playbackSpeed)); } catch { /* storage may be unavailable */ }
+  els?.speedControl?.querySelectorAll('.speed-control__button').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.speed) === playbackSpeed)));
+}
 
 // RECONCILE
 function updateHero(side, state) {
@@ -169,7 +193,8 @@ function updateHero(side, state) {
   if (refs.hp === hp && refs.max === max) return;
   const previous = refs.hp === undefined ? pct : refs.hp / (refs.max || max) * 100;
   refs.hpbar.style.setProperty('--loss-from', `${previous}%`); refs.hpbar.style.setProperty('--health', `${pct}%`);
-  if (hp < refs.hp) { refs.hpbar.getAnimations().forEach(animation => animation.cancel()); refs.hpbar.animate([{ width: `${previous}%` }, { width: `${pct}%` }], { duration: 250, easing: 'ease-in', pseudoElement: '::before' }); }
+  refs.fill.style.transitionDuration = `${dur(TIMING.hp)}ms`;
+  if (hp < refs.hp) { refs.hpbar.getAnimations().forEach(animation => animation.cancel()); refs.hpbar.animate([{ width: `${previous}%` }, { width: `${pct}%` }], { duration: dur(TIMING.hp), easing: 'ease-in', pseudoElement: '::before' }); }
   refs.hpbar.setAttribute('aria-valuenow', String(hp)); refs.hpbar.setAttribute('aria-valuemax', String(max));
   setText(refs.hpText, `${hp} / ${max}`); refs.fill.style.width = `${pct}%`;
   refs.panel.classList.toggle('is-low', hp <= max * .25); refs.panel.classList.toggle('is-healing', hp > refs.hp);
@@ -217,8 +242,8 @@ export async function flyCard(startEl, destRect, content, duration, keyframeOpts
   startEl.classList.add('is-vacant'); Object.assign(content.style, { left: `${startRect.left}px`, top: `${startRect.top}px`, width: `${startRect.width}px`, height: `${startRect.height}px` }); els.flight.append(content);
   const overshoot = keyframeOpts.overshoot && Math.abs(dx) > 1 ? Math.sign(dx) * 10 : 0, overshootY = keyframeOpts.overshoot && Math.abs(dx) <= 1 ? (Math.sign(dy) || 1) * 10 : 0;
   const keyframes = keyframeOpts.overshoot ? [{ transform: 'translate3d(0,0,0) scale(1)' }, { offset: .7, transform: `translate3d(${dx + overshoot}px,${dy + overshootY}px,0) scale(${scale * 1.05})` }, { transform: `translate3d(${dx}px,${dy}px,0) scale(${scale})` }] : [{ transform: 'translate3d(0,0,0) scale(1)' }, { offset: .5, transform: `translate3d(${dx / 2}px,${dy / 2 - 12}px,0) scale(${(1 + scale) / 2 * 1.05})` }, { transform: `translate3d(${dx}px,${dy}px,0) scale(${scale})` }];
-  const animation = content.animate(reducedMotion() ? [{ opacity: .7 }, { opacity: .7 }] : keyframes, { duration, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
-  try { await Promise.race([animation.finished, wait(duration)]); } catch { /* cancelled fight */ }
+  const scaled = dur(duration), animation = content.animate(reducedMotion() ? [{ opacity: .7 }, { opacity: .7 }] : keyframes, { duration: scaled, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+  try { await Promise.race([animation.finished, new Promise(resolve => setTimeout(resolve, scaled))]); } catch { /* cancelled fight */ }
   content.remove(); startEl.classList.remove('is-vacant');
 }
 
@@ -233,10 +258,43 @@ function destinationRect(side, slotIndex) { const rect = els[side].lane.getBound
 async function playDeploy(event) {
   const side = event.side, unit = event.state[side].board.find(item => item.uid === event.uid); if (!unit) { await wait(TIMING.deploy); return; }
   const slotIndex = event.state[side].board.findIndex(item => item.uid === event.uid); autoScrollFor(side, slotIndex); const dest = destinationRect(side, slotIndex), ghost = makeFlightVisual(unit, true, true);
-  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', 250); clearCharger(side); reconcile(event.state);
+  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', TIMING.pop); clearCharger(side); reconcile(event.state);
 }
-function revealScout(side, snapshot) { const charger = snapshot[side]?.charger; if (!charger || !els[side].charger.isConnected) return; const refs = els[side], face = createFace(charger.card, 'is-scout-revealed'); refs.charger.append(face); setText(refs.chargerLabel, 'SCOUTED'); setTimeout(() => { face.remove(); if (refs === els?.[side]) setText(refs.chargerLabel, refs.charger.querySelector('.charger-card') ? Number(refs.charger.querySelector('.cost-dot__count')?.textContent) === 0 ? 'READY' : 'CHARGING' : deckQueues[side].length ? 'EMPTY' : 'NO ARRIVAL'); }, TIMING.scout); }
-function pulse(node, className, duration) { if (node) { node.classList.add(className); setTimeout(() => node.classList.remove(className), duration); } }
+
+let hoverTip = null, hoverTimer = null, hoverOwner = null;
+function ensureHoverTip() {
+  if (hoverTip?.root?.isConnected) return hoverTip;
+  const root = el('aside', 'card-hover-tip'), name = el('strong', 'card-hover-tip__name'), cost = el('span', 'card-hover-tip__cost'), stats = el('span', 'card-hover-tip__stats'), base = el('span', 'card-hover-tip__base'), keywords = el('div', 'card-hover-tip__keywords'), text = el('p', 'card-hover-tip__text'), keywordEls = new Map();
+  for (const key of Object.keys(KEYWORD_NAMES)) { const keyword = el('span', `card-hover-tip__keyword card-hover-tip__keyword--${key}`); keywords.append(keyword); keywordEls.set(key, keyword); }
+  root.hidden = true; root.setAttribute('role', 'tooltip'); root.append(name, cost, stats, base, keywords, text); document.body.append(root); hoverTip = { root, name, cost, stats, base, keywords, keywordEls, text }; return hoverTip;
+}
+function hideHoverTip(node) { if (node && hoverOwner !== node) return; clearTimeout(hoverTimer); hoverTimer = null; hoverOwner = null; if (hoverTip) hoverTip.root.hidden = true; }
+function positionHoverTip(event) {
+  if (!hoverTip || hoverTip.root.hidden) return;
+  const gap = 14, rect = hoverTip.root.getBoundingClientRect(); let left = event.clientX + gap, top = event.clientY + gap;
+  if (left + rect.width > innerWidth - 8) left = event.clientX - rect.width - gap;
+  if (top + rect.height > innerHeight - 8) top = event.clientY - rect.height - gap;
+  hoverTip.root.style.left = `${scrollX + Math.max(8, left)}px`; hoverTip.root.style.top = `${scrollY + Math.max(8, top)}px`;
+}
+function showHoverTip(node, data, event) {
+  if (!data || hoverOwner !== node) return; const tip = ensureHoverTip(), keys = data.keys || [];
+  tip.name.textContent = data.name; tip.cost.textContent = String(data.cost ?? 0); tip.stats.textContent = `ATK ${data.atk}  ·  HP ${data.hp}`;
+  tip.base.textContent = data.base && (data.base.atk !== data.atk || data.base.hp !== data.maxHp) ? `Base ${data.base.atk}/${data.base.hp}` : '';
+  tip.keywordEls.forEach((keyword, key) => { keyword.textContent = KEYWORD_NAMES[key]; keyword.classList.toggle('is-visible', keys.includes(key)); }); tip.keywords.classList.toggle('is-empty', keys.length === 0); tip.text.textContent = data.text || 'No special ability.';
+  tip.root.hidden = false; positionHoverTip(event);
+}
+function bindMouseHover(node, getData) {
+  let latestEvent = null;
+  node.addEventListener('mouseenter', event => { latestEvent = event; hoverOwner = node; clearTimeout(hoverTimer); hoverTimer = setTimeout(() => showHoverTip(node, getData(), latestEvent), dur(TIMING.hover)); });
+  node.addEventListener('mousemove', event => { latestEvent = event; positionHoverTip(event); });
+  node.addEventListener('mouseleave', () => hideHoverTip(node));
+}
+function cardTipData(card, stats = null) {
+  const def = definitionFor(card), resolved = stats || { atk: card.atk ?? card.baseAtk, hp: card.hp ?? card.baseMaxHp, maxHp: card.hp ?? card.baseMaxHp };
+  return { name: card.name || def.name, cost: def.cost ?? 0, atk: resolved.atk, hp: resolved.hp, maxHp: resolved.maxHp ?? resolved.hp, base: { atk: card.baseAtk ?? def.atk, hp: card.baseMaxHp ?? def.hp }, keys: printedKeywordsFor(card), text: descriptorText(card) };
+}
+function revealScout(side, snapshot) { const charger = snapshot[side]?.charger; if (!charger || !els[side].charger.isConnected) return; const refs = els[side], face = createFace(charger.card, 'is-scout-revealed'); face.style.setProperty('--fx-duration', `${dur(TIMING.scoutFlip)}ms`); refs.charger.append(face); setText(refs.chargerLabel, 'SCOUTED'); setTimeout(() => { face.remove(); if (refs === els?.[side]) setText(refs.chargerLabel, refs.charger.querySelector('.charger-card') ? Number(refs.charger.querySelector('.cost-dot__count')?.textContent) === 0 ? 'READY' : 'CHARGING' : deckQueues[side].length ? 'EMPTY' : 'NO ARRIVAL'); }, dur(TIMING.scout)); }
+function pulse(node, className, duration) { if (node) { const scaled = dur(duration); node.style.setProperty('--fx-duration', `${scaled}ms`); node.classList.add(className); setTimeout(() => { node.classList.remove(className); node.style.removeProperty('--fx-duration'); }, scaled); } }
 function battlecryCaption(event) {
   const target = event.target || event.targets?.join(' and ');
   if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}` : 'Battlecry: no opposing unit';
@@ -264,15 +322,16 @@ async function playBattlecry(event) {
   const isReduced = reducedMotion(), caption = el('span', `battlecry-caption${isReduced ? ' is-reduced' : ''}`, battlecryCaption(event));
   if (source && !isReduced) { const rect = source.getBoundingClientRect(); caption.style.left = `${rect.left + rect.width / 2}px`; caption.style.top = `${Math.max(8, rect.top - 8)}px`; }
   els.flight.append(caption);
-  setTimeout(() => caption.classList.add('is-fading'), TIMING.battlecry);
-  setTimeout(() => caption.remove(), TIMING.battlecry * 2);
+  caption.style.setProperty('--caption-fade', `${dur(TIMING.captionFade)}ms`);
+  setTimeout(() => caption.classList.add('is-fading'), dur(TIMING.battlecry));
+  setTimeout(() => caption.remove(), dur(TIMING.battlecry + TIMING.captionFade));
   if (event.kind === 'scout' && event.scouted) revealScout(event.side === 'player' ? 'enemy' : 'player', event.state);
   await wait(TIMING.battlecry);
 }
 async function playAttack(event) { const attacker = getUnitEl(event.uid), target = event.targetUid ? getUnitEl(event.targetUid) : els[event.side === 'player' ? 'enemy' : 'player'].hero.portrait; if (attacker && target) { const a = attacker.getBoundingClientRect(), b = target.getBoundingClientRect(); els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2, factor = reducedMotion() ? 0 : Math.min(.28, 60 / (Math.hypot(dx, dy) || 1)); attacker.style.setProperty('--lunge-x', `${dx * factor}px`); attacker.style.setProperty('--lunge-y', `${dy * factor}px`); attacker.classList.add('is-attacker'); target.classList.add('is-target'); pulse(attacker, 'fx-lunge', TIMING.attack); } await wait(TIMING.attack); }
-function damageFloater(target, amount, rect = target?.getBoundingClientRect()) { if (!target) return; const offset = target._floatAlternate ? 16 : -16; target._floatAlternate = !target._floatAlternate; const floater = el('span', 'damage-floater', typeof amount === 'number' ? `-${amount}` : amount); floater.style.left = `${rect.left + rect.width / 2 + offset}px`; floater.style.top = `${rect.top + rect.height * .35}px`; els.flight.append(floater); setTimeout(() => floater.remove(), TIMING.floater); }
-function scheduleDeath(uid) { const entry = unitEls.get(uid); if (!entry || entry.dying) return; entry.dying = true; entry.el.classList.add('fx-death'); entry.el.style.pointerEvents = 'none'; let done = false; const finish = () => { if (done) return; done = true; entry.el.removeEventListener('animationend', onEnd); removeUnitEl(uid); }; const onEnd = event => { if (event.animationName === 'unit-death') finish(); }; entry.el.addEventListener('animationend', onEnd); setTimeout(() => { if (!done) { console.warn(`Death animation fallback fired for ${uid}`); finish(); } }, 500); }
-async function playShift(event) { const shifting = []; for (const side of SIDES) event.state[side].board.forEach((unit, index) => { const entry = unitEls.get(unit.uid); if (entry && !entry.dying && entry.slotIndex !== index) shifting.push({ entry, index }); }); shifting.sort((a, b) => a.index - b.index).forEach(({ entry, index }, order) => { entry.slotIndex = index; entry.el.style.transitionDelay = `${order * TIMING.stagger}ms`; entry.el.style.transform = `translate3d(${index * slotPitch}px, 0, 0)`; setTimeout(() => { entry.el.style.transitionDelay = '0ms'; }, TIMING.shift + order * TIMING.stagger); }); reconcile(event.state); await wait(TIMING.shift + Math.max(0, shifting.length - 1) * TIMING.stagger); }
+function damageFloater(target, amount, rect = target?.getBoundingClientRect()) { if (!target) return; const offset = target._floatAlternate ? 16 : -16; target._floatAlternate = !target._floatAlternate; const floater = el('span', 'damage-floater', typeof amount === 'number' ? `-${amount}` : amount); floater.style.left = `${rect.left + rect.width / 2 + offset}px`; floater.style.top = `${rect.top + rect.height * .35}px`; floater.style.setProperty('--fx-duration', `${dur(TIMING.floater)}ms`); els.flight.append(floater); setTimeout(() => floater.remove(), dur(TIMING.floater)); }
+function scheduleDeath(uid) { const entry = unitEls.get(uid); if (!entry || entry.dying) return; entry.dying = true; entry.el.style.setProperty('--fx-duration', `${dur(TIMING.death)}ms`); entry.el.classList.add('fx-death'); entry.el.style.pointerEvents = 'none'; let done = false; const finish = () => { if (done) return; done = true; entry.el.removeEventListener('animationend', onEnd); removeUnitEl(uid); }; const onEnd = event => { if (event.animationName === 'unit-death') finish(); }; entry.el.addEventListener('animationend', onEnd); setTimeout(() => { if (!done) { console.warn(`Death animation fallback fired for ${uid}`); finish(); } }, dur(TIMING.deathFallback)); }
+async function playShift(event) { const shifting = []; for (const side of SIDES) event.state[side].board.forEach((unit, index) => { const entry = unitEls.get(unit.uid); if (entry && !entry.dying && entry.slotIndex !== index) shifting.push({ entry, index }); }); shifting.sort((a, b) => a.index - b.index).forEach(({ entry, index }, order) => { entry.slotIndex = index; entry.el.style.transitionDuration = `${dur(TIMING.shift)}ms`; entry.el.style.transitionDelay = `${dur(order * TIMING.stagger)}ms`; entry.el.style.transform = `translate3d(${index * slotPitch}px, 0, 0)`; setTimeout(() => { entry.el.style.transitionDelay = '0ms'; }, dur(TIMING.shift + order * TIMING.stagger)); }); reconcile(event.state); await wait(TIMING.shift + Math.max(0, shifting.length - 1) * TIMING.stagger); }
 
 async function playEvent(event, deployUids) {
   els.phase.textContent = `${event.phase.toUpperCase()} · ROUND ${event.round}`;
@@ -287,12 +346,13 @@ async function playEvent(event, deployUids) {
   if (event.type === 'shield') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); damageFloater(target, 'BLOCKED', rect); pulse(getUnitEl(event.uid), 'fx-shield', TIMING.shield); await wait(TIMING.shield); return; }
   if (event.type === 'chargerDestroyed') { pulse(els[event.side].charger, 'fx-shatter', TIMING.chargerDestroyed); await wait(TIMING.chargerDestroyed); clearCharger(event.side); reconcile(event.state); return; }
   if (event.type === 'stalemate') { pulse(els.player.hero.panel, 'fx-stalemate', TIMING.stalemate); pulse(els.enemy.hero.panel, 'fx-stalemate', TIMING.stalemate); appendLog(`Stalemate: ${event.winner} wins`); await wait(TIMING.stalemate); return; }
-  if (event.type === 'cleanup') { await wait(TIMING.cleanup); return; } reconcile(event.state); await wait(TIMING[event.type] || 55);
+  if (event.type === 'cleanup') { await wait(TIMING.cleanup); return; } reconcile(event.state); await wait(TIMING[event.type] || TIMING.cleanup);
 }
 export async function playEvents(eventStream) {
   const deployUids = new Set(eventStream.filter(event => event.type === 'deploy').map(event => event.uid)); let lastAttack = null;
   for (const event of eventStream) {
-    if (event.type === 'attack') { if (lastAttack === event.uid && event.state[event.side].board.find(unit => unit.uid === event.uid)?.keywords.includes('windfury')) await wait(150); lastAttack = event.uid; }
+    if (event.round > lastRenderedRound) { lastRenderedRound = event.round; await playTurnBanner(event.round); }
+    if (event.type === 'attack') { if (lastAttack === event.uid && event.state[event.side].board.find(unit => unit.uid === event.uid)?.keywords.includes('windfury')) await wait(TIMING.windfuryGap); lastAttack = event.uid; }
     await playEvent(event, deployUids); if (!['attack', 'damage', 'shield', 'heroHit'].includes(event.type)) els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); setText(els.phase, `${event.phase.toUpperCase()} ? ROUND ${event.round}`); appendEventLog(event);
   }
 }
@@ -309,12 +369,20 @@ function appendEventLog(event) {
   if (event.type === 'battlecry') appendLog(`${event.unit} — ${battlecryCaption(event)}.`);
 }
 
+async function playTurnBanner(round) {
+  if (!els?.banner) return; const banner = els.banner; banner.textContent = `FIGHT ${fight?.fight || 1} — ROUND ${round}`; banner.hidden = false;
+  const enter = banner.animate(reducedMotion() ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translate(-50%,-58%) scale(.96)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }], { duration: dur(TIMING.bannerIn), fill: 'forwards', easing: 'ease-out' });
+  try { await enter.finished; } catch { /* remounted */ } await wait(TIMING.bannerHold);
+  const leave = banner.animate(reducedMotion() ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-42%) scale(.98)' }], { duration: dur(TIMING.bannerOut), fill: 'forwards', easing: 'ease-in' });
+  try { await leave.finished; } catch { /* remounted */ } banner.hidden = true;
+}
+
 function button(label, handler) { const node = el('button', 'primary', label); node.addEventListener('click', handler); return node; }
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }
-async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(500); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(600); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(500); showDraft(0); }
+async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.deathFallback); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
 function tooltip(card) { return battlecryText(card) || [...(card.keywords || []), card.deathrattle && 'Deathrattle', card.aura && 'Aura'].filter(Boolean).join(' · ') || 'No deploy effect.'; }
-export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', portrait(def.id), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); node.addEventListener('click', () => choose(def)); return node; }
+export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', portrait(def.id), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => choose(def)); return node; }
 function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`)); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
 function showEnd(won) { stopped = true; const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

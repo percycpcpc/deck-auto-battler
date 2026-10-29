@@ -9,3 +9,11 @@
 - Existing blocker: Meddler changes deck/charger without a deck-mutation snapshot contract, so the own NEXT mirror can become unknown after a bounce; battlecry narration itself is now explicit and does not reveal enemy hidden identity.
 - Acceptance limits: no physical-device or screen-reader certification. The brief says 16 battlecry kinds, while the current card pool implements 15 distinct kinds; all 15 are described and emitted.
 - DEBUG_HANDOFF.md not created: the implementation passed focused tests without a repeated unresolved diagnosis loop.
+
+## Latest update — speed, round banner, hover details
+
+- Phase: maintenance / fight presentation. No commit made.
+- Outcome: persistent 1x/2x/3x/5x/10x playback control (2x preserves prior timing), sequential round banners, and one cursor-following tooltip for own/public cards and draft offers. Enemy hidden zones remain unbound, including during Scout.
+- Owners changed: `src/ui.js`, `styles.css`; verification/evidence: `tools/speed_hover_audit.py`, `refs/ui-audit/speed-hover/`. Engine rules and title screen are unchanged.
+- Verification: engine 17/17; event snapshots PASS; UI harness wiring PASS; real Chrome invariants PASS (0 forbidden DOM writes/src mutations, max one ghost, Scout 1508ms, deaths 421–426ms at 2x). Scripted 10-round playback at 10x measured 2605ms.
+- Limits: headless Chrome at 1920x1080 and 390x844 was tested; no physical-device or screen-reader certification. The Meddler snapshot-contract blocker above remains.

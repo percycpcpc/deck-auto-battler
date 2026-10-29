@@ -3,3 +3,6 @@ dist/
 codex-output*.txt
 .hermes/tmp/
 _mobile-harness.html
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
