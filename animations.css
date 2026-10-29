@@ -7,7 +7,8 @@
 #battle-screen .fx-death { animation:unit-death 400ms ease-in forwards; }
 #battle-screen .fx-shatter { animation:charger-shatter 250ms ease-in forwards; }
 #battle-screen .fx-stalemate { animation:stalemate-flash 400ms ease-out; }
-#battle-screen .fx-battlecry { animation:shield-pop 300ms ease-out; }
+#battle-screen .fx-battlecry-source { animation:battlecry-source 300ms ease-out; }
+#battle-screen .fx-battlecry-target { animation:battlecry-target 300ms ease-out; }
 #battle-screen .fx-hero-hit::after { animation:ledger-vignette 200ms ease-out; }
 #battle-screen .damage-floater { animation:damage-float 600ms ease-out forwards; }
 #battle-screen .is-scout-revealed { animation:scout-flip 250ms ease-out; }
@@ -17,6 +18,8 @@
 @keyframes unit-hit { 25% { translate:-4px 0; } 50% { translate:4px 0; } 75% { translate:-3px 0; } }
 @keyframes frame-hit { 50% { filter:sepia(.5) drop-shadow(0 0 6px #ff5a3c); } }
 @keyframes shield-pop { 50% { box-shadow:0 0 12px #ffd9664d; outline:2px solid #ffd966; } }
+@keyframes battlecry-source { 50% { outline:2px solid #c99b4a; box-shadow:0 0 18px #c99b4a80; } }
+@keyframes battlecry-target { 50% { outline:2px solid #e8c468; box-shadow:0 0 14px #e8c46866; } }
 @keyframes unit-death { to { filter:grayscale(1); translate:0 20px; opacity:0; } }
 @keyframes charger-shatter { to { filter:grayscale(1); scale:.7; opacity:0; } }
 @keyframes stalemate-flash { 50% { outline:2px solid #e8c468; } }
@@ -26,6 +29,7 @@
 @media(prefers-reduced-motion:reduce) {
  #battle-screen .card,#battle-screen .hero-hpbar__fill { transition:none; }
  #battle-screen .fx-lunge,#battle-screen .fx-hit,#battle-screen .fx-tick,#battle-screen .fx-deploy-pop,#battle-screen .is-scout-revealed,#battle-screen .fx-shatter { animation-name:reduced-feedback; }
+ #battle-screen .fx-battlecry-source,#battle-screen .fx-battlecry-target { animation-name:reduced-battlecry; }
  #battle-screen .fx-hit .card__frame,#battle-screen .fx-hero-hit::after { animation:none; }
  #battle-screen .fx-hero-hit::after { box-shadow:none; outline:2px solid var(--bone); }
  #battle-screen .fx-death { animation-name:unit-death; }
@@ -33,6 +37,7 @@
  @keyframes unit-death { to { opacity:0; } }
 }
 @keyframes reduced-feedback { from,to { outline:2px solid #ede6d6; } }
+@keyframes reduced-battlecry { from,to { outline:2px solid #c99b4a; box-shadow:none; } }
 @keyframes reduced-float { to { opacity:0; } }
 
 #battle-screen .fx-deploy-pop > .card-face { animation:pop-visual 250ms ease-out; }

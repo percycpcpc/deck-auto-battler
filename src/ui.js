@@ -1,7 +1,7 @@
 import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, attack: 350, damage: 200, death: 400, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, floater: 600 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, attack: 350, damage: 200, death: 400, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, floater: 600 });
 const SIDES = ['enemy', 'player'];
 const HERO_MAX = 40;
 const app = typeof document === 'undefined' ? null : document.querySelector('#app');
@@ -22,6 +22,25 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 const toggleClass = (node, key, on) => { if (node.classList.contains(key) !== on) node.classList.toggle(key, on); };
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
+const BATTLECRY_TEXT = Object.freeze({
+  hex_hurler: 'On deploy: deal 2 damage to the opposing unit.',
+  tax: "On deploy: add 1 turn to the enemy's charging card.",
+  chrono: 'On deploy: tick your charging card down 1 turn.',
+  gate: 'On deploy: shove the opposing unit to the far right.',
+  squire: 'On deploy: give adjacent allies +1/+1.',
+  scout: "On deploy: reveal the enemy's charging card.",
+  duelist: 'On deploy: gain +1/+1 for each adjacent ally.',
+  hexblade: 'On deploy: set the opposing unit to 1/1.',
+  gravedigger: 'On deploy: summon a 1/1 for every death this combat.',
+  meddler: "On deploy: return the enemy's charging card to its deck.",
+  inquisitor: "On deploy: deal 3 damage to the enemy's strongest unit.",
+  doom: "On deploy: destroy the enemy's charging card.",
+  copycat: "On deploy: copy the opposing unit's ATK and HP.",
+  cultist: 'On deploy: devour your leftmost other unit and gain its stats.',
+  cataclysm: 'On deploy: deal 2 damage to every unit.',
+});
+export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
+const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${unit.battlecry ? `. ${battlecryText(unit)}` : ''}`;
 function inspect(node, describe) {
   node.tabIndex = 0; node.setAttribute('role', 'group');
   const show = () => { els.detail.textContent = describe(); els.detail.hidden = false; els.detail.owner = node; };
@@ -89,7 +108,7 @@ function replaceDeckTop(side, card) {
   // A reveal can prove our queue stale, but snapshots cannot supply the new deck.
   // Never fabricate the next face/count from that stale mirror (Meddler contract gap).
   if (!deckKnown[side]) { old?.remove(); refs.deck.top = null; setText(refs.deck.count, '?'); setText(refs.plaque, 'NEXT CARD HIDDEN'); if (side === 'player') setText(els.headerCount, 'YOUR DECK ?'); return; }
-  setText(refs.plaque, card ? side === 'player' ? `${card.name} · ATK ${card.atk} · HP ${card.hp}` : 'NEXT CARD HIDDEN' : 'DECK EMPTY · No more arrivals');
+  setText(refs.plaque, card ? side === 'player' ? `${card.name} · ATK ${card.atk} · HP ${card.hp}${card.battlecry ? ` · ${battlecryText(card)}` : ''}` : 'NEXT CARD HIDDEN' : 'DECK EMPTY · No more arrivals');
   const count = String(deckQueues[side].length); setText(refs.deck.count, count); if (side === 'player') setText(els.headerCount, `YOUR DECK ${count}`);
   if (!card) { old?.remove(); refs.deck.top = null; refs.deck.stack.classList.add('is-empty'); refs.deck.count.textContent = '0'; return; }
   const top = el('div', 'deck-top');
@@ -134,7 +153,7 @@ export function createUnitEl(uid, unit, side, slotIndex, snapshot = lastSnapshot
   const stats = snapshot ? effectiveStats(snapshot, side, unit) : { atk: unit.baseAtk ?? unit.atk, hp: (unit.baseMaxHp ?? unit.hp) - (unit.damage || 0) };
   const atk = el('span', 'card__atk', String(stats.atk)), hp = el('span', 'card__hp', String(stats.hp)), badges = el('div', 'card__badges');
   const badgeEls = new Map();
-  for (const key of ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry']) { const badge = img('card__badge', `assets/${iconFor(key)}`, key); badges.append(badge); badgeEls.set(key, badge); }
+  for (const key of ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry']) { const badge = img('card__badge', `assets/${iconFor(key)}`, key); badge.title = key === 'battlecry' ? battlecryText(unit) : key; badges.append(badge); badgeEls.set(key, badge); }
   const more = el('span', 'card__badge card__badge--more'); badges.append(more);
   card.append(createFace(unit), atk, hp, badges); if (unit.boss) card.append(el('em', 'card__crown', '♛'));
   inspect(card, () => card.getAttribute('aria-label'));
@@ -174,7 +193,7 @@ export function reconcile(snapshot) {
       const keys = keywordsFor(unit), visible = keys.length > 2 ? keys.slice(0, 1) : keys;
       entry.badgeEls.forEach((badge, key) => { const hidden = !visible.includes(key); if (badge.hidden !== hidden) badge.hidden = hidden; });
       if (entry.more.hidden !== (keys.length <= 2)) entry.more.hidden = keys.length <= 2; setText(entry.more, keys.length > 2 ? `+${keys.length - 1}` : '');
-      const label = `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}`;
+      const label = describeUnit(unit, stats, keys);
       if (entry.el.getAttribute('aria-label') !== label) entry.el.setAttribute('aria-label', label);
       if (els.detail.owner === entry.el) setText(els.detail, label); });
   }
@@ -214,10 +233,42 @@ function destinationRect(side, slotIndex) { const rect = els[side].lane.getBound
 async function playDeploy(event) {
   const side = event.side, unit = event.state[side].board.find(item => item.uid === event.uid); if (!unit) { await wait(TIMING.deploy); return; }
   const slotIndex = event.state[side].board.findIndex(item => item.uid === event.uid); autoScrollFor(side, slotIndex); const dest = destinationRect(side, slotIndex), ghost = makeFlightVisual(unit, true, true);
-  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', 250); clearCharger(side); if (unit.battlecry) pulse(card, 'fx-battlecry', 300); if (unit.cardId === 'scout') revealScout(side === 'player' ? 'enemy' : 'player', event.state); reconcile(event.state);
+  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', 250); clearCharger(side); reconcile(event.state);
 }
 function revealScout(side, snapshot) { const charger = snapshot[side]?.charger; if (!charger || !els[side].charger.isConnected) return; const refs = els[side], face = createFace(charger.card, 'is-scout-revealed'); refs.charger.append(face); setText(refs.chargerLabel, 'SCOUTED'); setTimeout(() => { face.remove(); if (refs === els?.[side]) setText(refs.chargerLabel, refs.charger.querySelector('.charger-card') ? Number(refs.charger.querySelector('.cost-dot__count')?.textContent) === 0 ? 'READY' : 'CHARGING' : deckQueues[side].length ? 'EMPTY' : 'NO ARRIVAL'); }, TIMING.scout); }
 function pulse(node, className, duration) { if (node) { node.classList.add(className); setTimeout(() => node.classList.remove(className), duration); } }
+function battlecryCaption(event) {
+  const target = event.target || event.targets?.join(' and ');
+  if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}` : 'Battlecry: no opposing unit';
+  if (event.kind === 'inquisitor') return target ? 'Battlecry: 3 damage → strongest enemy' : 'Battlecry: no enemy units';
+  if (event.kind === 'hexblade') return target ? `Battlecry: ${target} becomes 1/1` : 'Battlecry: no opposing unit';
+  if (event.kind === 'copycat') return target ? `Battlecry: copy ${target}'s stats` : 'Battlecry: no opposing unit';
+  if (event.kind === 'cultist') return target ? `Battlecry: devour ${target}` : 'Battlecry: no ally to devour';
+  if (event.kind === 'gate') return event.moved ? `Battlecry: shove ${target} right` : 'Battlecry: no unit to shove';
+  if (event.kind === 'cataclysm') return 'Battlecry: 2 damage to all units';
+  if (event.kind === 'squire') return event.neighborIndices?.length ? 'Battlecry: adjacent allies gain +1/+1' : 'Battlecry: no adjacent allies';
+  if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
+  if (event.kind === 'duelist') return event.adjacent ? `Battlecry: gain +${event.adjacent}/+${event.adjacent}` : 'Battlecry: no adjacent allies';
+  if (event.kind === 'tax') return event.counterDelta ? 'Battlecry: enemy charge +1 turn' : 'Battlecry: no enemy charging';
+  if (event.kind === 'chrono') return event.counterDelta ? `Battlecry: own charge -1 turn${event.deployed ? ' and deploy' : ''}` : 'Battlecry: no friendly charge';
+  if (event.kind === 'scout') return event.scouted ? 'Battlecry: reveal enemy charge' : 'Battlecry: no enemy charging';
+  if (event.kind === 'doom') return event.destroyed ? 'Battlecry: destroy enemy charge' : 'Battlecry: no enemy charging';
+  if (event.kind === 'meddler') return event.returned ? 'Battlecry: return enemy charge' : 'Battlecry: no enemy charging';
+  return `Battlecry: ${battlecryText(event).replace(/^On deploy:\s*/i, '') || 'no effect'}`;
+}
+async function playBattlecry(event) {
+  const source = getUnitEl(event.uid);
+  const targets = event.all ? [...unitEls.values()].map(entry => entry.el) : [event.targetUid, ...(event.targetUids || [])].filter(Boolean).map(getUnitEl).filter(Boolean);
+  pulse(source, 'fx-battlecry-source', TIMING.battlecry);
+  for (const target of new Set(targets.filter(node => node !== source))) pulse(target, 'fx-battlecry-target', TIMING.battlecry);
+  const isReduced = reducedMotion(), caption = el('span', `battlecry-caption${isReduced ? ' is-reduced' : ''}`, battlecryCaption(event));
+  if (source && !isReduced) { const rect = source.getBoundingClientRect(); caption.style.left = `${rect.left + rect.width / 2}px`; caption.style.top = `${Math.max(8, rect.top - 8)}px`; }
+  els.flight.append(caption);
+  setTimeout(() => caption.classList.add('is-fading'), TIMING.battlecry);
+  setTimeout(() => caption.remove(), TIMING.battlecry * 2);
+  if (event.kind === 'scout' && event.scouted) revealScout(event.side === 'player' ? 'enemy' : 'player', event.state);
+  await wait(TIMING.battlecry);
+}
 async function playAttack(event) { const attacker = getUnitEl(event.uid), target = event.targetUid ? getUnitEl(event.targetUid) : els[event.side === 'player' ? 'enemy' : 'player'].hero.portrait; if (attacker && target) { const a = attacker.getBoundingClientRect(), b = target.getBoundingClientRect(); els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2, factor = reducedMotion() ? 0 : Math.min(.28, 60 / (Math.hypot(dx, dy) || 1)); attacker.style.setProperty('--lunge-x', `${dx * factor}px`); attacker.style.setProperty('--lunge-y', `${dy * factor}px`); attacker.classList.add('is-attacker'); target.classList.add('is-target'); pulse(attacker, 'fx-lunge', TIMING.attack); } await wait(TIMING.attack); }
 function damageFloater(target, amount, rect = target?.getBoundingClientRect()) { if (!target) return; const offset = target._floatAlternate ? 16 : -16; target._floatAlternate = !target._floatAlternate; const floater = el('span', 'damage-floater', typeof amount === 'number' ? `-${amount}` : amount); floater.style.left = `${rect.left + rect.width / 2 + offset}px`; floater.style.top = `${rect.top + rect.height * .35}px`; els.flight.append(floater); setTimeout(() => floater.remove(), TIMING.floater); }
 function scheduleDeath(uid) { const entry = unitEls.get(uid); if (!entry || entry.dying) return; entry.dying = true; entry.el.classList.add('fx-death'); entry.el.style.pointerEvents = 'none'; let done = false; const finish = () => { if (done) return; done = true; entry.el.removeEventListener('animationend', onEnd); removeUnitEl(uid); }; const onEnd = event => { if (event.animationName === 'unit-death') finish(); }; entry.el.addEventListener('animationend', onEnd); setTimeout(() => { if (!done) { console.warn(`Death animation fallback fired for ${uid}`); finish(); } }, 500); }
@@ -226,6 +277,7 @@ async function playShift(event) { const shifting = []; for (const side of SIDES)
 async function playEvent(event, deployUids) {
   els.phase.textContent = `${event.phase.toUpperCase()} · ROUND ${event.round}`;
   if (event.type === 'reveal') return playReveal(event); if (event.type === 'deploy') return playDeploy(event);
+  if (event.type === 'battlecry') return playBattlecry(event);
   if (event.type === 'summon') { if (!deployUids.has(event.uid)) { const unit = event.state[event.side].board.find(item => item.uid === event.uid), index = event.state[event.side].board.findIndex(item => item.uid === event.uid); if (unit) pulse(createUnitEl(unit.uid, unit, event.side, index, event.state), 'fx-deploy-pop', TIMING.summon); } reconcile(event.state); await wait(TIMING.summon); return; }
   if (event.type === 'tick') { reconcile(event.state); pulse(els[event.side].charger.querySelector('.cost-dot__count'), 'fx-tick', TIMING.tick); await wait(TIMING.tick); return; }
   if (event.type === 'attack') return playAttack(event);
@@ -254,14 +306,15 @@ function appendEventLog(event) {
   if (event.type === 'death') appendLog(`${who} ${event.unit || 'unit'} falls`);
   if (event.type === 'shield') appendLog(`${who} shield blocks damage`);
   if (event.type === 'chargerDestroyed') appendLog(`${who} charger is destroyed`);
+  if (event.type === 'battlecry') appendLog(`${event.unit} — ${battlecryCaption(event)}.`);
 }
 
 function button(label, handler) { const node = el('button', 'primary', label); node.addEventListener('click', handler); return node; }
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(500); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(600); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(500); showDraft(0); }
-function tooltip(card) { if (card.id === 'gravedigger') return 'Battlecry: summon a 1/1 for every death on either side, including tokens.'; return [...(card.keywords || []), card.battlecry && 'Battlecry', card.deathrattle && 'Deathrattle', card.aura && 'Aura'].filter(Boolean).join(' · ') || 'A dependable fighter.'; }
-function draftCard(def, choose) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', portrait(def.id), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', '', tooltip(def))); node.addEventListener('click', () => choose(def)); return node; }
+function tooltip(card) { return battlecryText(card) || [...(card.keywords || []), card.deathrattle && 'Deathrattle', card.aura && 'Aura'].filter(Boolean).join(' · ') || 'No deploy effect.'; }
+export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', portrait(def.id), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); node.addEventListener('click', () => choose(def)); return node; }
 function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`)); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
 function showEnd(won) { stopped = true; const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

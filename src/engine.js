@@ -154,23 +154,71 @@ function deployCharger(state, side) {
 }
 
 export function triggerBattlecry(state, side, unit) {
-  const own = state[side], foe = state[other(side)], index = own.board.indexOf(unit), opposite = foe.board[index];
+  const foeSide = other(side), own = state[side], foe = state[foeSide], index = own.board.indexOf(unit), opposite = foe.board[index];
+  const event = { side, uid: unit.uid, unit: unit.name, kind: unit.battlecry };
   switch (unit.battlecry) {
-    case 'hex_hurler': dealDamage(state, unit, opposite, 2); break;
-    case 'tax': if (foe.charger) foe.charger.counter += 1; break;
-    case 'chrono': if (own.charger) { own.charger.counter = Math.max(0, own.charger.counter - 1); if (!own.charger.counter) deployCharger(state, side); } break;
-    case 'gate': if (opposite && foe.board.length < BOARD_CAP) { foe.board.splice(index, 1); foe.board.push(opposite); } break;
-    case 'squire': for (const i of [index - 1, index + 1]) if (own.board[i]) { own.board[i].baseAtk++; own.board[i].baseMaxHp++; } break;
-    case 'scout': if (foe.charger) foe.scouted = true; break;
-    case 'duelist': { const n = Number(!!own.board[index - 1]) + Number(!!own.board[index + 1]); unit.baseAtk += n; unit.baseMaxHp += n; break; }
-    case 'hexblade': if (opposite) { opposite.baseAtk = 1; opposite.baseMaxHp = 1; opposite.damage = 0; } break;
-    case 'gravedigger': for (let i = 0; i < state.deaths; i++) summon(state, side, tokenCard()); break;
-    case 'meddler': if (foe.charger) { foe.deck.unshift(foe.charger.card); foe.charger = null; foe.scouted = false; } break;
-    case 'inquisitor': { const targets = foe.board; if (targets.length) { const highest = Math.max(...targets.map(t => effectiveStats(state, other(side), t).atk)); dealDamage(state, unit, targets.find(t => effectiveStats(state, other(side), t).atk === highest), 3); } break; }
-    case 'doom': if (foe.charger) { emit(state, 'chargerDestroyed', { side: other(side) }); foe.charger = null; foe.scouted = false; } break;
-    case 'copycat': if (opposite) { const e = effectiveStats(state, other(side), opposite); unit.baseAtk = e.atk; unit.baseMaxHp = e.hp; unit.damage = 0; } break;
-    case 'cultist': { const victim = own.board.find(x => x !== unit); if (victim) { const e = effectiveStats(state, side, victim); unit.baseAtk += e.atk; unit.baseMaxHp += e.hp; victim.damage = 999; } break; }
-    case 'cataclysm': for (const s of ['player', 'enemy']) for (const target of [...state[s].board]) dealDamage(state, unit, target, 2); break;
+    case 'hex_hurler':
+      emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined, amount: 2 });
+      dealDamage(state, unit, opposite, 2); break;
+    case 'tax':
+      emit(state, 'battlecry', { ...event, targetSide: foeSide, counterDelta: foe.charger ? 1 : 0, charger: foe.charger?.card.name });
+      if (foe.charger) foe.charger.counter += 1; break;
+    case 'chrono': {
+      const counterDelta = own.charger && own.charger.counter > 0 ? -1 : 0, deployed = !!own.charger && own.charger.counter === 1;
+      emit(state, 'battlecry', { ...event, targetSide: side, counterDelta, charger: own.charger?.card.name, deployed });
+      if (own.charger) { own.charger.counter = Math.max(0, own.charger.counter - 1); if (!own.charger.counter) deployCharger(state, side); } break;
+    }
+    case 'gate': {
+      const moved = !!opposite && foe.board.length < BOARD_CAP, toIndex = moved ? foe.board.length - 1 : undefined;
+      emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, fromIndex: moved ? index : undefined, toIndex, moved });
+      if (moved) { foe.board.splice(index, 1); foe.board.push(opposite); } break;
+    }
+    case 'squire': {
+      const neighbors = [index - 1, index + 1].filter(i => own.board[i]);
+      emit(state, 'battlecry', { ...event, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: 1 });
+      for (const i of neighbors) { own.board[i].baseAtk++; own.board[i].baseMaxHp++; } break;
+    }
+    case 'scout':
+      emit(state, 'battlecry', { ...event, targetSide: foeSide, scouted: !!foe.charger });
+      if (foe.charger) foe.scouted = true; break;
+    case 'duelist': {
+      const neighbors = [index - 1, index + 1].filter(i => own.board[i]), n = neighbors.length;
+      emit(state, 'battlecry', { ...event, adjacent: n, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: n });
+      unit.baseAtk += n; unit.baseMaxHp += n; break;
+    }
+    case 'hexblade':
+      emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined });
+      if (opposite) { opposite.baseAtk = 1; opposite.baseMaxHp = 1; opposite.damage = 0; } break;
+    case 'gravedigger': {
+      const count = Math.min(state.deaths, BOARD_CAP - own.board.length);
+      emit(state, 'battlecry', { ...event, count });
+      for (let i = 0; i < state.deaths; i++) summon(state, side, tokenCard()); break;
+    }
+    case 'meddler':
+      emit(state, 'battlecry', { ...event, targetSide: foeSide, charger: foe.charger?.card.name, returned: !!foe.charger });
+      if (foe.charger) { foe.deck.unshift(foe.charger.card); foe.charger = null; foe.scouted = false; } break;
+    case 'inquisitor': {
+      const targets = foe.board, highest = targets.length ? Math.max(...targets.map(t => effectiveStats(state, foeSide, t).atk)) : null;
+      const target = highest === null ? null : targets.find(t => effectiveStats(state, foeSide, t).atk === highest);
+      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: target ? targets.indexOf(target) : undefined, amount: 3 });
+      dealDamage(state, unit, target, 3); break;
+    }
+    case 'doom':
+      emit(state, 'battlecry', { ...event, targetSide: foeSide, charger: foe.charger?.card.name, destroyed: !!foe.charger });
+      if (foe.charger) { emit(state, 'chargerDestroyed', { side: foeSide }); foe.charger = null; foe.scouted = false; } break;
+    case 'copycat':
+      emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined });
+      if (opposite) { const e = effectiveStats(state, foeSide, opposite); unit.baseAtk = e.atk; unit.baseMaxHp = e.hp; unit.damage = 0; } break;
+    case 'cultist': {
+      const victim = own.board.find(x => x !== unit);
+      emit(state, 'battlecry', { ...event, targetUid: victim?.uid, target: victim?.name, targetIndex: victim ? own.board.indexOf(victim) : undefined });
+      if (victim) { const e = effectiveStats(state, side, victim); unit.baseAtk += e.atk; unit.baseMaxHp += e.hp; victim.damage = 999; } break;
+    }
+    case 'cataclysm': {
+      const targets = [...state.player.board, ...state.enemy.board];
+      emit(state, 'battlecry', { ...event, all: true, targetUids: targets.map(target => target.uid), amount: 2 });
+      for (const s of ['player', 'enemy']) for (const target of [...state[s].board]) dealDamage(state, unit, target, 2); break;
+    }
   }
 }
 

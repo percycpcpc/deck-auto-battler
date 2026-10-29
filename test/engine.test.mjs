@@ -70,8 +70,24 @@ test('Gravedigger counts token deaths on both sides', () => {
   assert.equal(s.player.board.filter(u => u.token).length, 2);
 });
 
-test('Tax Collector fizzles against an empty charger', () => {
-  const s = empty(), tax = summon(s, 'player', getCard('tax_collector')); triggerBattlecry(s, 'player', tax); assert.equal(s.enemy.charger, null);
+test('battlecries emit ordered source, target, change, and fizzle details', () => {
+  let s = empty(), unit = summon(s, 'player', getCard('tax_collector')); s.events = []; triggerBattlecry(s, 'player', unit);
+  let event = s.events[0]; assert.equal(event.type, 'battlecry'); assert.equal(event.uid, unit.uid); assert.equal(event.kind, 'tax'); assert.equal(event.counterDelta, 0);
+
+  s = empty(); unit = summon(s, 'player', getCard('hex_hurler')); const opposite = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(event.targetUid, opposite.uid); assert.equal(event.amount, 2); assert.equal(s.events[1].type, 'damage');
+
+  s = empty(); unit = summon(s, 'player', getCard('inquisitor')); summon(s, 'enemy', getCard('sellsword')); const strongest = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(event.targetUid, strongest.uid); assert.equal(event.targetIndex, 1); assert.equal(s.events[1].type, 'damage');
+
+  s = empty(); summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.deepEqual(event.neighborIndices, [0]); assert.equal(event.targetUids.length, 1);
+
+  s = empty(); unit = summon(s, 'player', getCard('gate_crasher')); const moved = summon(s, 'enemy', getCard('sellsword')); summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(event.targetUid, moved.uid); assert.equal(event.fromIndex, 0); assert.equal(event.toIndex, 1);
+
+  s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false }; unit = summon(s, 'player', getCard('doomcaller')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(event.destroyed, true); assert.equal(s.events[1].type, 'chargerDestroyed');
 });
 
 test('Chrono Imp turns a 1 counter into immediate deployment', () => {
