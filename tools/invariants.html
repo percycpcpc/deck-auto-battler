@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>INVARIANTS: RUNNING</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../animations.css">
+</head>
+<body>
+  <main id="app"></main>
+  <pre id="results" style="position:fixed;inset:8px 8px auto auto;z-index:99;max-width:48vw;max-height:90vh;overflow:auto;background:#14101cee;padding:12px;color:#ede6d6;font:12px/1.4 monospace;pointer-events:none"></pre>
+  <script type="module">
+    globalThis.__DECK_BATTLER_NO_BOOT__ = true;
+    const ui = await import('../src/ui.js');
+    const engine = await import('../src/engine.js');
+    const results = document.querySelector('#results');
+    const lines = [];
+    const report = (number, pass, evidence) => {
+      const line = `CHECK ${number}: ${pass ? 'PASS' : 'FAIL'} — ${evidence}`;
+      lines.push(line); console.log(line); results.textContent = lines.join('\n');
+    };
+    const scout = engine.getCard('scout');
+    const grunt = { id:'enemy_grunt', name:'Ash Grunt', cost:2, atk:2, hp:1 };
+    const fight = engine.createFight({ playerDeck:[scout, engine.getCard('sellsword'), engine.getCard('dagger_imp')], enemyDeck:[grunt, grunt, grunt], rng:()=>.5 });
+    ui.mountBattleScreen(fight, document.querySelector('#app'));
+    const battle = document.querySelector('#battle-screen');
+
+    let srcMutations = 0, forbiddenWrites = 0;
+    const cardDeltas = [], ghostCounts = [], scoutWindows = [], deathWindows = new Map();
+    const imageObserver = new MutationObserver(records => { srcMutations += records.filter(r => r.type === 'attributes' && r.attributeName === 'src' && r.target.closest('#battle-screen')).length; });
+    imageObserver.observe(battle, { subtree:true, attributes:true, attributeFilter:['src'] });
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    Object.defineProperty(Element.prototype, 'innerHTML', { configurable:true, get:descriptor.get, set(value) { if (this.closest?.('#battle-screen') || this.id === 'battle-screen') forbiddenWrites++; return descriptor.set.call(this, value); } });
+    const originalInsert = Element.prototype.insertAdjacentHTML;
+    Element.prototype.insertAdjacentHTML = function(...args) { if (this.closest?.('#battle-screen') || this.id === 'battle-screen') forbiddenWrites++; return originalInsert.apply(this, args); };
+    const observer = new MutationObserver(records => {
+      const now = performance.now();
+      for (const record of records) {
+        if (record.type === 'attributes' && record.attributeName === 'class' && record.target.classList.contains('fx-death')) deathWindows.set(record.target.dataset.uid, { start:now, node:record.target });
+        for (const node of record.addedNodes) {
+          if (node.nodeType === 1 && node.matches?.('.card')) cardDeltas.push(1);
+          if (node.nodeType === 1 && (node.matches?.('.is-scout-revealed') || node.querySelector?.('.is-scout-revealed'))) scoutWindows.push({ start:now });
+        }
+        for (const node of record.removedNodes) {
+          if (node.nodeType === 1 && node.matches?.('.is-scout-revealed')) { const window = scoutWindows.findLast(x => !x.end); if (window) window.end = now; }
+          if (node.nodeType === 1 && node.matches?.('.card')) { cardDeltas.push(-1); const window = deathWindows.get(node.dataset.uid); if (window) window.end = now; }
+        }
+      }
+      ghostCounts.push(battle.querySelectorAll('.flight-layer .card-ghost').length);
+    });
+    observer.observe(battle, { subtree:true, childList:true, attributes:true, attributeFilter:['class'] });
+
+    for (let round = 0; round < 3 && !fight.over; round++) { engine.runRound(fight); await ui.playEvents(fight.events); }
+    await new Promise(resolve => setTimeout(resolve, 550));
+    observer.disconnect(); imageObserver.disconnect();
+    Object.defineProperty(Element.prototype, 'innerHTML', descriptor); Element.prototype.insertAdjacentHTML = originalInsert;
+
+    report(1, cardDeltas.length > 0 && cardDeltas.every(delta => delta === 1 || delta === -1), `card deltas [${cardDeltas.join(', ')}], only unit commits/removals`);
+    report(2, srcMutations === 0, `${srcMutations} src attribute mutations after mount`);
+    report(3, forbiddenWrites === 0, `${forbiddenWrites} innerHTML/insertAdjacentHTML calls under battle screen`);
+    const maxGhosts = Math.max(0, ...ghostCounts), flightPE = getComputedStyle(document.querySelector('.flight-layer')).pointerEvents;
+    report(6, maxGhosts === 1 && flightPE === 'none' && !document.querySelector('.card-ghost'), `max ghosts ${maxGhosts}, pointer-events ${flightPE}, final ghosts 0`);
+    const scoutDuration = scoutWindows[0]?.end - scoutWindows[0]?.start;
+    const leakedName = [...document.querySelectorAll('.side--enemy .deck-top *, .side--enemy .charger-slot *')].some(node => node.textContent.includes('Ash Grunt') || node.getAttribute?.('src')?.includes('sellsword'));
+    report(8, !leakedName && scoutDuration >= 1400 && scoutDuration <= 1600, `enemy identity absent after window; scout duration ${Math.round(scoutDuration || 0)}ms`);
+    const deathDurations = [...deathWindows.values()].filter(x => x.end).map(x => x.end - x.start);
+    report(10, deathDurations.length > 0 && deathDurations.every(ms => ms >= 380 && ms <= 500), `death durations [${deathDurations.map(Math.round).join(', ')}]ms; survivors retained by uid registry`);
+    const passed = lines.every(line => line.includes(': PASS'));
+    document.title = `INVARIANTS: ${passed ? 'PASS' : 'FAIL'} | ${lines.join(' | ')}`;
+  </script>
+</body>
+</html>
