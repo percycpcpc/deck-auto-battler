@@ -1,23 +1,43 @@
-.fx-deploy-pop { animation: deploy-pop .25s ease-out; }
-.fx-tick { animation: charger-tick .25s ease-out; }
-.fx-lunge { animation: unit-lunge .35s ease-in-out; }
-.fx-hit { animation: unit-hit .2s ease-out; }
-.fx-shield { animation: shield-pop .25s ease-out; }
-.fx-death { animation: unit-death .4s ease-in forwards; }
-.fx-shatter { animation: charger-shatter .25s ease-in forwards; }
-.fx-stalemate { animation: stalemate-flash .4s ease-out; }
-.fx-hero-hit::after { animation: vignette .25s ease-out; }
-.damage-floater { animation: damage-float .6s ease-out forwards; }
-.is-scout-revealed { animation: scout-flip .25s ease-out; }
-@keyframes deploy-pop { 0% { opacity:.4; scale:1.08; } 100% { opacity:1; scale:1; } }
-@keyframes charger-tick { 50% { scale:1.25; filter:brightness(1.8); } }
-@keyframes unit-lunge { 50% { translate:var(--lunge-x) var(--lunge-y); filter:brightness(1.35); } }
-@keyframes unit-hit { 25% { translate:-4px 0; filter:brightness(2) sepia(1) saturate(5); } 50% { translate:4px 0; } 75% { translate:-3px 0; } }
-@keyframes shield-pop { 50% { filter:drop-shadow(0 0 18px #ffd966) brightness(1.5); scale:1.04; } }
-@keyframes unit-death { to { filter:grayscale(1); translate:0 20px; scale:.8; opacity:0; } }
-@keyframes charger-shatter { to { filter:grayscale(1) brightness(2); scale:.7; opacity:0; } }
-@keyframes stalemate-flash { 50% { filter:brightness(1.8) drop-shadow(0 0 20px #e8c468); } }
-@keyframes vignette { 50% { box-shadow:inset 0 0 180px #ff5a3c; } }
+﻿#battle-screen .fx-deploy-pop { animation:deploy-pop 250ms ease-out; }
+#battle-screen .fx-tick { animation:charger-tick 250ms ease-out; }
+#battle-screen .fx-lunge { animation:unit-lunge 350ms ease-in-out; }
+#battle-screen .fx-hit { animation:unit-hit 200ms ease-out; }
+#battle-screen .fx-hit .card__frame { animation:frame-hit 200ms ease-out; }
+#battle-screen .fx-shield { animation:shield-pop 250ms ease-out; }
+#battle-screen .fx-death { animation:unit-death 400ms ease-in forwards; }
+#battle-screen .fx-shatter { animation:charger-shatter 250ms ease-in forwards; }
+#battle-screen .fx-stalemate { animation:stalemate-flash 400ms ease-out; }
+#battle-screen .fx-battlecry { animation:shield-pop 300ms ease-out; }
+#battle-screen .fx-hero-hit::after { animation:ledger-vignette 200ms ease-out; }
+#battle-screen .damage-floater { animation:damage-float 600ms ease-out forwards; }
+#battle-screen .is-scout-revealed { animation:scout-flip 250ms ease-out; }
+@keyframes deploy-pop { from { opacity:.4; } to { opacity:1; } }
+@keyframes charger-tick { 50% { scale:1.25; } }
+@keyframes unit-lunge { 50% { translate:var(--lunge-x) var(--lunge-y); } }
+@keyframes unit-hit { 25% { translate:-4px 0; } 50% { translate:4px 0; } 75% { translate:-3px 0; } }
+@keyframes frame-hit { 50% { filter:sepia(.5) drop-shadow(0 0 6px #ff5a3c); } }
+@keyframes shield-pop { 50% { box-shadow:0 0 12px #ffd9664d; outline:2px solid #ffd966; } }
+@keyframes unit-death { to { filter:grayscale(1); translate:0 20px; opacity:0; } }
+@keyframes charger-shatter { to { filter:grayscale(1); scale:.7; opacity:0; } }
+@keyframes stalemate-flash { 50% { outline:2px solid #e8c468; } }
+@keyframes ledger-vignette { from,to { opacity:0; } 50% { opacity:1; } }
 @keyframes damage-float { to { translate:0 -40px; opacity:0; } }
 @keyframes scout-flip { from { transform:rotateY(90deg); } }
-@media (prefers-reduced-motion:reduce) { #battle-screen *, #battle-screen *::before, #battle-screen *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+@media(prefers-reduced-motion:reduce) {
+ #battle-screen .card,#battle-screen .hero-hpbar__fill { transition:none; }
+ #battle-screen .fx-lunge,#battle-screen .fx-hit,#battle-screen .fx-tick,#battle-screen .fx-deploy-pop,#battle-screen .is-scout-revealed,#battle-screen .fx-shatter { animation-name:reduced-feedback; }
+ #battle-screen .fx-hit .card__frame,#battle-screen .fx-hero-hit::after { animation:none; }
+ #battle-screen .fx-hero-hit::after { box-shadow:none; outline:2px solid var(--bone); }
+ #battle-screen .fx-death { animation-name:unit-death; }
+ #battle-screen .damage-floater { animation-name:reduced-float; }
+ @keyframes unit-death { to { opacity:0; } }
+}
+@keyframes reduced-feedback { from,to { outline:2px solid #ede6d6; } }
+@keyframes reduced-float { to { opacity:0; } }
+
+#battle-screen .fx-deploy-pop > .card-face { animation:pop-visual 250ms ease-out; }
+@keyframes pop-visual { from { scale:1.02; } to { scale:1; } }
+@media(prefers-reduced-motion:reduce) { #battle-screen .fx-deploy-pop > .card-face { animation:none; } }
+#battle-screen .hero-portrait.fx-hit { animation:hero-ring 200ms ease-out; }
+@keyframes hero-ring { 50% { box-shadow:0 0 12px #ff5a3c; } }
+@media(prefers-reduced-motion:reduce) { #battle-screen .hero-portrait.fx-hit { animation:reduced-feedback 200ms; } #battle-screen .fx-death::after { display:none; } }

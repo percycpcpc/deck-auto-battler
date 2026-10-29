@@ -1,25 +1,11 @@
-# Deck Auto Battler v0 handoff
+# Deck Auto Battler handoff
 
-- Phase/status: vertical slice implemented; event-snapshot rendering fix verified in maintenance.
-- Goal: playable three-fight auto-battler run with two draft picks between fights.
-- Important files: `src/engine.js` owns pure state/rules; `src/ui.js` owns DOM/timing; `styles.css` owns layout/animation; `test/engine.test.mjs` owns regression checks.
-- Art: 16 generated UI assets are integrated. The 36 pre-existing portraits were not modified.
-- Latest work: round events now carry restricted post-event view snapshots and unit UIDs; the UI animates the current DOM before rendering each event snapshot, so deaths and shifts remain visible.
-- Verification: `node test/engine.test.mjs` (17 passed); `node tools/event_snapshot_check.mjs` (PASS); `node tools/balance_sim.mjs 1 100` (75%); HTTP checks for `index.html` and `animations.css` (200).
-- Risks: browser interaction remains smoke-tested at the HTTP/source layer rather than through a full browser/device matrix; balance and long-session pacing at 40 HP remain playtest questions.
-- Next safest task: manual browser playtest focused on repeated same-name units, simultaneous deaths, and small-screen readability.
-
-## UI fit maintenance — 2026-10-29
-
-- Changed `styles.css`, `src/ui.js`, and `animations.css`: viewport-bounded battle rows, full-width mobile boards below compact HUDs, proportional card geometry, contained HP fills, flow-layout banners, and draft art separated from growing descriptions. Existing assets, engine rules, events, and selector hooks remain intact.
-- Verification: all 17 engine tests pass; `node --check src/ui.js` and `git diff --check` pass. No browser run was allowed for this pass; layout outcomes are source-derived, not visually certified.
-- Re-probe at 1258×566 and 1258×560: battle page height, both boards/header/lane, boss and animation clipping; draft page height with Gravedigger's longest description, banner/heading separation, and all offers. At 390×844 and 390×560: battle height, three visible cards at 844px height, card names/stats/badges, internal scrolling, HP/counters, title/start, and draft/end banner separation and reachable actions. Mobile draft may scroll vertically to preserve readable offers.
-- Next safest task: orchestrator browser verification at those dimensions, then diff review. No commits made. `DEBUG_HANDOFF.md` was not needed: no repeated failed diagnosis cycle. Pre-existing `_styles-pretty.css` deletion and untracked files were left untouched.
-
-## Persistent-DOM battle rewrite — 2026-10-29
-
-- Phase/status: production UI architecture rewrite implemented; command-line gates pass; real-browser invariants harness is ready for orchestrator execution.
-- Changed `src/ui.js`, `styles.css`, and `animations.css`: the battle screen now mounts once, keeps uid-keyed unit nodes, reconciles snapshot deltas, uses fixed-overlay WAAPI flight ghosts, delays death removal until animation completion, and excludes enemy identity from deck/charger DOM outside Scout's timed face node.
-- Added `tools/invariants.html`, `tools/invariants_check.mjs`, and compatibility entrypoint `tools/ui_invariants_check.mjs`. The page instruments checklist items 1, 2, 3, 6, 8, and 10 with MutationObserver/prototype spies and writes PASS/FAIL evidence to console, page, and title.
-- Verification: engine 17/17; event snapshot PASS; harness wiring PASS; fight-1 simulation 77% over 100 runs; `node --check src/ui.js` and `git diff --check` pass.
-- Remaining evidence: run `python -m http.server 8000`, open `/tools/invariants.html` in a visible real browser, and capture its six console lines. The available UI driver could not control Chrome in this session; headless `--dump-dom` did not advance the WAAPI sequence.
+- Phase: maintenance / fight-page War Ledger implementation. No commit made.
+- Outcome: mirrored info-over-board layout, frozen responsive card geometry, readable hero health and charger counters, persistent inspection/log controls, six keyword icons, local feedback, and explicit reduced motion.
+- Owners: `src/ui.js`, `styles.css`, `animations.css`; existing DOM/event-player structure preserved. Engine, title/draft functions, and 52 asset files unchanged.
+- Verification: engine 17/17; event snapshots PASS; UI harness wiring PASS; real Google Chrome six checks PASS in normal and reduced motion; no uncaught browser errors or death fallbacks. Scrolled slot-5 ghost endpoint and committed position both x=852 at scrollLeft=708. No-op reconcile makes zero mutations. Frozen resize and log/inspection tests pass.
+- Balance: unseeded `node tools/balance_sim.mjs 1 100` gave 70% initially, 68% final; engine untouched.
+- Evidence: `docs/WAR_LEDGER_IMPLEMENTATION.md`, `refs/ui-audit/war-ledger/`, `tools/war_ledger_audit.py`. Server: `python -m http.server 8323`; optional audit requires Python Playwright and installed Chrome.
+- Blocker: Meddler changes deck/charger without an explicit event; snapshots omit deck/top/count. Cannot perform the required non-reveal commit correctly. A contradictory later reveal suppresses guessed next-card identity and shows unknown count. Identical-card bounces remain undetectable. Next task: authorize and specify a deck-mutation event/snapshot contract, then implement engine/UI integration separately.
+- Acceptance limits: no physical-device, human one-second glance, full per-pixel contrast, or screen-reader certification; CSS zoom used for 200%; draft preserved by source comparison. Full-page screenshots capture short-viewport vertical scrolling.
+- DEBUG_HANDOFF.md not created: discovered UI issues were resolved with focused tests; no repeated unresolved diagnosis loop.
