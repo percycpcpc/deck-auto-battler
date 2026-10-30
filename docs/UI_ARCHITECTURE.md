@@ -53,7 +53,7 @@ Maintain a module-level registry:
 unitEls: Map<uid, { el, side, slotIndex, atk, hp }>
 ```
 
-- A unit's `.card` element is **created exactly once**, at its DEPLOY commit, and **removed exactly once**, at the end of its death animation (400ms, on `animationend`, plus a 500ms fallback timeout).
+- A unit's `.card` element is **created exactly once**, at its DEPLOY commit, and **removed exactly once**, during the round-end cleanup/shift event. Its 400ms death animation ends in a visible inert corpse state; animation completion never removes the node.
 - State updates (ATK/HP changes, buffs, counters) **never** recreate the element. They mutate the existing node's text/styles.
 - Unit elements are absolutely positioned inside `.board-lane` with `left: 0; top: 0; transform: translate3d(slotIndex * slotPitch, 0, 0)`. Slot position is a function of the transform only — never of DOM order or parent changes. Shift-left is a transform write (§2c). This is what makes persistence and gliding compatible with scrolling.
 - `slotPitch = slotWidth + slotGap` (take both from `docs/ART_DIRECTION.md` layout constants; define once as CSS custom properties `--slot-w`, `--slot-gap` and read them into JS constants at mount).
@@ -80,9 +80,9 @@ Per event, exactly one of three operations:
 
 - **MUTATE-IN-PLACE:** tick, damage, heroHit, shield, attack (numbers + fx classes). Applied at the **start** of the event's animation so numbers land with the hit.
 - **CREATE:** deploy (one unit element, at flight commit), reveal (charger content, at flight commit), damage floaters (transient, removed after 600ms).
-- **REMOVE:** death — element gets `.fx-death`, is removed from DOM **only after the 400ms animation completes** (`animationend` handler; 500ms fallback timer in case the event is interrupted). The registry entry is deleted at the same moment. Until removal, the dying element is `pointer-events: none` and excluded from shift-left recalculation.
+- **REMOVE:** cleanup/shift — `death` adds `.fx-death`, then `.is-corpse`, disables pointer events, and leaves the node visibly fallen in its original slot. The cleanup `shift` event removes all corpse nodes absent from its snapshot in one DOM pass and deletes their registry entries before survivor transforms are written.
 
-Deaths and shifts in the same event batch: remove dead uids from slot-index bookkeeping **immediately** (survivors glide over/through the dying card, which is fading), remove the element at animation end.
+Deaths do not free slot-index bookkeeping. At cleanup, remove the batch of dead uids first, then glide survivors to compacted indices without recreating any survivor node.
 
 ### 1.5 Board scroll + persistence
 
@@ -96,7 +96,7 @@ Deaths and shifts in the same event batch: remove dead uids from slot-index book
 2. Every `<img>` in the battle screen gets its `src` assigned **once** at mount or once at element creation (new unit cards). **Reassigning `src` on an existing `<img>` is forbidden.** Face/back swaps (scout reveal, deck-top flip) are done by swapping **two pre-loaded child elements' visibility classes**, both created with their `src` at parent creation — or by creating a new node (deck-top case) and letting the old one be GC'd.
 3. All animation is CSS-class or WAAPI-`element.animate()` driven. No JS per-frame loops, no `setInterval` animation.
 4. No forced synchronous layout between write phases: in the event player, do **one batched read phase** (all `getBoundingClientRect` calls) at animation start, then a write phase. Never read layout after writing within the same event step. Reconcile performs zero layout reads.
-5. fx classes are removed via `animationend` listener or a single `setTimeout` matching the duration map — not by rebuild.
+5. Transient fx classes are removed via `animationend` listener or a single `setTimeout` matching the duration map — not by rebuild. Death is the exception: `.fx-death` persists as the corpse presentation until cleanup removes the node.
 
 ---
 
@@ -204,13 +204,13 @@ Timings are binding and unchanged from current values. "Op" = MUTATE (in place) 
 | `battlecry` (if separate event) | MUTATE + transient | `.fx-cast` glow on the deployed unit. **Scout:** narrated public-information fizzle per §3.4. Other battlecries: effect-specific class on affected targets, log line. | 300ms |
 | `attack` | MUTATE | `.fx-lunge` on attacker: translate toward target (direction computed from rects once, applied as CSS var `--lunge-x/--lunge-y`) and back. No numeric changes here. | 350ms |
 | `damage` | MUTATE + CREATE | Target HP text/fill update at animation start; `.fx-hit` shake on target; floating damage number created in `.flight-layer` at target rect, rises/fades, removed after 600ms. | 200ms |
-| `death` | REMOVE (deferred) | `.fx-death` fade/collapse; element removed from DOM + registry at `animationend` (500ms fallback). Slot bookkeeping freed immediately for shifts. | 400ms |
-| `shift` | MUTATE (transform) | Survivors glide via `translate3d`, staggered 40ms (§2.4). | 300ms + stagger |
+| `death` | MUTATE | `.fx-death` falls/dims into persistent `.is-corpse`; node and registry entry remain in the occupied slot. | 400ms |
+| `shift` | REMOVE + MUTATE | At cleanup, remove all corpse nodes in the batch, then survivors glide via `translate3d`, staggered 40ms (§2.4). | 300ms + stagger |
 | `heroHit` | MUTATE | Hero HP text + bar width; `.fx-hit` on hero portrait; screen-edge flash on the victim's side (class on `.side`, ART_DIRECTION's damage-flash token). | 200ms |
 | `shield` | MUTATE | `.fx-shield` ring pulse on the protected unit/hero; if the snapshot carries a shield value, update its badge textContent. | 250ms |
 | `stalemate` | MUTATE | `.fx-stalemate` flash on both hero panels simultaneously + log line. No element changes. | 400ms |
 
-Event player: sequential `async` — each event applies its visuals, awaits its duration (shift awaits duration + max stagger), then the next event begins. No overlap between events except damage floaters and death fades, which always finish in the background.
+Event player: sequential `async` — each event applies its visuals, awaits its duration (shift awaits duration + max stagger), then the next event begins. Damage floaters may finish in the background; death reaches its corpse pose after 400ms and persists until cleanup.
 
 ---
 
@@ -240,7 +240,7 @@ Organize into five labeled sections, top to bottom:
 
 ### 5.3 Acceptance checklist (self-verify, headless-able)
 
-1. Mount a scripted fight of ≥ 3 full rounds including ≥ 1 deploy, ≥ 1 death, ≥ 1 shift. During the entire run, `document.querySelectorAll('#battle-screen .card').length` changes **only** in steps of +1 at deploy commits and −1 at death-animation completions — never any other delta.
+1. Mount a scripted fight of ≥ 3 full rounds including ≥ 1 deploy, ≥ 1 death, ≥ 1 shift. During the entire run, `document.querySelectorAll('#battle-screen .card').length` changes **only** in steps of +1 at deploy commits and cleanup-batched −1 removals — never on death-animation completion.
 2. After mount, instrument `HTMLImageElement` via a MutationObserver on attributes: zero `src` mutations under `#battle-screen` for the whole fight.
 3. Instrument `innerHTML`/`insertAdjacentHTML` (setter override / prototype spy): zero calls touching nodes under `#battle-screen` after mount.
 4. A single `deploy` event adds exactly one `.card` element to `.board-lane`, and that element's uid is registered; the element is the same node (`===`) before and after any subsequent `damage`/`tick`/`shift` events.
@@ -249,9 +249,9 @@ Organize into five labeled sections, top to bottom:
 7. Deploy to a slot scrolled out of view: `.board-scroll.scrollLeft` changes **before** the ghost's first animation frame and not during it.
 8. Enemy queue information is present and consistent with engine state: the shown enemy NEXT name matches `state.enemy.deck[0]`, the count matches `state.enemy.deck.length`, the charger name matches `state.enemy.charger.card`, and the ordered inspection list matches every remaining deck entry.
 9. Both deck-tops show face cards and update only at reveal commits; enemy count uses the known “N left” treatment.
-10. Death: the dying element remains in the DOM for ≥ 400ms after the death event and is absent after 500ms; a shift in the same round does not recreate any survivor element.
+10. Death: the dying element remains in the DOM as a visible corpse after its 400ms animation, is present until the cleanup `shift`, and is removed in that cleanup batch; survivor elements retain identity while sliding left once.
 11. Board with 2 units renders exactly 5 `.slot-ghost` frames; deck-out renders `.deck-stack.is-empty` with no `.deck-top` child.
-12. Full scripted fight completes with zero uncaught errors and zero `animationend` fallback timeouts firing (log a warning if the 500ms death fallback ever triggers).
+12. Full scripted fight completes with zero uncaught errors; no death-animation handler or timeout removes a unit node.
 
 ---
 

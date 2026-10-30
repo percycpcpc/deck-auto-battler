@@ -9,13 +9,17 @@ for (let round = 0; round < 3 && !fight.over; round++) {
 }
 
 const death = events.find(event => event.type === 'death'
-  && !event.state[event.side].board.some(unit => unit.uid === event.uid));
+  && event.state[event.side].board.some(unit => unit.uid === event.uid && unit.dead));
 const deploy = events.find(event => event.type === 'deploy'
   && event.state[event.side].board.some(unit => unit.uid === event.uid));
+const shift = death && events.find(event => event.type === 'shift'
+  && event.side === death.side
+  && event.removedUids.includes(death.uid)
+  && !event.state[event.side].board.some(unit => unit.uid === death.uid));
 
-if (!death || !deploy) {
-  console.error(`FAIL: death snapshot=${Boolean(death)}, deploy snapshot=${Boolean(deploy)}`);
+if (!death || !deploy || !shift) {
+  console.error(`FAIL: death corpse snapshot=${Boolean(death)}, cleanup removal snapshot=${Boolean(shift)}, deploy snapshot=${Boolean(deploy)}`);
   process.exitCode = 1;
 } else {
-  console.log(`PASS: death ${death.uid} absent; deploy ${deploy.uid} present`);
+  console.log(`PASS: death ${death.uid} marked dead then absent at cleanup shift; deploy ${deploy.uid} present`);
 }

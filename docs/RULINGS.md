@@ -6,8 +6,8 @@ Every ruling below is BINDING for the v0 implementation. Where the spec was ambi
 1. **Reveal**: if a side's charger slot is empty and its deck is non-empty, top card enters the charger with counter = cost.
 2. **Tick**: all charging counters −1.
 3. **Deploy**: any charger at 0 enters the leftmost empty slot; Battlecries resolve (player first). If board full, charger waits at 0 and deploys at the next Deploy step with a free slot.
-4. **Action (owner test — under evaluation)**: the player side completes a live left-to-right sweep, then the enemy side completes a live left-to-right sweep. Deaths shift the board immediately; later actions use the current board position, and an enemy killed in the player sweep never acts. The previous interleaved ruling is preserved at commit `f5b2fdd`.
-5. **Cleanup**: deaths and Deathrattles resolve.
+4. **Action (owner test — under evaluation)**: the player side completes a live left-to-right sweep, then the enemy side completes a live left-to-right sweep. A lethal unit becomes an inert corpse in its current slot, never acts, and is treated as no unit for targeting; its lane can therefore be hit through to the hero. The previous interleaved ruling is preserved at commit `f5b2fdd`.
+5. **Cleanup**: after both sweeps, all corpses are removed in one batch per affected side and survivors shift left once.
 
 A card revealed on round N with cost 1 deploys on round N+1 and acts that same round.
 
@@ -15,11 +15,12 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 
 ## Damage
 - **Mutual exchange within sequential sweeps**: when a unit attacks a living defender, attacker and defender both deal their ATK to each other. Every attack is an exchange; Windfury = two exchanges. This supersedes the old within-round interleaving/simultaneous-action interpretation for the owner test, but does not change `exchange`: a defender that survives until its own side's sweep may later initiate its own exchange. (If playtests show fights ending too fast, the fallback is attacker-only damage — config flag.)
-- **Opposite is evaluated at the moment of action**, after any mid-phase shifts. Overkill is lost; it never splashes to the hero (no trample).
+- **Opposite is evaluated at the moment of action**. A corpse in the opposite slot counts as no unit, so the attack hits the hero; damage dealt to a living unit never splashes (no trample).
 
 ## Death, shift, Deathrattle ordering
-- Deaths are checked after every individual action; survivors shift left immediately; the action sequence is re-evaluated by position index (no phase-start snapshot). A unit that dies before its turn does not act.
-- In a mutual exchange that kills both, **player's Deathrattles resolve first**, then enemy's. DR summons enter the leftmost empty slot *after* shift-left and never act in the current action phase.
+- Deaths are checked after every individual action. Lethal units are marked dead immediately, emit `death`, increment the death count, and fire Deathrattles, but remain in place until round-end cleanup. Corpses are excluded from actions, targeting, auras, Battlecries, summon pings, and every other live-unit query.
+- In a mutual exchange that kills both, **player's Deathrattles resolve first**, then enemy's. DR summons append subject to the physical board cap (corpses still occupy slots) and never act in the current action phase.
+- Cleanup removes all marked corpses while preserving survivor order, then emits one `shift { side, removedUids }` event per affected side. There is no second death event and no mid-sweep compaction.
 
 ## Charger manipulation
 - Tax Collector, Chrono Imp, Doomcaller, Meddler all fizzle if their target charger slot is empty.
@@ -40,7 +41,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
 ## Keyword interactions
 - Windfury vs Divine Shield: first exchange pops the shield (whole instance negated), second exchange damages normally. Poisonous only triggers if damage actually lands — a negated hit does not kill.
 - Poisonous in a mutual exchange: any unit damaged by a Poisonous source dies, regardless of HP — both can die in one exchange. Hero damage is never Poisonous-relevant.
-- **Base stats + dynamic auras**: units store base ATK/HP; auras (Warlord, Overlord, boss herald) recompute on top continuously whenever board state changes (death-shifts re-evaluate adjacency).
+- **Base stats + dynamic auras**: units store base ATK/HP; living aura sources recompute continuously. Corpses provide no aura, and their empty lane breaks adjacency until cleanup compacts the board.
 - Hexblade sets the target's **base** stats to 1/1 (an adjacent Warlord then makes it effectively 2/1).
 - Copycat copies the opposite unit's current **effective** stats as its new base.
 - Cultist gains the destroyed unit's current effective stats added to its base.
@@ -49,7 +50,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Numeric decisions
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
-- **Stalemate safety valve** (new rule): if both decks are empty and nothing is charging, and a full round passes with no change in total unit count on either side, the fight ends immediately — higher hero HP wins; tie goes to the player.
+- **Stalemate safety valve** (new rule): if both decks are empty and nothing is charging, and a full round passes with no change in total **live** unit count on either side, the fight ends immediately — higher hero HP wins; tie goes to the player. Corpses never delay this valve.
 - **Enemy decks**: Fight 1 = 6× 2/1 (cost 1) + 2× 2/3 (cost 2); fights 2–3 use five 2/1s + two 2/3s plus the pre-boarded boss. These shells use the fixed, unshuffled scripts in `SPEC.md`. (Owner-approved balance fix 2026-10-29: the original 5× 2/2 + 3× 3/4 shell out-statted the starter deck 19/22 vs 12/14 and went 0/500 in simulation.)
 
 ## Information

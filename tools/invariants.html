@@ -27,7 +27,7 @@
     const battle = document.querySelector('#battle-screen');
 
     let srcMutations = 0, forbiddenWrites = 0;
-    const cardDeltas = [], ghostCounts = [], scoutWindows = [], deathWindows = new Map();
+    const cardDeltas = [], ghostCounts = [], scoutWindows = [], deathWindows = new Map(), cleanupShifts = [];
     const imageObserver = new MutationObserver(records => { srcMutations += records.filter(r => r.type === 'attributes' && r.attributeName === 'src' && r.target.closest('#battle-screen')).length; });
     imageObserver.observe(battle, { subtree:true, attributes:true, attributeFilter:['src'] });
     const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
@@ -37,7 +37,11 @@
     const observer = new MutationObserver(records => {
       const now = performance.now();
       for (const record of records) {
-        if (record.type === 'attributes' && record.attributeName === 'class' && record.target.classList.contains('fx-death')) deathWindows.set(record.target.dataset.uid, { start:now, node:record.target });
+        if (record.type === 'attributes' && record.attributeName === 'class' && record.target.classList.contains('fx-death')) {
+          const window = deathWindows.get(record.target.dataset.uid) || { start:now, node:record.target };
+          if (record.target.classList.contains('is-corpse')) window.corpseAt = now;
+          deathWindows.set(record.target.dataset.uid, window);
+        }
         for (const node of record.addedNodes) {
           if (node.nodeType === 1 && node.matches?.('.card')) cardDeltas.push(1);
           if (node.nodeType === 1 && (node.matches?.('.is-scout-revealed') || node.querySelector?.('.is-scout-revealed'))) scoutWindows.push({ start:now });
@@ -51,7 +55,7 @@
     });
     observer.observe(battle, { subtree:true, childList:true, attributes:true, attributeFilter:['class'] });
 
-    for (let round = 0; round < 3 && !fight.over; round++) { engine.runRound(fight); await ui.playEvents(fight.events); }
+    for (let round = 0; round < 3 && !fight.over; round++) { engine.runRound(fight); cleanupShifts.push(...fight.events.filter(event => event.type === 'shift')); await ui.playEvents(fight.events); }
     await new Promise(resolve => setTimeout(resolve, 550));
     observer.disconnect(); imageObserver.disconnect();
     Object.defineProperty(Element.prototype, 'innerHTML', descriptor); Element.prototype.insertAdjacentHTML = originalInsert;
@@ -68,8 +72,11 @@
     const shownCharger = document.querySelector('.side--enemy .charger-card .card__name')?.textContent;
     const queueConsistent = shownNext === next?.name && shownCount === `${fight.enemy.deck.length} left` && JSON.stringify(shownQueue) === JSON.stringify(expectedQueue) && shownCharger === chargerName;
     report(8, queueConsistent, `NEXT ${shownNext}; ${shownCount}; charger ${shownCharger}; ordered queue [${shownQueue.join(', ')}]`);
-    const deathDurations = [...deathWindows.values()].filter(x => x.end).map(x => x.end - x.start);
-    report(10, deathDurations.length > 0 && deathDurations.every(ms => ms >= 380 && ms <= 500), `death durations [${deathDurations.map(Math.round).join(', ')}]ms; survivors retained by uid registry`);
+    const completedDeaths = [...deathWindows.entries()].filter(([, window]) => window.end);
+    const deathDurations = completedDeaths.map(([, window]) => window.end - window.start);
+    const persisted = completedDeaths.every(([, window]) => window.corpseAt && window.corpseAt < window.end);
+    const shiftedAtCleanup = cleanupShifts.length > 0 && cleanupShifts.every(event => event.phase === 'cleanup' && event.removedUids.length > 0 && event.removedUids.every(uid => !event.state[event.side].board.some(unit => unit.uid === uid)));
+    report(10, deathDurations.length > 0 && deathDurations.every(ms => ms >= 400) && persisted && shiftedAtCleanup, `death-to-cleanup removals [${deathDurations.map(Math.round).join(', ')}]ms; corpse state observed ${persisted}; cleanup batches ${cleanupShifts.map(event => `${event.side}:${event.removedUids.length}`).join(', ')}`);
     const passed = lines.every(line => line.includes(': PASS'));
     document.title = `INVARIANTS: ${passed ? 'PASS' : 'FAIL'} | ${lines.join(' | ')}`;
   </script>

@@ -20,7 +20,7 @@
 @keyframes shield-pop { 50% { box-shadow:0 0 12px #ffd9664d; outline:2px solid #ffd966; } }
 @keyframes battlecry-source { 50% { outline:2px solid #c99b4a; box-shadow:0 0 18px #c99b4a80; } }
 @keyframes battlecry-target { 50% { outline:2px solid #e8c468; box-shadow:0 0 14px #e8c46866; } }
-@keyframes unit-death { to { filter:grayscale(1); translate:0 20px; opacity:0; } }
+@keyframes unit-death { to { filter:grayscale(1); translate:0 20px; opacity:.38; } }
 @keyframes charger-shatter { to { filter:grayscale(1); scale:.7; opacity:0; } }
 @keyframes stalemate-flash { 50% { outline:2px solid #e8c468; } }
 @keyframes ledger-vignette { from,to { opacity:0; } 50% { opacity:1; } }
@@ -34,7 +34,7 @@
  #battle-screen .fx-hero-hit::after { box-shadow:none; outline:2px solid var(--bone); }
  #battle-screen .fx-death { animation-name:unit-death; }
  #battle-screen .damage-floater { animation-name:reduced-float; }
- @keyframes unit-death { to { opacity:0; } }
+ @keyframes unit-death { to { opacity:.38; } }
 }
 @keyframes reduced-feedback { from,to { outline:2px solid #ede6d6; } }
 @keyframes reduced-battlecry { from,to { outline:2px solid #c99b4a; box-shadow:none; } }

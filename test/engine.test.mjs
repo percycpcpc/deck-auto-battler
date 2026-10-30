@@ -22,7 +22,7 @@ test('round ordering and cost-1 deploys on the following round', () => {
 
 test('mutual exchange: 2/2 versus 2/2 both die', () => {
   const s = empty(), a = summon(s, 'player', getCard('sellsword')), b = summon(s, 'enemy', getCard('sellsword'));
-  exchange(s, 'player', a, b); assert.equal(s.player.board.length, 0); assert.equal(s.enemy.board.length, 0);
+  exchange(s, 'player', a, b); assert.equal(s.player.board.length, 1); assert.equal(s.enemy.board.length, 1); assert.equal(a.dead, true); assert.equal(b.dead, true);
 });
 
 test('Windfury performs two full exchanges', () => {
@@ -93,14 +93,14 @@ test('Bristleback gains +3 Attack per surviving damage instance but not when kil
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 7);
   assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onDamaged').length, 2);
   s = empty(); bristle = summon(s, 'player', getCard('bristleback')); attacker = summon(s, 'enemy', getCard('colossus'));
-  exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 1); assert.equal(s.player.board.includes(bristle), false);
+  exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 1); assert.equal(bristle.dead, true);
 });
 
 test('Quillback Elder pings enemy and friendly arrivals, can kill entry, and ignores its own entry', () => {
   const s = empty(); const elder = summon(s, 'player', getCard('quillback_elder'));
   assert.equal(elder.damage, 0); assert.equal(s.events.some(event => event.type === 'summonPing'), false);
   const grunt = summon(s, 'enemy', getCard('sellsword')); assert.equal(grunt.damage, 1);
-  const token = summon(s, 'player', tokenCard()); assert.equal(s.player.board.includes(token), false);
+  const token = summon(s, 'player', tokenCard()); assert.equal(token.dead, true); assert.ok(s.player.board.includes(token));
   const ping = s.events.find(event => event.type === 'summonPing' && event.targetUid === grunt.uid);
   assert.ok(ping); assert.ok(s.events.indexOf(ping) < s.events.findIndex(event => event.type === 'damage' && event.uid === grunt.uid));
 });
@@ -122,7 +122,7 @@ test('an entrant killed by Quillback Elder does not fire its Battlecry', () => {
 
 test('Poisonous kills through HP, but not through a shielded hit', () => {
   let s = empty(), p = summon(s, 'player', getCard('venom_hound')), tank = summon(s, 'enemy', getCard('colossus'));
-  exchange(s, 'player', p, tank); assert.equal(s.enemy.board.length, 0);
+  exchange(s, 'player', p, tank); assert.equal(tank.dead, true);
   s = empty(); p = summon(s, 'player', getCard('venom_hound')); tank = summon(s, 'enemy', getCard('aegis_knight'));
   exchange(s, 'player', p, tank); assert.ok(s.enemy.board.includes(tank));
 });
@@ -131,7 +131,7 @@ test('player Deathrattle resolves first and its summon waits until next round', 
   const s = empty(); const p = summon(s, 'player', getCard('brood_wisp')); const e = summon(s, 'enemy', getCard('spiteful_imp'));
   p.baseMaxHp = 1; exchange(s, 'player', p, e);
   assert.equal(s.events.filter(x => x.type === 'death')[0].side, 'player');
-  assert.equal(s.player.board[0].token, true); assert.equal(s.player.board[0].summonedThisAction, true);
+  const token = s.player.board.find(unit => unit.token); assert.ok(token); assert.equal(token.summonedThisAction, true);
 });
 
 test('dynamic adjacent aura recomputes after shift-left', () => {
@@ -243,6 +243,60 @@ test('fight-3 entry buff applies to tokens, not the pre-boarded boss', () => {
   assert.equal(boss.baseAtk, 1); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 2);
 });
 
+test('a later attacker treats an opposite corpse as an empty lane and hits the hero', () => {
+  const s = empty();
+  summon(s, 'player', { id: 'p0', name: 'P0', cost: 0, atk: 0, hp: 10 });
+  const striker = summon(s, 'player', { id: 'p1', name: 'P1', cost: 0, atk: 3, hp: 10 });
+  summon(s, 'enemy', { id: 'e0', name: 'E0', cost: 0, atk: 0, hp: 10 });
+  const doomed = summon(s, 'enemy', { id: 'e1', name: 'E1', cost: 0, atk: 0, hp: 1 });
+  exchange(s, 'player', makeUnit(getCard('colossus')), doomed);
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 });
+  runRound(s);
+  const attack = s.events.find(event => event.type === 'attack' && event.uid === striker.uid);
+  assert.equal(attack.target, 'hero'); assert.equal(attack.targetUid, undefined); assert.equal(s.enemy.hp, HERO_HP - 3);
+});
+
+test('corpses provide no aura and are invalid opposite battlecry targets', () => {
+  const s = empty(), ally = summon(s, 'player', getCard('sellsword')), overlord = summon(s, 'player', getCard('overlord'));
+  assert.equal(effectiveStats(s, 'player', ally).atk, 3);
+  exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), overlord);
+  assert.equal(overlord.dead, true); assert.equal(effectiveStats(s, 'player', ally).atk, 2);
+  summon(s, 'enemy', getCard('sellsword')); const hurler = summon(s, 'enemy', getCard('hex_hurler')); s.events = []; triggerBattlecry(s, 'enemy', hurler);
+  assert.equal(s.events[0].targetUid, undefined); assert.equal(s.events.some(event => event.type === 'damage'), false);
+});
+
+test('cleanup emits one batch shift for an affected side', () => {
+  const s = empty(), first = summon(s, 'player', getCard('dagger_imp')), second = summon(s, 'player', getCard('dagger_imp'));
+  exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), first); exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), second);
+  runRound(s);
+  const shifts = s.events.filter(event => event.type === 'shift' && event.side === 'player');
+  assert.equal(shifts.length, 1); assert.deepEqual(shifts[0].removedUids, [first.uid, second.uid]); assert.equal(shifts[0].phase, 'cleanup');
+});
+
+test('deathrattle fires immediately at lethal while its corpse stays in lane', () => {
+  const s = empty(), wisp = summon(s, 'player', getCard('brood_wisp')), killer = summon(s, 'enemy', getCard('sellsword'));
+  s.events = []; exchange(s, 'enemy', killer, wisp);
+  const deathAt = s.events.findIndex(event => event.type === 'death' && event.uid === wisp.uid);
+  const summonAt = s.events.findIndex((event, index) => index > deathAt && event.type === 'summon' && event.unit === '1/1 Token');
+  assert.ok(deathAt >= 0 && summonAt > deathAt); assert.ok(s.player.board.includes(wisp)); assert.equal(wisp.dead, true);
+});
+
+test('stalemate valve ignores corpses when comparing round progress', () => {
+  const s = empty(), corpse = summon(s, 'player', getCard('dagger_imp'));
+  exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), corpse); s.events = [];
+  runRound(s);
+  assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.board.length, 0); assert.ok(s.events.some(event => event.type === 'stalemate'));
+});
+
+test('two corpses compact once at cleanup and preserve live left-to-right order', () => {
+  const s = empty(), deadA = summon(s, 'player', getCard('dagger_imp')), liveA = summon(s, 'player', getCard('sellsword'));
+  const deadB = summon(s, 'player', getCard('dagger_imp')), liveB = summon(s, 'player', getCard('road_ogre'));
+  exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), deadA); exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), deadB);
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  assert.deepEqual(s.player.board.map(unit => unit.uid), [liveA.uid, liveB.uid]);
+  assert.equal(s.events.filter(event => event.type === 'shift' && event.side === 'player').length, 1);
+});
+
 test('round events carry post-event view snapshots for deploys and deaths', () => {
   const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [getCard('sellsword')] });
   runRound(s);
@@ -252,7 +306,10 @@ test('round events carry post-event view snapshots for deploys and deaths', () =
   const deploy = s.events.find(event => event.type === 'deploy');
   assert.ok(deploy.state[deploy.side].board.some(unit => unit.uid === deploy.uid));
   const death = s.events.find(event => event.type === 'death');
-  assert.ok(death && !death.state[death.side].board.some(unit => unit.uid === death.uid));
+  const corpse = death?.state[death.side].board.find(unit => unit.uid === death.uid);
+  assert.ok(corpse?.dead);
+  const shift = s.events.find(event => event.type === 'shift' && event.side === death.side && event.removedUids.includes(death.uid));
+  assert.ok(shift && !shift.state[death.side].board.some(unit => unit.uid === death.uid));
   assert.deepEqual(Object.keys(death.state).sort(), ['enemy', 'phase', 'player', 'round']);
   assert.deepEqual(Object.keys(death.state.player).sort(), ['board', 'charger', 'hp']);
   assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'charger', 'deck', 'hp']);

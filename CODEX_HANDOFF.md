@@ -1,54 +1,43 @@
-# Deck Auto Battler handoff
+# CODEX_HANDOFF
 
-## Latest update — preseeded public enemy queue, restored trickle
+## Project Goal
 
-- Phase: maintenance / owner clarification. No commit made.
-- Outcome: regular enemies are back in their decks and reveal/charge/deploy one at a time; fights 2/3 retain only the 1/5 boss in column 1. Each fight has a fixed public draw script, shown in NEXT, charger inspection, an ordered queue panel, draft preview, and fight-opening preview. Scout narrates an already-known-information fizzle.
-- Owners changed: `src/engine.js`, `src/ui.js`, `styles.css`, `test/engine.test.mjs`, `tools/invariants.html`, `docs/SPEC.md`, `docs/RULINGS.md`, `docs/UI_ARCHITECTURE.md`, `docs/FIGHT_UI_DESIGN.md`; audit automation/evidence: `tools/preseed_audit.py`, `refs/ui-audit/preseed/`.
-- Verification: engine 32/32, event snapshots PASS, UI harness wiring PASS, installed-Chrome invariant harness PASS including queue/state consistency, and desktop/mobile screenshots captured. Balance n=200: fight 1 100%, fight 2 7%, fight 3 30%; fight 1 is above the expected mid-90s while fights 2/3 match the requested bands.
-- Limits: browser evidence is installed headless Chrome at 1920×1080 and 390×844, not a physical-device or screen-reader certification. `DEBUG_HANDOFF.md` remains unnecessary because no defect survived repeated diagnosis.
+Defer dead-unit removal and left compaction until the end of the full combat round while keeping death effects immediate.
 
-## Latest update — fully pre-boarded enemy line and public preview
+## Current Phase
 
-- Phase: maintenance / owner deployment test. No commit made.
-- Outcome: every enemy shell unit begins on the battlefield; fights 2/3 keep the boss in column 1 followed by seven shell units. Enemy deck and charger remain empty. The exact randomized next line is prepared once, shown on both draft picks, and reused by the next fight; the same preview component appears at round-0 opening.
-- Owners changed: `src/engine.js`, `src/ui.js`, `styles.css`, `test/engine.test.mjs`, `tools/invariants.html`, `docs/SPEC.md`, `docs/RULINGS.md`; browser audit: `tools/preboard_audit.py`, evidence: `refs/ui-audit/preboard/`.
-- Verification: engine 31/31, event snapshots PASS, UI harness wiring PASS, installed-Chrome invariant harness PASS (0 forbidden DOM writes/src mutations, max one ghost, Scout 1508ms, deaths 423/433ms), requested desktop/mobile captures present.
-- Raw balance: all fights at n=200 and n=500 produced 0% player wins, `roundsMed=3`; no stats were changed.
-- Limits: installed headless Chrome at 1920×1080 and 390×844, not a physical-device or screen-reader certification. `DEBUG_HANDOFF.md` remains unnecessary because no gameplay defect survived repeated diagnosis.
+- Phase: maintenance
+- Status: implemented and verified; no commit made
 
-## Latest update — five counter units
+## Latest Completed Work
 
-- Phase: maintenance / counter-package content. No commit made.
-- Outcome: pool is 36 cards with Headsman, Firebelcher, Shield Saint, Bristleback, and Quillback Elder; numeric kill growth, enemy-wide deploy damage, surviving-damage growth, and cross-board entry pings use ordered engine events and the existing sequential UI player.
-- Owners changed: `src/engine.js`, `src/ui.js`, `test/engine.test.mjs`, `docs/SPEC.md`, `docs/RULINGS.md`; audit automation/evidence: `tools/counters_audit.py`, `refs/ui-audit/counters/`.
-- Verification: engine tests, event snapshots, UI harness, balance simulations, HTTP portrait checks, real Chrome desktop/mobile descriptors, and combat feedback were run; see the completing Codex response for exact outputs.
-- Limits: no drafted full-run simulator exists; raw-starter balance is unseeded. Browser evidence is headless Chrome, not physical-device or screen-reader certification.
-- `DEBUG_HANDOFF.md` remains unnecessary because no gameplay defect survived repeated diagnosis.
+- Lethal units are marked `dead`, emit `death`, increment `state.deaths`, and fire Deathrattles immediately while remaining in their physical lane.
+- All engine live-unit reads exclude corpses. An opposite corpse is an empty combat lane and attacks/battlecries resolve accordingly.
+- Cleanup removes corpses in one batch and emits one `shift { side, removedUids }` per affected side; stalemate counts live units.
+- UI death animation settles into a visible corpse. Cleanup removes corpse nodes and slides surviving nodes left once.
+- Binding docs, engine tests, event snapshots, invariant harness, browser audit, and desktop/mobile evidence were updated.
 
-## Latest update — touching rows and sequential side turns
+## Important Modified Files
 
-- Phase: maintenance / owner combat-order test. No commit made.
-- Outcome: rounds now emit `turnStart` and resolve the complete player sweep before the complete enemy sweep; live board shifts and existing mutual `exchange()` behavior are preserved. The battle card rows share a zero-gap boundary, with enemy info above and player info below, while the log overlays that boundary. Header/log/lane accent identify the active side.
-- Owners changed: `src/engine.js`, `src/ui.js`, `styles.css`, `test/engine.test.mjs`, combat/UI binding docs; audit evidence is in `refs/ui-audit/sequential-turns/` and `tools/sequential_turns_audit.py`.
-- Verification: engine 20/20; event snapshots PASS; UI harness wiring PASS; real Chrome invariants PASS (0 forbidden DOM writes/src mutations, max one ghost, Scout 1513ms, deaths 418–432ms); actual card-row boundary gap 0px and log track 0px at desktop/mobile; 1258×566 scroll layout captured.
-- Balance (200 simulations each): fight 1 66%, fight 2 0%, fight 3 0%. No tuning was made. Deterministic trace: `turnStart:player -> attack:player:P1 -> attack:player:P2 -> turnStart:enemy -> attack:enemy:E1 -> attack:enemy:E2`.
-- Limits: headless installed Chrome was used at 1920, 1258×566, and 390×844; no physical-device or screen-reader certification. Title/draft selectors were untouched. `DEBUG_HANDOFF.md` remains unnecessary because no repeated diagnosis loop occurred.
+- `src/engine.js`, `src/ui.js`, `styles.css`, `animations.css`
+- `test/engine.test.mjs`, `tools/event_snapshot_check.mjs`, `tools/invariants.html`, `tools/deferred_shift_audit.py`
+- `docs/SPEC.md`, `docs/RULINGS.md`, `docs/UI_ARCHITECTURE.md`, `docs/FIGHT_UI_DESIGN.md`
+- `refs/ui-audit/deferred-shift/`
 
-- Phase: maintenance / battlecry observability. No commit made.
-- Outcome: every implemented battlecry kind emits an ordered `battlecry` event before its effects, including target/change/fizzle details. Draft choices show plain deploy text; public board inspection, the battlecry icon tooltip, and own NEXT plaque reuse the same descriptors. Combat plays a 300ms source/target pulse, caption, and War Ledger line with a reduced-motion branch.
-- Owners: `src/engine.js`, `src/ui.js`, `styles.css`, `animations.css`, `test/engine.test.mjs`; title screen and gameplay effects remain unchanged.
-- Verification: engine 17/17; event snapshots PASS; UI harness wiring PASS; real Chrome harness PASS at `http://localhost:8321/tools/invariants.html`; targeted battlecry precedes damage (indices 0/1); targeted, fizzle, inspect, desktop/mobile draft, and reduced motion checks PASS with no browser errors.
-- Balance: the required unseeded `node tools/balance_sim.mjs 1 200` produced 66% on the final run (earlier run 69%), below the requested approximate 70–80% band. No tuning was made because this pass is observability-only.
-- Evidence: `refs/ui-audit/battlecry/` and `tools/battlecry_audit.py`. The audit requires Python Playwright, installed Chrome, and `python -m http.server 8321`.
-- Existing blocker: Meddler changes deck/charger without a deck-mutation snapshot contract, so the own NEXT mirror can become unknown after a bounce; battlecry narration itself is now explicit and does not reveal enemy hidden identity.
-- Acceptance limits: no physical-device or screen-reader certification. The brief says 16 battlecry kinds, while the current card pool implements 15 distinct kinds; all 15 are described and emitted.
-- DEBUG_HANDOFF.md not created: the implementation passed focused tests without a repeated unresolved diagnosis loop.
+## Verification
 
-## Latest update — speed, round banner, hover details
+- `node test/engine.test.mjs`: 38/38 passed
+- `node tools/event_snapshot_check.mjs`: PASS
+- `node tools/ui_invariants_check.mjs`: PASS (static wiring)
+- Installed headless Chrome invariant harness: PASS, including cleanup-delayed removals
+- Installed headless Chrome desktop/mobile audit: PASS; four screenshots captured
+- Balance n=300: fight 1 99%, fight 2 4%, fight 3 18%
 
-- Phase: maintenance / fight presentation. No commit made.
-- Outcome: persistent 1x/2x/3x/5x/10x playback control (2x preserves prior timing), sequential round banners, and one cursor-following tooltip for own/public cards and draft offers. Enemy hidden zones remain unbound, including during Scout.
-- Owners changed: `src/ui.js`, `styles.css`; verification/evidence: `tools/speed_hover_audit.py`, `refs/ui-audit/speed-hover/`. Engine rules and title screen are unchanged.
-- Verification: engine 17/17; event snapshots PASS; UI harness wiring PASS; real Chrome invariants PASS (0 forbidden DOM writes/src mutations, max one ghost, Scout 1508ms, deaths 421–426ms at 2x). Scripted 10-round playback at 10x measured 2605ms.
-- Limits: headless Chrome at 1920x1080 and 390x844 was tested; no physical-device or screen-reader certification. The Meddler snapshot-contract blocker above remains.
+## Known Risks / Untested Areas
+
+- Browser evidence uses installed headless Chrome, not a physical mobile device or screen reader.
+- The cleanup contract emits one shift event per affected side; the first cleanup snapshot already contains the fully compacted state, so UI removal/animation is one visual batch.
+
+## Next Safest Task
+
+Owner review of corpse readability and confirmation that “turn” means the full round rather than each side sweep.

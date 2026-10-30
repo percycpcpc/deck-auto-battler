@@ -630,6 +630,7 @@ button {
 #battle-screen .card .card__name { border-color:var(--card-trim,#b08d57); }
 #battle-screen .cost-dot__count::before { content:''; position:absolute; inset:-5px; padding:2px; border-radius:10px; background:conic-gradient(var(--bone) calc(var(--charge-progress,1) * 1turn),transparent 0); mask:linear-gradient(#14101c 0 0) content-box,linear-gradient(#14101c 0 0); mask-composite:exclude; pointer-events:none; }
 #battle-screen .fx-death::after { content:''; position:absolute; inset:0; background:linear-gradient(125deg,transparent 49.5%,#ede6d659 50%,transparent 50.5%); pointer-events:none; }
+#battle-screen .card.is-corpse { filter:grayscale(1); opacity:.38; translate:0 20px; }
 #battle-screen[data-card-tier=mobile] .card__atk,#battle-screen[data-card-tier=mobile] .card__hp { bottom:0; }
 @media(max-width:760px) { #battle-screen .deck-count { right:-8px; bottom:-8px; } }
 @media(max-width:760px) { #battle-screen .charger-slot { align-self:flex-start; margin-top:8px; } }
