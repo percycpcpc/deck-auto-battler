@@ -1,5 +1,13 @@
 # Deck Auto Battler handoff
 
+## Latest update — preseeded public enemy queue, restored trickle
+
+- Phase: maintenance / owner clarification. No commit made.
+- Outcome: regular enemies are back in their decks and reveal/charge/deploy one at a time; fights 2/3 retain only the 1/5 boss in column 1. Each fight has a fixed public draw script, shown in NEXT, charger inspection, an ordered queue panel, draft preview, and fight-opening preview. Scout narrates an already-known-information fizzle.
+- Owners changed: `src/engine.js`, `src/ui.js`, `styles.css`, `test/engine.test.mjs`, `tools/invariants.html`, `docs/SPEC.md`, `docs/RULINGS.md`, `docs/UI_ARCHITECTURE.md`, `docs/FIGHT_UI_DESIGN.md`; audit automation/evidence: `tools/preseed_audit.py`, `refs/ui-audit/preseed/`.
+- Verification: engine 32/32, event snapshots PASS, UI harness wiring PASS, installed-Chrome invariant harness PASS including queue/state consistency, and desktop/mobile screenshots captured. Balance n=200: fight 1 100%, fight 2 7%, fight 3 30%; fight 1 is above the expected mid-90s while fights 2/3 match the requested bands.
+- Limits: browser evidence is installed headless Chrome at 1920×1080 and 390×844, not a physical-device or screen-reader certification. `DEBUG_HANDOFF.md` remains unnecessary because no defect survived repeated diagnosis.
+
 ## Latest update — fully pre-boarded enemy line and public preview
 
 - Phase: maintenance / owner deployment test. No commit made.

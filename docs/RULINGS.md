@@ -11,7 +11,7 @@ Every ruling below is BINDING for the v0 implementation. Where the spec was ambi
 
 A card revealed on round N with cost 1 deploys on round N+1 and acts that same round.
 
-**Enemy deployment owner test:** the entire enemy line is pre-boarded before round 1. In fights 2 and 3 the boss occupies column 1, followed by every unit from `enemyDeckFor`; fight 1 has all eight regular units. The enemy deck and charger are empty throughout, so charging/reveal economy is player-only. Charger-targeting effects fizzle normally. The full enemy composition is public on the preceding draft and fight opening.
+**Enemy deployment owner clarification:** “the order of the enemy is preseeded, not starting all on board at round1.” Regular enemy units remain in the deck and reveal, charge, and deploy through the normal one-per-round economy. Only Hivematron/Warherald begin pre-boarded in column 1 in fights 2/3. Each fight uses the fixed order documented in `SPEC.md`; the enemy deck-top, charger identity, remaining count, and full current-fight queue are public. Scout therefore narrates an “already scouted” fizzle rather than revealing hidden information.
 
 ## Damage
 - **Mutual exchange within sequential sweeps**: when a unit attacks a living defender, attacker and defender both deal their ATK to each other. Every attack is an exchange; Windfury = two exchanges. This supersedes the old within-round interleaving/simultaneous-action interpretation for the owner test, but does not change `exchange`: a defender that survives until its own side's sweep may later initiate its own exchange. (If playtests show fights ending too fast, the fallback is attacker-only damage — config flag.)
@@ -50,7 +50,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
 ## Numeric decisions
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
 - **Stalemate safety valve** (new rule): if both decks are empty and nothing is charging, and a full round passes with no change in total unit count on either side, the fight ends immediately — higher hero HP wins; tie goes to the player.
-- **Enemy decks**: Fight 1 = 6× 2/1 (cost 1) + 2× 2/3 (cost 2), shuffled. Fights 2–3 = same shell minus one card, plus the pre-boarded boss. (Owner-approved balance fix 2026-10-29: the original 5× 2/2 + 3× 3/4 shell out-statted the starter deck 19/22 vs 12/14 and went 0/500 in simulation; the weaker shell wins ~65%.)
+- **Enemy decks**: Fight 1 = 6× 2/1 (cost 1) + 2× 2/3 (cost 2); fights 2–3 use five 2/1s + two 2/3s plus the pre-boarded boss. These shells use the fixed, unshuffled scripts in `SPEC.md`. (Owner-approved balance fix 2026-10-29: the original 5× 2/2 + 3× 3/4 shell out-statted the starter deck 19/22 vs 12/14 and went 0/500 in simulation.)
 
 ## Information
 - Owner sees their own charging card's identity only (not the card beneath it). Opponent sees cost dot + counter only.

@@ -10,8 +10,8 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 
 ## Combat rules
 - **Battlefield**: up to 20 slots per side (viewport shows 5, scrolls horizontally). Columns are aligned: each unit faces the unit directly opposite.
-- **Reveal phase**: the player reveals the top card of their deck into a charging slot. The card enters play when its cost (in turns) ticks down: cost 1 = next round, cost 2 = two rounds, cost 3 = three rounds. On entering, it lands in the **leftmost empty slot**. **Owner test:** charging/reveal economy is player-only; the entire enemy line starts pre-boarded.
-- **Information**: the owner sees their own top card's identity. The opponent sees only a cost dot + turn counter on the charging card — identity hidden. Owner also sees opponent's top-card cost only.
+- **Reveal phase**: both sides reveal the top card of their deck into a charging slot. The card enters play when its cost (in turns) ticks down: cost 1 = next round, cost 2 = two rounds, cost 3 = three rounds. On entering, it lands in the **leftmost empty slot**. Bosses are the only pre-boarded enemy units.
+- **Information**: the player sees their own top card's identity; their deeper draw order remains private. The enemy's scripted queue is public by owner ruling: its deck-top, charger identity, remaining count, and complete ordered queue may be inspected. No future-fight or RNG information is exposed during a fight.
 - **Action phase (owner test — under evaluation)**: every surviving player unit acts left-to-right, then every surviving enemy unit acts left-to-right. Board order is evaluated live at each unit's action; deaths shift the board immediately, so later units target using the shifted layout. An enemy killed during the player sweep does not act. Each unit attacks the unit directly opposite; if no opposite unit, it attacks the enemy hero. Each attack remains a **mutual exchange** (attacker and a living defender both deal their ATK to each other). Overkill damage is lost. The prior interleaved order is preserved in git history at commit `f5b2fdd`.
 - **Death**: a unit at 0 HP dies; all units shift left to fill the gap. A unit that dies before its action in the same phase does NOT act (action list resolves live).
 - **Deck-out**: when a deck is empty, nothing happens — no more cards revealed, no reshuffle, no fatigue. Deck never refills in v0.
@@ -82,7 +82,11 @@ Owner tuning: 1-cost 2/4 to soften early game.
 - **Fight 1 — Vanilla midrange**: deck of 2/2s and 3/4s. Teaches reveal/charging; beatable by starter deck.
 - **Fight 2 — Token boss**: starts with a boss unit on board: 1/5 (owner test: boss HP 10→5), "create a 1/1 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
 - **Fight 3 — Aura boss**: starts with a boss unit on board: 1/5 (owner test: boss HP 10→5), "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
-- **Owner test:** the entire enemy unit set starts pre-boarded left-to-right; bosses remain column 1 and the regular line follows in columns 2+. The enemy deck and charger stay empty for the fight. Enemy composition is public on the preceding draft and fight opening.
+- Enemy regular units use the same reveal, charge, and leftmost-deploy rules as the player. Bosses remain the pre-board exception in column 1. Enemy draw order is fixed and public; `enemyDeckFor(fight)` never shuffles it:
+  - Fight 1: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
+  - Fight 2: Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt.
+  - Fight 3: Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt.
+- Scout remains in the pool. Its Battlecry is a narrated fizzle: **“Already scouted — enemy order is known.”**
 
 ## Balance flags (watch in playtests)
 - Hexblade / Doomcaller are the strongest control cards (deliberate — the tall/charger answers).

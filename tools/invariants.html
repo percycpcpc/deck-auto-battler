@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="../">
   <title>INVARIANTS: RUNNING</title>
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="../animations.css">
@@ -21,12 +22,7 @@
       lines.push(line); console.log(line); results.textContent = lines.join('\n');
     };
     const scout = engine.getCard('scout');
-    const grunt = { id:'enemy_grunt', name:'Ash Grunt', cost:2, atk:2, hp:1 };
-    const fight = engine.createFight({ playerDeck:[scout, engine.getCard('sellsword'), engine.getCard('dagger_imp')], enemyDeck:[], rng:()=>.5 });
-    // Synthetic hidden-zone fixture: production enemies are fully pre-boarded,
-    // but the persistent-DOM harness still guards the charger's privacy contract.
-    fight.enemy.charger = { card:grunt, counter:3, justRevealed:true };
-    fight.enemy.board.push(engine.makeUnit(grunt, 'enemy', { uid:'harness-preboarded-grunt' }));
+    const fight = engine.createFight({ playerDeck:[scout, engine.getCard('sellsword'), engine.getCard('dagger_imp')], rng:()=>.5 });
     ui.mountBattleScreen(fight, document.querySelector('#app'));
     const battle = document.querySelector('#battle-screen');
 
@@ -65,9 +61,13 @@
     report(3, forbiddenWrites === 0, `${forbiddenWrites} innerHTML/insertAdjacentHTML calls under battle screen`);
     const maxGhosts = Math.max(0, ...ghostCounts), flightPE = getComputedStyle(document.querySelector('.flight-layer')).pointerEvents;
     report(6, maxGhosts === 1 && flightPE === 'none' && !document.querySelector('.card-ghost'), `max ghosts ${maxGhosts}, pointer-events ${flightPE}, final ghosts 0`);
-    const scoutDuration = scoutWindows[0]?.end - scoutWindows[0]?.start;
-    const leakedName = [...document.querySelectorAll('.side--enemy .deck-top *, .side--enemy .charger-slot *')].some(node => node.textContent.includes('Ash Grunt') || node.getAttribute?.('src')?.includes('sellsword'));
-    report(8, !leakedName && scoutDuration >= 1400 && scoutDuration <= 1600, `enemy identity absent after window; scout duration ${Math.round(scoutDuration || 0)}ms`);
+    const next = fight.enemy.deck[0], shownNext = document.querySelector('.side--enemy .deck-top .card__name')?.textContent;
+    const shownCount = document.querySelector('.side--enemy .deck-count')?.textContent;
+    const shownQueue = [...document.querySelectorAll('.enemy-queue-list li:not([hidden])')].map(node => node.textContent.split(' · ')[0]);
+    const expectedQueue = fight.enemy.deck.map(card => card.name), chargerName = fight.enemy.charger?.card.name;
+    const shownCharger = document.querySelector('.side--enemy .charger-card .card__name')?.textContent;
+    const queueConsistent = shownNext === next?.name && shownCount === `${fight.enemy.deck.length} left` && JSON.stringify(shownQueue) === JSON.stringify(expectedQueue) && shownCharger === chargerName;
+    report(8, queueConsistent, `NEXT ${shownNext}; ${shownCount}; charger ${shownCharger}; ordered queue [${shownQueue.join(', ')}]`);
     const deathDurations = [...deathWindows.values()].filter(x => x.end).map(x => x.end - x.start);
     report(10, deathDurations.length > 0 && deathDurations.every(ms => ms >= 380 && ms <= 500), `death durations [${deathDurations.map(Math.round).join(', ')}]ms; survivors retained by uid registry`);
     const passed = lines.every(line => line.includes(': PASS'));

@@ -400,6 +400,25 @@ button {
 .enemy-preview__units { display:flex; flex-wrap:wrap; gap:6px 18px; margin:0; padding:0; list-style:none; font:700 15px/20px system-ui,sans-serif; }
 #battle-screen .enemy-preview--opening { position:fixed; left:50%; top:50%; z-index:29; translate:-50% -50%; transition:opacity 250ms ease,translate 250ms ease; }
 #battle-screen .enemy-preview--opening.is-dismissed { opacity:0; translate:-50% -44%; pointer-events:none; }
+#battle-screen .enemy-queue-panel {
+  position:fixed;
+  z-index:28;
+  top:86px;
+  right:clamp(12px,4vw,72px);
+  width:min(360px,calc(100vw - 24px));
+  max-height:calc(100vh - 110px);
+  overflow:auto;
+  padding:14px 18px;
+  border:2px solid #c99b4a;
+  border-radius:8px;
+  background:#e8dcc3;
+  box-shadow:0 8px 28px #14101ca8;
+  color:#2a2118;
+}
+#battle-screen .enemy-queue-panel h2 { margin:0 0 8px; color:#6b3e16; font:800 18px/22px Georgia,serif; letter-spacing:.05em; }
+#battle-screen .enemy-queue-list { margin:0; padding-left:28px; font:700 15px/24px system-ui,sans-serif; }
+#battle-screen .deck-stack--enemy { cursor:pointer; }
+#battle-screen .deck-stack--enemy:focus-visible { outline:2px solid #e8b84b; outline-offset:4px; }
 .draft-card .draft-effect {
   min-height:3.9em;
   display:flex;
@@ -452,6 +471,7 @@ button {
   .enemy-preview__boss { padding:8px 0 0; border-left:0; border-top:1px solid #c99b4a; }
   .enemy-preview__units { font-size:14px; }
   #battle-screen .enemy-preview--opening { width:calc(100% - 24px); }
+  #battle-screen .enemy-queue-panel { top:64px; right:12px; max-height:calc(100vh - 76px); }
 }
 #log { max-width:calc(100% - 24px); text-align:center; z-index:5; }
 @media (max-width:760px) {
@@ -511,7 +531,7 @@ button {
 #battle-screen .deck-stack.is-empty .deck-stack__layer { display:none; }
 #battle-screen .deck-stack.is-empty .deck-stack__layer--1 { display:block; translate:0; filter:grayscale(1); opacity:.4; }
 #battle-screen .deck-top { position:absolute; inset:0; }
-#battle-screen .deck-count { position:absolute; z-index:6; right:-8px; bottom:-8px; width:32px; height:32px; display:grid; place-items:center; background:var(--bg); border:2px solid var(--gold); border-radius:50%; font:700 18px/24px system-ui; }
+#battle-screen .deck-count { position:absolute; z-index:6; right:-8px; bottom:-8px; min-width:32px; height:32px; padding:0 7px; display:grid; place-items:center; white-space:nowrap; background:var(--bg); border:2px solid var(--gold); border-radius:18px; font:700 18px/24px system-ui; }
 #battle-screen .deck-label,#battle-screen .charger-label { position:absolute; bottom:0; left:0; right:0; text-align:center; background:var(--panel); font:600 14px/20px system-ui; z-index:5; }
 #battle-screen .deck-plaque { width:176px; min-height:64px; padding:8px; background:var(--panel); border:1px solid #9a8fa873; border-radius:8px; }
 #battle-screen .charger-slot { border:2px dashed var(--dim); background:url(assets/slot_charger.png) center/100% 100%; }

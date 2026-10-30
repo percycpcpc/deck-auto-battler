@@ -73,15 +73,14 @@ export function effectiveStats(state, side, unit) {
 }
 
 export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random } = {}) {
-  const enemyLine = enemyDeck || enemyDeckFor(fight, rng);
+  const enemyLine = enemyDeck || enemyDeckFor(fight);
   const state = {
     fight, round: 0, phase: 'ready', rng, deaths: 0, events: [], over: false, winner: null,
     player: { hp: playerHp, deck: [...playerDeck], charger: null, board: [], scouted: false },
-    enemy: { hp: HERO_HP, deck: [], charger: null, board: [], scouted: false },
+    enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false },
   };
   if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 5), 'enemy', { boss: 'hive' }));
   if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 5), 'enemy', { boss: 'herald' }));
-  for (const def of enemyLine) state.enemy.board.push(makeUnit(def, 'enemy'));
   return state;
 }
 
@@ -91,12 +90,15 @@ export function shuffle(items, rng = Math.random) {
   return a;
 }
 
-export function enemyDeckFor(fight, rng = Math.random) {
-  let shell = [...Array(6)].map(() => card('enemy_grunt', 'Ash Grunt', 1, 2, 1))
-    .concat([...Array(2)].map(() => card('enemy_brute', 'Camp Brute', 2, 2, 3)));
-  if (fight > 1) shell.splice(Math.floor(rng() * shell.length), 1);
-  return shuffle(shell, rng);
-}
+const ENEMY_SCRIPTS = Object.freeze({
+  1: ['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt'],
+  2: ['grunt', 'brute', 'grunt', 'grunt', 'brute', 'grunt', 'grunt'],
+  3: ['brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt', 'grunt'],
+});
+const enemyCard = kind => kind === 'brute'
+  ? card('enemy_brute', 'Camp Brute', 2, 2, 3)
+  : card('enemy_grunt', 'Ash Grunt', 1, 2, 1);
+export function enemyDeckFor(fight) { return (ENEMY_SCRIPTS[fight] || ENEMY_SCRIPTS[1]).map(enemyCard); }
 
 const other = side => side === 'player' ? 'enemy' : 'player';
 export function snapshotView(state) {
@@ -104,7 +106,7 @@ export function snapshotView(state) {
     round: state.round,
     phase: state.phase,
     player: { hp: state.player.hp, board: state.player.board, charger: state.player.charger },
-    enemy: { hp: state.enemy.hp, board: state.enemy.board, charger: state.enemy.charger },
+    enemy: { hp: state.enemy.hp, deck: state.enemy.deck, board: state.enemy.board, charger: state.enemy.charger },
   });
 }
 
@@ -202,8 +204,7 @@ export function triggerBattlecry(state, side, unit) {
       for (const i of neighbors) { own.board[i].baseAtk++; own.board[i].baseMaxHp++; } break;
     }
     case 'scout':
-      emit(state, 'battlecry', { ...event, targetSide: foeSide, scouted: !!foe.charger });
-      if (foe.charger) foe.scouted = true; break;
+      emit(state, 'battlecry', { ...event, targetSide: foeSide, scouted: false, alreadyKnown: true }); break;
     case 'duelist': {
       const neighbors = [index - 1, index + 1].filter(i => own.board[i]), n = neighbors.length;
       emit(state, 'battlecry', { ...event, adjacent: n, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: n });
@@ -320,7 +321,7 @@ export function draftOffers(rng = Math.random) { return Array.from({ length: 3 }
 
 export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, deck: starterDeck(), rng, enemyLine: null, won: false, lost: false }; }
 export function startRunFight(run) {
-  const enemyLine = run.enemyLine || enemyDeckFor(run.fight, run.rng);
+  const enemyLine = run.enemyLine || enemyDeckFor(run.fight);
   run.enemyLine = null;
   return createFight({ fight: run.fight, playerHp: run.hp, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyLine, rng: run.rng });
 }
@@ -328,6 +329,6 @@ export function finishRunFight(run, fightState) {
   run.hp = Math.max(0, fightState.player.hp);
   if (fightState.winner !== 'player') run.lost = true;
   else if (run.fight === 3) run.won = true;
-  else { run.fight++; run.enemyLine = enemyDeckFor(run.fight, run.rng); }
+  else { run.fight++; run.enemyLine = enemyDeckFor(run.fight); }
   return run;
 }

@@ -68,7 +68,7 @@ A single `reconcile(snapshot, side)` function walks the snapshot and applies **o
 | hero HP | `.hero-hpbar__fill` | `style.width = pct%` if changed (CSS transition on width handles the tween) |
 | charger counter | `.charger-slot .cost-dot__count` | `textContent` if changed |
 | charger presence/identity-class | `.charger-slot` | see §3 (create/remove charger card content only on reveal/deploy, not per-tick) |
-| deck-top cost (enemy) / identity (player) | `.deck-top` | rebuild **this node only** when the top card changes (reveal commit), never otherwise |
+| deck-top public identity (both sides) | `.deck-top` | rebuild **this node only** when the top card changes (reveal commit), never otherwise |
 | deck count | `.deck-count` | `textContent` |
 | unit ATK / HP | unit el's `.card__atk` / `.card__hp` | `textContent` if changed; HP fill width if the card frame has one |
 
@@ -106,7 +106,7 @@ Deaths and shifts in the same event batch: remove dead uids from slot-index book
 
 **Decision: ghost elements in `.flight-layer`, animated with the Web Animations API (`element.animate`).**
 
-Rationale (binding): (a) REVEAL has no persistent source element to FLIP — the deck-top visual and the charger visual are different information states (enemy: back+dot → back+dot+counter; player: face → face+counter), so a single FLIPped element would either leak or lose information mid-flight. (b) Ghosts are immune to the horizontal-scroll problem: they live in a fixed overlay measured in viewport coordinates, so a mid-flight scroll can't stretch or detach them. (c) One uniform technique covers all three journeys plus future moves. (d) `pointer-events: none` on `.flight-layer` guarantees zero interactivity mid-flight without per-element bookkeeping.
+Rationale (binding): (a) REVEAL has no persistent source element to FLIP — the deck-top face and charger face+counter are different lifecycle elements. (b) Ghosts are immune to the horizontal-scroll problem: they live in a fixed overlay measured in viewport coordinates, so a mid-flight scroll can't stretch or detach them. (c) One uniform technique covers all three journeys plus future moves. (d) `pointer-events: none` on `.flight-layer` guarantees zero interactivity mid-flight without per-element bookkeeping.
 
 Ghost lifecycle, identical for every journey:
 
@@ -122,11 +122,11 @@ During flight, ghost gets `.is-flying` → `z-index` top of flight-layer, `scale
 
 ### 2.2 Journey (a) — REVEAL: deck-top → charger
 
-- **Player:** ghost = mini face card (identity visible — the player owns this information). **Enemy:** ghost = card-back with cost dot. Identity must not exist in the enemy ghost's DOM.
+- **Player and enemy:** ghost = mini face card. The player owns their top-card information; the enemy's current-fight scripted queue is public by owner ruling.
 - Destination: that side's `.charger-slot` rect.
 - Duration: **300ms**.
-- Commit: charger slot populates — player: face card + cost dot + turn counter; enemy: card-back + cost dot + turn counter. Counter starts at the snapshot value.
-- Simultaneously, at commit, `.deck-top` is updated to the **next** top card (player: new face; enemy: new back + new cost dot) and `.deck-count` decrements. This is the only moment deck-top content changes.
+- Commit: charger slot populates with a face card + cost dot + turn counter on both sides. Counter starts at the snapshot value.
+- Simultaneously, at commit, `.deck-top` is updated to the **next** face card and `.deck-count` decrements. This is the only moment deck-top content changes.
 - Cost dot / counter location by phase: **deck-top** — enemy shows cost dot (no counter); player face card shows whatever the standard card face shows (no counter). **In flight** — dot only. **On charger** — dot + counter, both sides. Counter never appears on the deck-top.
 
 ### 2.3 Journey (b) — DEPLOY: charger → board slot
@@ -166,23 +166,23 @@ Left → right within each `.side`'s info row: **`hero-panel` → `deck-stack` �
 | Side | Pre-reveal (idle) | During REVEAL flight | Post-commit |
 |---|---|---|---|
 | Player | Face card at reduced size (`.deck-top .card--mini`, ~70% scale of board card): art + name + stats per the standard card frame | deck-top `.is-vacant`; ghost carries the face | next card's face (node rebuilt — the ONLY permitted deck-top rebuild) |
-| Enemy | Card-back + **48px cost dot, top-left**, ring colored by cost tier (§3.3). No identity in DOM. | deck-top `.is-vacant`; ghost = back + dot | next card's back + new dot |
+| Enemy | Public scripted face card at reduced size: art + name + stats. | deck-top `.is-vacant`; ghost carries the face | next scripted card's face |
 
-The enemy's identity must **never** be present in the DOM in any form (no hidden nodes, no data attributes, no alt text). The UI is the enforcement layer: hidden information is rendered absent, not rendered invisible.
+The enemy's **current-fight scripted queue** is public and may be present in the DOM: deck-top identity, charger identity, and every remaining queued card in draw order. This is a scoped exception only. Player deck order, future-fight scripts, and RNG internals remain absent from public DOM.
 
 ### 3.3 Cost dot (placement & palette)
 
 - 48px circle, positioned top-left of the card with the offset defined in `docs/ART_DIRECTION.md` (`.cost-dot`).
 - Ring color by cost tier: classes `.cost-dot--t1 … .cost-dot--tN` mapping to the tier color tokens defined in `docs/ART_DIRECTION.md`. Use the doc's exact hex/token values and tier boundaries; do not invent colors.
-- Appears on: enemy deck-top (always), both chargers (always), flight ghosts for journeys (a) and (b). Never on board units, never on the player's deck-top beyond what the standard face frame already shows.
+- Appears on: both chargers and flight ghosts for journeys (a) and (b). Never on board units or either face-up deck-top beyond what the standard face frame already shows.
 - On chargers, the turn counter is a **separate** element (`.cost-dot__count`, bottom-right per ART_DIRECTION) — not overlaid on the dot.
 
 ### 3.4 Charger slot
 
 - Empty: dashed slot frame (`.charger-slot.is-empty` — dashed border, empty interior; styles from ART_DIRECTION's slot-placeholder treatment).
-- Occupied — player: face card + cost dot + counter. Occupied — enemy: card-back + cost dot + counter; **identity absent from DOM**.
-- **Scout reveal:** on scout Battlecry, the enemy charger temporarily shows identity. Implement as: create a face card node, add `.is-scout-revealed` for **1500ms** (with a 250ms flip-in class), then remove the face node from the DOM entirely. The identity exists in the DOM only inside that window.
-- Content changes (reveal commit / deploy commit / scout window) are the **only** times charger child nodes are created/removed. Tick mutates the counter's `textContent` only.
+- Occupied — both sides: face card + cost dot + remaining-delay counter. Enemy charger inspection/tooltip includes the public card name.
+- **Scout:** identity is already public, so Scout narrates “already scouted — enemy order is known” and performs no temporary DOM reveal.
+- Content changes at reveal and deploy commits are the **only** times charger child nodes are created/removed. Tick mutates the counter's `textContent` only; Scout creates no charger child.
 
 ### 3.5 Empty states
 
@@ -201,7 +201,7 @@ Timings are binding and unchanged from current values. "Op" = MUTATE (in place) 
 | `reveal` | MOVE + CREATE | Ghost deck-top → charger (§2.2). Commit: charger content created; deck-top advances; deck-count −1. | 300ms |
 | `tick` | MUTATE | Charger counter `textContent` −1 (both sides, from snapshot); `.fx-tick` pulse class on the counter, removed after. No other DOM change. | 250ms |
 | `deploy` | MOVE + CREATE | Ghost charger → slot with 10px overshoot (§2.3). Auto-scroll if needed (§2.5). Commit: persistent unit element created (exactly one), charger → empty dashed. | 400ms |
-| `battlecry` (if separate event) | MUTATE + transient | `.fx-cast` glow on the deployed unit. **Scout:** enemy charger face reveal per §3.4 (face node in DOM for 1500ms only). Other battlecries: effect-specific class on affected targets, log line. | 300ms (scout window 1500ms) |
+| `battlecry` (if separate event) | MUTATE + transient | `.fx-cast` glow on the deployed unit. **Scout:** narrated public-information fizzle per §3.4. Other battlecries: effect-specific class on affected targets, log line. | 300ms |
 | `attack` | MUTATE | `.fx-lunge` on attacker: translate toward target (direction computed from rects once, applied as CSS var `--lunge-x/--lunge-y`) and back. No numeric changes here. | 350ms |
 | `damage` | MUTATE + CREATE | Target HP text/fill update at animation start; `.fx-hit` shake on target; floating damage number created in `.flight-layer` at target rect, rises/fades, removed after 600ms. | 200ms |
 | `death` | REMOVE (deferred) | `.fx-death` fade/collapse; element removed from DOM + registry at `animationend` (500ms fallback). Slot bookkeeping freed immediately for shifts. | 400ms |
@@ -220,7 +220,7 @@ Event player: sequential `async` — each event applies its visuals, awaits its 
 
 Organize into five labeled sections, top to bottom:
 
-1. **CONSTANTS** — keep the existing timing map (extend it with the stagger 40ms, scout window 1500ms, floater 600ms); keep asset path helpers untouched; add slot-geometry constants read from CSS custom properties at mount.
+1. **CONSTANTS** — keep the existing timing map (including stagger 40ms and floater 600ms); keep asset path helpers untouched; add slot-geometry constants read from CSS custom properties at mount.
 2. **MOUNT** — `mountBattleScreen(initialState)`: builds §1.1 skeleton once, assigns all `<img>` `src`s (heroes, card-backs, art preloads), renders initial deck-tops, returns/holds element references in a module-level `els` object.
 3. **REGISTRY** — `unitEls` Map + helpers: `createUnitEl(uid, card, side, slotIndex)`, `removeUnitEl(uid)`, `getUnitEl(uid)`.
 4. **RECONCILE** — `reconcile(snapshot)`: the diff writer of §1.3/§3. Pure targeted mutations; no layout reads; no creates except deck-top node swap.
@@ -234,7 +234,7 @@ Organize into five labeled sections, top to bottom:
 1. `innerHTML`/`outerHTML`/`insertAdjacentHTML` anywhere under `#battle-screen` after mount.
 2. Reassigning `src` on any existing `<img>` in the battle screen.
 3. Per-event full re-renders, full-node replacement of any §1.1 region, or recreating a unit element that already exists in the registry.
-4. Enemy card identity anywhere in the DOM outside the scout-reveal window (no hidden nodes, no data attributes).
+4. Enemy information beyond the current fight's scripted queue (no future-fight identities, player deck order, or RNG internals in public DOM).
 5. Per-frame JS animation loops; layout reads interleaved with writes inside an event step.
 6. Smooth-scroll during a flight; any scroll except user input and the §2.5 pre-measure instant scroll.
 
@@ -247,12 +247,12 @@ Organize into five labeled sections, top to bottom:
 5. A `tick` event mutates at most one text node per charger (the counter) and adds/removes no elements other than the transient `.fx-tick` class.
 6. During REVEAL and DEPLOY, exactly one `.card-ghost` exists in `.flight-layer`; it is removed at commit; `pointer-events` computed style of `.flight-layer` is `none`.
 7. Deploy to a slot scrolled out of view: `.board-scroll.scrollLeft` changes **before** the ghost's first animation frame and not during it.
-8. Enemy charger and enemy deck-top: `querySelector` finds no node containing the card's name/art for the entire fight, except during a scout window, where the face node exists for 1500ms ± 100ms and is then absent again.
-9. Enemy deck-top shows a `.cost-dot` with the correct tier class; player deck-top shows a face card; both update only at reveal commits.
+8. Enemy queue information is present and consistent with engine state: the shown enemy NEXT name matches `state.enemy.deck[0]`, the count matches `state.enemy.deck.length`, the charger name matches `state.enemy.charger.card`, and the ordered inspection list matches every remaining deck entry.
+9. Both deck-tops show face cards and update only at reveal commits; enemy count uses the known “N left” treatment.
 10. Death: the dying element remains in the DOM for ≥ 400ms after the death event and is absent after 500ms; a shift in the same round does not recreate any survivor element.
 11. Board with 2 units renders exactly 5 `.slot-ghost` frames; deck-out renders `.deck-stack.is-empty` with no `.deck-top` child.
 12. Full scripted fight completes with zero uncaught errors and zero `animationend` fallback timeouts firing (log a warning if the 500ms death fallback ever triggers).
 
 ---
 
-**End of spec.** Any ambiguity discovered during implementation: prefer the interpretation that (a) touches less DOM, and (b) exposes less hidden information — in that order — and flag the ambiguity in the PR description rather than deciding silently.
+**End of spec.** Any ambiguity discovered during implementation: prefer the interpretation that (a) touches less DOM, and (b) exposes less information outside the scoped public enemy queue — in that order — and flag the ambiguity in the PR description rather than deciding silently.

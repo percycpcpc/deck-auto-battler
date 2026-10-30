@@ -172,6 +172,9 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
 
   s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false }; unit = summon(s, 'player', getCard('doomcaller')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.destroyed, true); assert.equal(s.events[1].type, 'chargerDestroyed');
+
+  s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false }; unit = summon(s, 'player', getCard('scout')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(event.alreadyKnown, true); assert.equal(event.scouted, false); assert.equal(s.enemy.scouted, false);
 });
 
 test('Chrono Imp turns a 1 counter into immediate deployment', () => {
@@ -190,35 +193,42 @@ test('deck-out does nothing and stalemate valve favors player on tie', () => {
   const s = empty(); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.hp, HERO_HP);
 });
 
-test('enemy line starts fully pre-boarded with an empty deck', () => {
-  const first = createFight({ fight: 1, rng: () => 0 });
-  assert.equal(first.enemy.board.length, 8); assert.equal(first.enemy.deck.length, 0); assert.equal(first.enemy.board.some(unit => unit.boss), false);
-  for (const fight of [2, 3]) {
-    const state = createFight({ fight, rng: () => 0 });
-    assert.equal(state.enemy.board.length, 8); assert.ok(state.enemy.board[0].boss); assert.equal(state.enemy.deck.length, 0);
+test('regular enemies remain in the trickle deck and reveal one charger at a time', () => {
+  const first = createFight({ fight: 1 });
+  assert.equal(first.enemy.board.length, 0); assert.equal(first.enemy.deck.length, 8);
+  runRound(first);
+  assert.equal(first.enemy.deck.length, 7); assert.equal(first.enemy.charger.card.id, 'enemy_grunt'); assert.equal(first.enemy.board.length, 0);
+  assert.ok(first.events.some(event => event.type === 'reveal' && event.side === 'enemy'));
+});
+
+test('enemy order is identical across 100 runs of the same fight', () => {
+  const expected = enemyDeckFor(1).map(card => card.id);
+  for (let run = 0; run < 100; run++) assert.deepEqual(enemyDeckFor(1, Math.random).map(card => card.id), expected);
+});
+
+test('player order still varies while enemy NEXT stays deterministic', () => {
+  const orders = new Set();
+  for (let seed = 1; seed <= 100; seed++) {
+    let value = seed; const rng = () => ((value = value * 48271 % 2147483647) - 1) / 2147483646;
+    const fight = startRunFight(createRun(rng)); orders.add(fight.player.deck.map(card => card.id).join(','));
+    assert.equal(fight.enemy.deck[0].id, 'enemy_grunt');
   }
+  assert.ok(orders.size > 1);
 });
 
-test('pre-boarded enemy emits no reveal and keeps its charger empty', () => {
-  const s = createFight({ fight: 1, playerDeck: [getCard('sellsword')], rng: () => 0 });
-  runRound(s);
-  assert.equal(s.events.some(event => event.type === 'reveal' && event.side === 'enemy'), false);
-  assert.equal(s.enemy.charger, null);
-});
-
-test('normal pre-boarded opening does not trip the stalemate valve on round 1', () => {
-  const s = createFight({ fight: 1, rng: () => 0 });
-  runRound(s);
-  assert.equal(s.round, 1); assert.equal(s.over, false); assert.ok(s.player.charger);
-  assert.equal(s.events.some(event => event.type === 'stalemate'), false);
-});
-
-test('next enemy line is previewed once and reused by the following fight', () => {
+test('next enemy script is previewed once and reused by the following fight', () => {
   const run = createRun(() => 0), first = startRunFight(run);
   first.over = true; first.winner = 'player'; finishRunFight(run, first);
   const preview = run.enemyLine.map(card => card.id), second = startRunFight(run);
-  assert.deepEqual(second.enemy.board.slice(1).map(unit => unit.cardId), preview);
+  assert.deepEqual(second.enemy.deck.map(card => card.id), preview);
   assert.equal(run.enemyLine, null); assert.equal(enemyDeckFor(2, () => 0).length, 7);
+});
+
+test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
+  const state = createFight({ fight: 2 });
+  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].boss, 'hive'); assert.equal(state.enemy.board[0].baseMaxHp, 5);
+  assert.equal(state.enemy.deck.length, 7); runRound(state);
+  assert.ok(state.enemy.board.some(unit => unit.boss === 'hive')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 6);
 });
 
 test('fight-2 boss token appears only after attack damage and only with room', () => {
@@ -245,7 +255,7 @@ test('round events carry post-event view snapshots for deploys and deaths', () =
   assert.ok(death && !death.state[death.side].board.some(unit => unit.uid === death.uid));
   assert.deepEqual(Object.keys(death.state).sort(), ['enemy', 'phase', 'player', 'round']);
   assert.deepEqual(Object.keys(death.state.player).sort(), ['board', 'charger', 'hp']);
-  assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'charger', 'hp']);
+  assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'charger', 'deck', 'hp']);
 });
 
 test('full three-fight run victory carries HP and grows deck 8 to 12', () => {

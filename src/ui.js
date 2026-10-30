@@ -1,7 +1,7 @@
 import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, scoutFlip: 250, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
 export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
@@ -14,7 +14,7 @@ const portrait = id => `assets/portrait_${id}.png`;
 const frameFor = cost => `assets/frame_cost${Math.max(1, Math.min(3, cost || 1))}.png`;
 const iconFor = key => ({ shield: 'icon_ds.png', poisonous: 'icon_poison.png', windfury: 'icon_wf.png', battlecry: 'icon_bc.png', deathrattle: 'icon_dr.png', aura: 'icon_aura.png' }[key]);
 const definitionFor = unit => CARD_POOL.find(card => card.id === unit?.cardId) || unit;
-const unitPortrait = unit => unit?.boss ? portrait(`boss_${unit.boss === 'hive' ? 'hivematron' : 'warherald'}`) : unit?.token ? portrait('brood_wisp') : unit?.cardId === 'enemy_grunt' ? portrait('sellsword') : unit?.cardId === 'enemy_brute' ? portrait('road_ogre') : portrait(unit?.portraitId || unit?.cardId || unit?.id);
+const unitPortrait = unit => unit?.boss ? portrait(`boss_${unit.boss === 'hive' ? 'hivematron' : 'warherald'}`) : unit?.token ? portrait('brood_wisp') : (unit?.cardId || unit?.id) === 'enemy_grunt' ? portrait('sellsword') : (unit?.cardId || unit?.id) === 'enemy_brute' ? portrait('road_ogre') : portrait(unit?.portraitId || unit?.cardId || unit?.id);
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
 const img = (className, src, alt = '') => { const node = el('img', className); node.src = src; node.alt = alt; return node; };
 
@@ -32,7 +32,7 @@ const BATTLECRY_TEXT = Object.freeze({
   chrono: 'On deploy: tick your charging card down 1 turn.',
   gate: 'On deploy: shove the opposing unit to the far right.',
   squire: 'On deploy: give adjacent allies +1/+1.',
-  scout: "On deploy: reveal the enemy's charging card.",
+  scout: 'On deploy: already scouted — enemy order is known.',
   duelist: 'On deploy: gain +1/+1 for each adjacent ally.',
   hexblade: 'On deploy: set the opposing unit to 1/1.',
   gravedigger: 'On deploy: summon a 1/1 for every death this combat.',
@@ -107,7 +107,10 @@ function createHeroPanel(side) {
 function createSide(side) {
   const root = el('div', `side side--${side}`), info = el('div', 'side__info');
   const hero = createHeroPanel(side), deck = createDeckStack(side), charger = el('div', 'charger-slot is-empty');
-  const chargerLabel = el('span', 'charger-label', 'EMPTY'), plaque = el('div', 'deck-plaque'); plaque.id = `deck-detail-${side}`; deck.stack.setAttribute('aria-describedby', plaque.id); charger.append(chargerLabel); info.append(hero.panel, deck.stack, charger, plaque); if (side === 'player') { inspect(deck.stack, () => plaque.textContent); bindMouseHover(deck.stack, () => deckQueues.player[0] ? cardTipData(deckQueues.player[0]) : null); bindMouseHover(charger, () => lastSnapshot?.player?.charger ? cardTipData(lastSnapshot.player.charger.card) : null); } deck.stack.setAttribute('aria-label', side === 'player' ? 'Inspect your next card' : 'Enemy next card hidden');
+  const chargerLabel = el('span', 'charger-label', 'EMPTY'), plaque = el('div', 'deck-plaque'); plaque.id = `deck-detail-${side}`; deck.stack.setAttribute('aria-describedby', plaque.id); charger.append(chargerLabel); info.append(hero.panel, deck.stack, charger, plaque);
+  if (side === 'player') { inspect(deck.stack, () => plaque.textContent); bindMouseHover(deck.stack, () => deckQueues.player[0] ? cardTipData(deckQueues.player[0]) : null); bindMouseHover(charger, () => lastSnapshot?.player?.charger ? cardTipData(lastSnapshot.player.charger.card) : null); }
+  else { bindMouseHover(deck.stack, () => deckQueues.enemy[0] ? cardTipData(deckQueues.enemy[0]) : null); bindMouseHover(charger, () => lastSnapshot?.enemy?.charger ? cardTipData(lastSnapshot.enemy.charger.card) : null); }
+  deck.stack.setAttribute('aria-label', side === 'player' ? 'Inspect your next card' : 'Inspect the public enemy draw order');
   const scroll = el('div', 'board-scroll'), lane = el('div', 'board-lane'), ghosts = el('div', 'slot-ghosts');
   for (let n = 0; n < 5; n++) ghosts.append(el('div', 'slot-ghost'));
   const empty = el('span', 'board-empty', 'NO UNITS IN LINE');
@@ -126,11 +129,11 @@ function replaceDeckTop(side, card) {
   // A reveal can prove our queue stale, but snapshots cannot supply the new deck.
   // Never fabricate the next face/count from that stale mirror (Meddler contract gap).
   if (!deckKnown[side]) { old?.remove(); refs.deck.top = null; setText(refs.deck.count, '?'); setText(refs.plaque, 'NEXT CARD HIDDEN'); if (side === 'player') setText(els.headerCount, 'YOUR DECK ?'); return; }
-  setText(refs.plaque, card ? side === 'player' ? `${card.name} · ATK ${card.atk} · HP ${card.hp}${card.battlecry ? ` · ${battlecryText(card)}` : ''}` : 'NEXT CARD HIDDEN' : 'DECK EMPTY · No more arrivals');
-  const count = String(deckQueues[side].length); setText(refs.deck.count, count); if (side === 'player') setText(els.headerCount, `YOUR DECK ${count}`);
-  if (!card) { old?.remove(); refs.deck.top = null; refs.deck.stack.classList.add('is-empty'); refs.deck.count.textContent = '0'; return; }
+  setText(refs.plaque, card ? `${card.name} · COST ${card.cost} · ATK ${card.atk} · HP ${card.hp}${card.battlecry ? ` · ${battlecryText(card)}` : ''}` : 'DECK EMPTY · No more arrivals');
+  const count = String(deckQueues[side].length); setText(refs.deck.count, side === 'enemy' ? `${count} left` : count); if (side === 'player') setText(els.headerCount, `YOUR DECK ${count}`);
+  if (!card) { old?.remove(); refs.deck.top = null; refs.deck.stack.classList.add('is-empty'); refs.deck.count.textContent = side === 'enemy' ? '0 left' : '0'; return; }
   const top = el('div', 'deck-top');
-  top.append(side === 'player' ? createFace(card, 'card--mini') : createBack(card.cost, 'card--mini'));
+  top.append(createFace(card, 'card--mini'));
   if (old) old.replaceWith(top); else refs.deck.stack.insertBefore(top, refs.deck.count);
   refs.deck.top = top; refs.deck.stack.classList.remove('is-empty');
 }
@@ -146,21 +149,26 @@ export function mountBattleScreen(initialState, root = app) {
   for (const value of SPEEDS) { const speedButton = el('button', 'speed-control__button', `${value}x`); speedButton.type = 'button'; speedButton.dataset.speed = String(value); speedButton.setAttribute('aria-pressed', String(value === playbackSpeed)); speedButton.addEventListener('click', () => setPlaybackSpeed(value)); speedControl.append(speedButton); }
   header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / 3`), phase);
   const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
-  const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'); banner.hidden = true;
-  const openingPreview = createEnemyPreview(initialState.fight, initialState.enemy.board); openingPreview.classList.add('enemy-preview--opening');
-  battle.append(header, enemy.root, log, player.root, flight, banner, openingPreview); root.append(battle);
+  const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'), queue = createEnemyQueuePanel(); banner.hidden = true;
+  const openingPreview = createEnemyPreview(initialState.fight, initialState.enemy.deck, initialState.enemy.board); openingPreview.classList.add('enemy-preview--opening');
+  battle.append(header, enemy.root, log, player.root, flight, banner, queue.panel, openingPreview); root.append(battle);
   const history = el('div', 'battle-log__history'), detail = el('div', 'battle-detail'), live = el('span', 'sr-only'), toggle = el('button', 'log-toggle', 'Log');
   detail.hidden = true; live.setAttribute('aria-live', 'polite'); toggle.setAttribute('aria-expanded', 'false'); history.id = 'battle-history'; toggle.setAttribute('aria-controls', history.id);
   for (let i = 0; i < 4; i++) history.append(el('p', 'battle-log__line', i === 3 ? 'Combat proceeds automatically' : ''));
   log.append(history, detail, live, toggle);
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
-  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, enemy, player };
+  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player };
+  const toggleQueue = open => { queue.panel.hidden = open === undefined ? !queue.panel.hidden : !open; enemy.deck.stack.setAttribute('aria-expanded', String(!queue.panel.hidden)); };
+  enemy.deck.stack.tabIndex = 0; enemy.deck.stack.setAttribute('role', 'button'); enemy.deck.stack.setAttribute('aria-controls', queue.panel.id); enemy.deck.stack.setAttribute('aria-expanded', 'false');
+  enemy.deck.stack.addEventListener('pointerdown', () => { enemy.deck.stack._queueWasOpen = !queue.panel.hidden; });
+  enemy.deck.stack.addEventListener('focus', () => toggleQueue(true)); enemy.deck.stack.addEventListener('click', () => toggleQueue(!enemy.deck.stack._queueWasOpen)); enemy.deck.stack.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleQueue(); } });
   const styles = getComputedStyle(battle);
   slotWidth = parseFloat(styles.getPropertyValue('--slot-w')) || 128; slotGap = parseFloat(styles.getPropertyValue('--slot-gap')) || 12; slotPitch = slotWidth + slotGap; cardHeight = parseFloat(styles.getPropertyValue('--card-h'));
   for (const key of ['--slot-w', '--slot-gap', '--card-h', '--name-size', '--name-line', '--pip-size', '--stat-size', '--badge-size', '--name-bottom']) battle.style.setProperty(key, styles.getPropertyValue(key));
   battle.dataset.cardTier = slotWidth === 112 ? 'mobile' : slotWidth === 216 ? 'large' : 'medium';
-  for (const side of SIDES) { replaceDeckTop(side, deckQueues[side][0]); els[side].deck.count.textContent = String(deckQueues[side].length); }
+  for (const side of SIDES) replaceDeckTop(side, deckQueues[side][0]);
+  updateEnemyQueuePanel();
   for (const side of SIDES) if (initialState[side]?.charger) populateCharger(side, initialState[side].charger);
   for (const side of SIDES) (initialState[side]?.board || []).forEach((unit, index) => createUnitEl(unit.uid, unit, side, index, initialState));
   reconcile(snapshotView(initialState)); return els;
@@ -191,6 +199,13 @@ export function setPlaybackSpeed(value) {
   els?.speedControl?.querySelectorAll('.speed-control__button').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.speed) === playbackSpeed)));
 }
 
+function createEnemyQueuePanel() {
+  const panel = el('aside', 'enemy-queue-panel'), list = el('ol', 'enemy-queue-list');
+  panel.hidden = true; panel.id = 'enemy-queue-panel';
+  const items = Array.from({ length: 8 }, () => { const item = el('li'); item.hidden = true; list.append(item); return item; });
+  panel.append(el('h2', '', 'ENEMY DRAW ORDER'), list); return { panel, list, items };
+}
+
 // RECONCILE
 function updateHero(side, state) {
   const refs = els[side].hero, max = state.maxHp || HERO_MAX, hp = Math.max(0, state.hp), pct = Math.max(0, Math.min(100, hp / max * 100));
@@ -207,12 +222,13 @@ function updateHero(side, state) {
 }
 export function reconcile(snapshot) {
   if (!els || !snapshot) return; lastSnapshot = snapshot;
+  if (snapshot.enemy.deck) { deckQueues.enemy = [...snapshot.enemy.deck]; replaceDeckTop('enemy', deckQueues.enemy[0]); updateEnemyQueuePanel(); }
   for (const side of SIDES) {
     updateHero(side, snapshot[side]);
     const boardEmptyHidden = snapshot[side].board.length > 0; if (els[side].empty.hidden !== boardEmptyHidden) els[side].empty.hidden = boardEmptyHidden;
     const charge = snapshot[side].charger;
     setText(els[side].chargerLabel, charge ? els[side].charger.querySelector('.is-scout-revealed') ? 'SCOUTED' : charge.counter === 0 ? snapshot[side].board.length >= 20 ? 'WAITING' : 'READY' : 'CHARGING' : deckQueues[side].length ? 'EMPTY' : 'NO ARRIVAL');
-    const chargeLabel = charge ? `${side === 'player' ? 'Your' : 'Enemy'} charger, cost ${charge.card.cost}, remaining ${charge.counter}` : `${side === 'player' ? 'Your' : 'Enemy'} charger, ${els[side].chargerLabel.textContent}`;
+    const chargeLabel = charge ? `${side === 'player' ? 'Your' : 'Enemy'} charger, ${charge.card.name}, cost ${charge.card.cost}, remaining ${charge.counter}` : `${side === 'player' ? 'Your' : 'Enemy'} charger, ${els[side].chargerLabel.textContent}`;
     if (els[side].charger.getAttribute('aria-label') !== chargeLabel) els[side].charger.setAttribute('aria-label', chargeLabel);
     const progress = charge ? String(Math.max(0, charge.counter) / Math.max(1, charge.card.cost)) : '0'; if (els[side].charger.style.getPropertyValue('--charge-progress') !== progress) els[side].charger.style.setProperty('--charge-progress', progress);
     const count = els[side].charger.querySelector('.cost-dot__count'); if (count && snapshot[side].charger && count.textContent !== String(snapshot[side].charger.counter)) count.textContent = String(snapshot[side].charger.counter);
@@ -234,8 +250,8 @@ function populateCharger(side, charger) {
   for (const child of [...slot.children]) if (child !== els[side].chargerLabel) child.remove();
   slot.classList.toggle('is-empty', !charger);
   if (!charger) { setText(els[side].chargerLabel, deckQueues[side].length ? 'EMPTY' : 'NO ARRIVAL'); return; }
-  const visual = side === 'player' ? createFace(charger.card, 'charger-card') : createBack(charger.card.cost, 'charger-card');
-  if (side === 'player') visual.append(createCostDot(charger.card.cost));
+  const visual = createFace(charger.card, 'charger-card');
+  visual.append(createCostDot(charger.card.cost));
   slot.append(visual, el('span', 'cost-dot__count', String(charger.counter))); setText(els[side].chargerLabel, charger.counter === 0 ? 'READY' : 'CHARGING');
 }
 function clearCharger(side) { populateCharger(side, null); }
@@ -254,8 +270,8 @@ export async function flyCard(startEl, destRect, content, duration, keyframeOpts
 async function playReveal(event) {
   const side = event.side, source = els[side].deck.top || els[side].deck.stack, charger = event.state[side].charger;
   if (!source || !charger) { await wait(TIMING.reveal); return; }
-  const destination = els[side].charger.getBoundingClientRect(), ghost = makeFlightVisual(charger.card, side === 'player');
-  await flyCard(source, destination, ghost, TIMING.reveal); populateCharger(side, charger); if (deckQueues[side][0]?.id !== charger.card.id) deckKnown[side] = false; if (deckKnown[side]) deckQueues[side].shift(); replaceDeckTop(side, deckQueues[side][0]);
+  const destination = els[side].charger.getBoundingClientRect(), ghost = makeFlightVisual(charger.card, true);
+  await flyCard(source, destination, ghost, TIMING.reveal); populateCharger(side, charger); if (side === 'enemy' && event.state.enemy.deck) deckQueues.enemy = [...event.state.enemy.deck]; else { if (deckQueues[side][0]?.id !== charger.card.id) deckKnown[side] = false; if (deckKnown[side]) deckQueues[side].shift(); } replaceDeckTop(side, deckQueues[side][0]); updateEnemyQueuePanel();
 }
 function autoScrollFor(side, slotIndex) { const scroll = els[side].scroll, left = slotIndex * slotPitch, right = left + slotWidth; if (right > scroll.scrollLeft + scroll.clientWidth - 8 || left < scroll.scrollLeft + 8) scroll.scrollTo({ left: Math.max(0, left + slotWidth / 2 - scroll.clientWidth / 2), behavior: 'auto' }); }
 function destinationRect(side, slotIndex) { const rect = els[side].lane.getBoundingClientRect(); return { left: rect.left + slotIndex * slotPitch, top: rect.top, width: slotWidth, height: cardHeight }; }
@@ -297,7 +313,6 @@ function cardTipData(card, stats = null) {
   const def = definitionFor(card), resolved = stats || { atk: card.atk ?? card.baseAtk, hp: card.hp ?? card.baseMaxHp, maxHp: card.hp ?? card.baseMaxHp };
   return { name: card.name || def.name, cost: def.cost ?? 0, atk: resolved.atk, hp: resolved.hp, maxHp: resolved.maxHp ?? resolved.hp, base: { atk: card.baseAtk ?? def.atk, hp: card.baseMaxHp ?? def.hp }, keys: printedKeywordsFor(card), text: descriptorText(card) };
 }
-function revealScout(side, snapshot) { const charger = snapshot[side]?.charger; if (!charger || !els[side].charger.isConnected) return; const refs = els[side], face = createFace(charger.card, 'is-scout-revealed'); face.style.setProperty('--fx-duration', `${dur(TIMING.scoutFlip)}ms`); refs.charger.append(face); setText(refs.chargerLabel, 'SCOUTED'); setTimeout(() => { face.remove(); if (refs === els?.[side]) setText(refs.chargerLabel, refs.charger.querySelector('.charger-card') ? Number(refs.charger.querySelector('.cost-dot__count')?.textContent) === 0 ? 'READY' : 'CHARGING' : deckQueues[side].length ? 'EMPTY' : 'NO ARRIVAL'); }, dur(TIMING.scout)); }
 function pulse(node, className, duration) { if (node) { const scaled = dur(duration); node.style.setProperty('--fx-duration', `${scaled}ms`); node.classList.add(className); setTimeout(() => { node.classList.remove(className); node.style.removeProperty('--fx-duration'); }, scaled); } }
 function battlecryCaption(event) {
   const target = event.target || event.targets?.join(' and ');
@@ -314,7 +329,7 @@ function battlecryCaption(event) {
   if (event.kind === 'duelist') return event.adjacent ? `Battlecry: gain +${event.adjacent}/+${event.adjacent}` : 'Battlecry: no adjacent allies';
   if (event.kind === 'tax') return event.counterDelta ? 'Battlecry: enemy charge +1 turn' : 'Battlecry: no enemy charging';
   if (event.kind === 'chrono') return event.counterDelta ? `Battlecry: own charge -1 turn${event.deployed ? ' and deploy' : ''}` : 'Battlecry: no friendly charge';
-  if (event.kind === 'scout') return event.scouted ? 'Battlecry: reveal enemy charge' : 'Battlecry: no enemy charging';
+  if (event.kind === 'scout') return 'Battlecry: already scouted — enemy order is known';
   if (event.kind === 'doom') return event.destroyed ? 'Battlecry: destroy enemy charge' : 'Battlecry: no enemy charging';
   if (event.kind === 'meddler') return event.returned ? 'Battlecry: return enemy charge' : 'Battlecry: no enemy charging';
   return `Battlecry: ${battlecryText(event).replace(/^On deploy:\s*/i, '') || 'no effect'}`;
@@ -330,7 +345,6 @@ async function playBattlecry(event) {
   caption.style.setProperty('--caption-fade', `${dur(TIMING.captionFade)}ms`);
   setTimeout(() => caption.classList.add('is-fading'), dur(TIMING.battlecry));
   setTimeout(() => caption.remove(), dur(TIMING.battlecry + TIMING.captionFade));
-  if (event.kind === 'scout' && event.scouted) revealScout(event.side === 'player' ? 'enemy' : 'player', event.state);
   await wait(TIMING.battlecry);
 }
 async function playAttack(event) { const attacker = getUnitEl(event.uid), target = event.targetUid ? getUnitEl(event.targetUid) : els[event.side === 'player' ? 'enemy' : 'player'].hero.portrait; if (attacker && target) { const a = attacker.getBoundingClientRect(), b = target.getBoundingClientRect(); els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2, factor = reducedMotion() ? 0 : Math.min(.28, 60 / (Math.hypot(dx, dy) || 1)); attacker.style.setProperty('--lunge-x', `${dx * factor}px`); attacker.style.setProperty('--lunge-y', `${dy * factor}px`); attacker.classList.add('is-attacker'); target.classList.add('is-target'); pulse(attacker, 'fx-lunge', TIMING.attack); } await wait(TIMING.attack); }
@@ -394,20 +408,18 @@ async function playTurnBanner(round) {
 }
 
 function button(label, handler) { const node = el('button', 'primary', label); node.addEventListener('click', handler); return node; }
-export function createEnemyPreview(fightNumber, line) {
+function updateEnemyQueuePanel() {
+  if (!els?.queue) return;
+  els.queue.items.forEach((item, index) => { const card = deckQueues.enemy[index]; item.hidden = !card; setText(item, card ? `${card.name} · ${card.cost} cost · ${card.atk}/${card.hp}` : ''); });
+}
+export function createEnemyPreview(fightNumber, queue, board = []) {
   const panel = el('aside', 'enemy-preview');
-  const boss = line.find(unit => unit.boss), bossBlock = el('div', 'enemy-preview__boss');
+  const boss = board.find(unit => unit.boss), bossBlock = el('div', 'enemy-preview__boss');
   if (boss) bossBlock.append(el('strong', '', `${boss.name} · ${boss.baseAtk ?? boss.atk}/${boss.baseMaxHp ?? boss.hp}`), el('p', '', BOSS_TEXT[boss.boss] || 'Boss unit.'));
   else bossBlock.append(el('strong', '', 'NO BOSS'), el('p', '', 'The enemy line is entirely made of regular units.'));
-  const counts = new Map();
-  for (const unit of line.filter(unit => !unit.boss)) {
-    const key = unit.cardId || unit.id;
-    const current = counts.get(key) || { count: 0, name: unit.name, atk: unit.baseAtk ?? unit.atk, hp: unit.baseMaxHp ?? unit.hp };
-    current.count++; counts.set(key, current);
-  }
   const list = el('ul', 'enemy-preview__units');
-  for (const unit of counts.values()) list.append(el('li', '', `${unit.count}× ${unit.name} ${unit.atk}/${unit.hp}`));
-  panel.append(el('h2', 'enemy-preview__title', `FIGHT ${fightNumber} · ENEMY LINE`), bossBlock, list); return panel;
+  queue.forEach((unit, index) => list.append(el('li', '', `${index + 1}. ${unit.name} · ${unit.cost} cost · ${unit.atk}/${unit.hp}`)));
+  panel.append(el('h2', 'enemy-preview__title', `FIGHT ${fightNumber} · ENEMY DRAW ORDER`), bossBlock, list); return panel;
 }
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }
