@@ -72,8 +72,8 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = enemyDeckF
     player: { hp: playerHp, deck: [...playerDeck], charger: null, board: [], scouted: false },
     enemy: { hp: HERO_HP, deck: [...enemyDeck], charger: null, board: [], scouted: false },
   };
-  if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 10), 'enemy', { boss: 'hive' }));
-  if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 10), 'enemy', { boss: 'herald' }));
+  if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 5), 'enemy', { boss: 'hive' }));
+  if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 5), 'enemy', { boss: 'herald' }));
   return state;
 }
 

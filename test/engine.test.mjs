@@ -131,7 +131,7 @@ test('deck-out does nothing and stalemate valve favors player on tie', () => {
 });
 
 test('fight-2 boss token appears only after attack damage and only with room', () => {
-  const s = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }); summon(s, 'player', getCard('colossus'));
+  const s = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }); summon(s, 'player', getCard('sellsword'));
   s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
   const attackAt = s.events.findIndex(e => e.type === 'attack' && e.unit === 'Hivematron'); const summonAt = s.events.findIndex((e, i) => i > attackAt && e.type === 'summon' && e.unit === '1/1 Token');
   assert.ok(attackAt >= 0 && summonAt > attackAt);
