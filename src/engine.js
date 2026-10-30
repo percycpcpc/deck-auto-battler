@@ -26,6 +26,10 @@ export const CARD_POOL = [
   card('hexblade', 'Hexblade', 2, 2, 1, { battlecry: 'hexblade' }),
   card('gravedigger', 'Gravedigger', 2, 2, 2, { battlecry: 'gravedigger' }),
   card('meddler', 'Meddler', 2, 2, 2, { battlecry: 'meddler' }),
+  card('headsman', 'Headsman', 2, 3, 3, { onKill: 2, portraitId: 'doomcaller' }),
+  card('firebelcher', 'Firebelcher', 2, 2, 3, { battlecry: 'firebelch', portraitId: 'plague_bearer' }),
+  card('shield_saint', 'Shield Saint', 2, 3, 1, { keywords: ['shield'], portraitId: 'aegis_knight' }),
+  card('bristleback', 'Bristleback', 2, 1, 4, { onDamaged: 3, portraitId: 'venom_hound' }),
   card('colossus', 'Colossus', 3, 6, 6),
   card('inquisitor', 'Inquisitor', 3, 4, 5, { battlecry: 'inquisitor' }),
   card('brood_queen', 'Brood Queen', 3, 3, 6, { deathrattle: 'summon2x2' }),
@@ -34,6 +38,7 @@ export const CARD_POOL = [
   card('overlord', 'Overlord', 3, 2, 4, { aura: 'all' }),
   card('cultist', 'Cultist', 3, 3, 2, { battlecry: 'cultist' }),
   card('cataclysm', 'Cataclysm', 3, 1, 1, { battlecry: 'cataclysm' }),
+  card('quillback_elder', 'Quillback Elder', 3, 3, 6, { onSummonPing: 1, portraitId: 'warlord' }),
 ];
 
 export const STARTER_IDS = ['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre'];
@@ -49,7 +54,8 @@ export function makeUnit(def, side = 'player', extras = {}) {
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
     keywords: [...(def.keywords || [])], battlecry: def.battlecry, deathrattle: def.deathrattle,
     portraitId: def.portraitId,
-    aura: def.aura, onKill: def.onKill, token: !!def.token, boss: extras.boss || null,
+    aura: def.aura, onKill: def.onKill, onDamaged: def.onDamaged, onSummonPing: def.onSummonPing,
+    token: !!def.token, boss: extras.boss || null,
     summonedThisAction: false, ...extras,
   };
 }
@@ -109,6 +115,12 @@ export function summon(state, side, def, extras = {}) {
     unit.baseAtk += 1; unit.baseMaxHp += 1;
   }
   state[side].board.push(unit); emit(state, 'summon', { side, unit: unit.name, uid: unit.uid });
+  const pingers = [...state.player.board, ...state.enemy.board].filter(source => source !== unit && source.onSummonPing);
+  for (const source of pingers) {
+    emit(state, 'summonPing', { side: source.side, uid: source.uid, unit: source.name, targetSide: side, targetUid: unit.uid, target: unit.name, amount: source.onSummonPing });
+    dealDamage(state, source, unit, source.onSummonPing);
+  }
+  if (pingers.length) resolveDeaths(state);
   return unit;
 }
 
@@ -117,7 +129,13 @@ function dealDamage(state, source, target, amount) {
   if (target.shield) { target.shield = false; emit(state, 'shield', { unit: target.name, uid: target.uid }); return false; }
   target.damage += amount;
   if (source?.keywords?.includes('poisonous')) target.poisoned = true;
-  emit(state, 'damage', { unit: target.name, uid: target.uid, amount }); return true;
+  emit(state, 'damage', { unit: target.name, uid: target.uid, amount });
+  if (target.onDamaged && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) {
+    target.baseAtk += target.onDamaged;
+    const stats = effectiveStats(state, target.side, target);
+    emit(state, 'statChange', { side: target.side, uid: target.uid, unit: target.name, atk: stats.atk, hp: stats.hp, amount: target.onDamaged, reason: 'onDamaged' });
+  }
+  return true;
 }
 
 function isDead(state, side, unit) { return unit.poisoned || effectiveStats(state, side, unit).hp <= 0; }
@@ -152,7 +170,8 @@ function deployCharger(state, side) {
   if (!own.charger || own.charger.counter > 0 || own.board.length >= BOARD_CAP) return false;
   const def = own.charger.card; own.charger = null; own.scouted = false;
   const unit = summon(state, side, def); emit(state, 'deploy', { side, unit: unit.name, uid: unit.uid });
-  triggerBattlecry(state, side, unit); resolveDeaths(state); return true;
+  if (own.board.includes(unit)) triggerBattlecry(state, side, unit);
+  resolveDeaths(state); return true;
 }
 
 export function triggerBattlecry(state, side, unit) {
@@ -221,6 +240,11 @@ export function triggerBattlecry(state, side, unit) {
       emit(state, 'battlecry', { ...event, all: true, targetUids: targets.map(target => target.uid), amount: 2 });
       for (const s of ['player', 'enemy']) for (const target of [...state[s].board]) dealDamage(state, unit, target, 2); break;
     }
+    case 'firebelch': {
+      const targets = [...foe.board];
+      emit(state, 'battlecry', { ...event, all: true, targetSide: foeSide, targetUids: targets.map(target => target.uid), amount: 1 });
+      for (const target of targets) dealDamage(state, unit, target, 1); break;
+    }
   }
 }
 
@@ -228,7 +252,12 @@ export function exchange(state, side, attacker, defender) {
   const foe = other(side), aAtk = effectiveStats(state, side, attacker).atk, dAtk = effectiveStats(state, foe, defender).atk;
   dealDamage(state, attacker, defender, aAtk); dealDamage(state, defender, attacker, dAtk);
   const defenderDied = isDead(state, foe, defender);
-  if (defenderDied && attacker.onKill === 'grow') { attacker.baseAtk++; attacker.baseMaxHp++; }
+  const growth = attacker.onKill === 'grow' ? 1 : Number(attacker.onKill) || 0;
+  if (defenderDied && growth) {
+    attacker.baseAtk += growth; attacker.baseMaxHp += growth;
+    const stats = effectiveStats(state, side, attacker);
+    emit(state, 'statChange', { side, uid: attacker.uid, unit: attacker.name, atk: stats.atk, hp: stats.hp, amount: growth, reason: 'onKill' });
+  }
   resolveDeaths(state);
 }
 

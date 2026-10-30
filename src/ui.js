@@ -1,7 +1,7 @@
 import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, captionFade: 300, turnStart: 150, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, scoutFlip: 250, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, scout: 1500, scoutFlip: 250, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
 export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
@@ -42,6 +42,7 @@ const BATTLECRY_TEXT = Object.freeze({
   copycat: "On deploy: copy the opposing unit's ATK and HP.",
   cultist: 'On deploy: devour your leftmost other unit and gain its stats.',
   cataclysm: 'On deploy: deal 2 damage to every unit.',
+  firebelch: 'On deploy: deal 1 damage to ALL enemy units.',
 });
 const DEATHRATTLE_TEXT = Object.freeze({
   summon1: 'Deathrattle: summon a 1/1.',
@@ -51,11 +52,12 @@ const DEATHRATTLE_TEXT = Object.freeze({
   oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
+const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
 export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
-const descriptorText = card => [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura]].filter(Boolean).join(' ');
-const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${unit.battlecry ? `. ${battlecryText(unit)}` : ''}`;
+const descriptorText = card => [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
+const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${descriptorText(unit) ? `. ${descriptorText(unit)}` : ''}`;
 function inspect(node, describe) {
   node.tabIndex = 0; node.setAttribute('role', 'group');
   const show = () => { els.detail.textContent = describe(); els.detail.hidden = false; els.detail.owner = node; };
@@ -304,6 +306,7 @@ function battlecryCaption(event) {
   if (event.kind === 'cultist') return target ? `Battlecry: devour ${target}` : 'Battlecry: no ally to devour';
   if (event.kind === 'gate') return event.moved ? `Battlecry: shove ${target} right` : 'Battlecry: no unit to shove';
   if (event.kind === 'cataclysm') return 'Battlecry: 2 damage to all units';
+  if (event.kind === 'firebelch') return event.targetUids?.length ? 'Battlecry: 1 damage to all enemies' : 'Battlecry: no enemy units';
   if (event.kind === 'squire') return event.neighborIndices?.length ? 'Battlecry: adjacent allies gain +1/+1' : 'Battlecry: no adjacent allies';
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
   if (event.kind === 'duelist') return event.adjacent ? `Battlecry: gain +${event.adjacent}/+${event.adjacent}` : 'Battlecry: no adjacent allies';
@@ -316,7 +319,7 @@ function battlecryCaption(event) {
 }
 async function playBattlecry(event) {
   const source = getUnitEl(event.uid);
-  const targets = event.all ? [...unitEls.values()].map(entry => entry.el) : [event.targetUid, ...(event.targetUids || [])].filter(Boolean).map(getUnitEl).filter(Boolean);
+  const targets = Array.isArray(event.targetUids) ? event.targetUids.map(getUnitEl).filter(Boolean) : event.all ? [...unitEls.values()].map(entry => entry.el) : [event.targetUid].filter(Boolean).map(getUnitEl).filter(Boolean);
   pulse(source, 'fx-battlecry-source', TIMING.battlecry);
   for (const target of new Set(targets.filter(node => node !== source))) pulse(target, 'fx-battlecry-target', TIMING.battlecry);
   const isReduced = reducedMotion(), caption = el('span', `battlecry-caption${isReduced ? ' is-reduced' : ''}`, battlecryCaption(event));
@@ -342,10 +345,12 @@ async function playEvent(event, deployUids) {
   els.phase.textContent = `${event.phase.toUpperCase()} · ROUND ${event.round}`;
   if (event.type === 'reveal') return playReveal(event); if (event.type === 'deploy') return playDeploy(event);
   if (event.type === 'battlecry') return playBattlecry(event);
+  if (event.type === 'summonPing') { pulse(getUnitEl(event.uid), 'fx-battlecry-source', TIMING.summonPing); pulse(getUnitEl(event.targetUid), 'fx-battlecry-target', TIMING.summonPing); await wait(TIMING.summonPing); return; }
   if (event.type === 'summon') { if (!deployUids.has(event.uid)) { const unit = event.state[event.side].board.find(item => item.uid === event.uid), index = event.state[event.side].board.findIndex(item => item.uid === event.uid); if (unit) pulse(createUnitEl(unit.uid, unit, event.side, index, event.state), 'fx-deploy-pop', TIMING.summon); } reconcile(event.state); await wait(TIMING.summon); return; }
   if (event.type === 'tick') { reconcile(event.state); pulse(els[event.side].charger.querySelector('.cost-dot__count'), 'fx-tick', TIMING.tick); await wait(TIMING.tick); return; }
   if (event.type === 'attack') return playAttack(event);
   if (event.type === 'damage') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); pulse(target, 'fx-hit', TIMING.damage); damageFloater(target, event.amount, rect); await wait(TIMING.damage); return; }
+  if (event.type === 'statChange') { reconcile(event.state); pulse(getUnitEl(event.uid), 'fx-deploy-pop', TIMING.statChange); await wait(TIMING.statChange); return; }
   if (event.type === 'death') { scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
   if (event.type === 'heroHit') { reconcile(event.state); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
   if (event.type === 'shield') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); damageFloater(target, 'BLOCKED', rect); pulse(getUnitEl(event.uid), 'fx-shield', TIMING.shield); await wait(TIMING.shield); return; }
@@ -354,7 +359,7 @@ async function playEvent(event, deployUids) {
   if (event.type === 'cleanup') { for (const side of SIDES) els[side].root.classList.remove('is-active-turn'); await wait(TIMING.cleanup); return; } reconcile(event.state); await wait(TIMING[event.type] || TIMING.cleanup);
 }
 export async function playEvents(eventStream) {
-  const deployUids = new Set(eventStream.filter(event => event.type === 'deploy').map(event => event.uid)); let lastAttack = null;
+  const deployUids = new Set(eventStream.filter(event => event.type === 'deploy' && event.state[event.side].board.some(unit => unit.uid === event.uid)).map(event => event.uid)); let lastAttack = null;
   for (const event of eventStream) {
     if (event.round > lastRenderedRound) { lastRenderedRound = event.round; await playTurnBanner(event.round); }
     if (event.type === 'attack') { if (lastAttack === event.uid && event.state[event.side].board.find(unit => unit.uid === event.uid)?.keywords.includes('windfury')) await wait(TIMING.windfuryGap); lastAttack = event.uid; }
@@ -372,6 +377,9 @@ function appendEventLog(event) {
   if (event.type === 'shield') appendLog(`${who} shield blocks damage`);
   if (event.type === 'chargerDestroyed') appendLog(`${who} charger is destroyed`);
   if (event.type === 'battlecry') appendLog(`${event.unit} — ${battlecryCaption(event)}.`);
+  if (event.type === 'summonPing') appendLog(`${event.unit} pings ${event.target} for ${event.amount}.`);
+  if (event.type === 'statChange' && event.reason === 'onDamaged') appendLog(`${event.unit} gains +${event.amount} Attack.`);
+  if (event.type === 'statChange' && event.reason === 'onKill') appendLog(`${event.unit} gains +${event.amount}/+${event.amount}.`);
   if (event.type === 'turnStart') appendLog(`— ${event.side === 'player' ? 'Your' : 'Enemy'} turn —`);
 }
 
@@ -387,8 +395,8 @@ function button(label, handler) { const node = el('button', 'primary', label); n
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.deathFallback); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
-function tooltip(card) { return battlecryText(card) || [...(card.keywords || []), card.deathrattle && 'Deathrattle', card.aura && 'Aura'].filter(Boolean).join(' · ') || 'No deploy effect.'; }
-export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', portrait(def.id), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => choose(def)); return node; }
+function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
+export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => choose(def)); return node; }
 function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`)); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
 function showEnd(won) { stopped = true; const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

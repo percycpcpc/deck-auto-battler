@@ -1,5 +1,14 @@
 # Deck Auto Battler handoff
 
+## Latest update — five counter units
+
+- Phase: maintenance / counter-package content. No commit made.
+- Outcome: pool is 36 cards with Headsman, Firebelcher, Shield Saint, Bristleback, and Quillback Elder; numeric kill growth, enemy-wide deploy damage, surviving-damage growth, and cross-board entry pings use ordered engine events and the existing sequential UI player.
+- Owners changed: `src/engine.js`, `src/ui.js`, `test/engine.test.mjs`, `docs/SPEC.md`, `docs/RULINGS.md`; audit automation/evidence: `tools/counters_audit.py`, `refs/ui-audit/counters/`.
+- Verification: engine tests, event snapshots, UI harness, balance simulations, HTTP portrait checks, real Chrome desktop/mobile descriptors, and combat feedback were run; see the completing Codex response for exact outputs.
+- Limits: no drafted full-run simulator exists; raw-starter balance is unseeded. Browser evidence is headless Chrome, not physical-device or screen-reader certification.
+- `DEBUG_HANDOFF.md` remains unnecessary because no gameplay defect survived repeated diagnosis.
+
 ## Latest update — touching rows and sequential side turns
 
 - Phase: maintenance / owner combat-order test. No commit made.

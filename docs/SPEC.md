@@ -26,7 +26,7 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 - **Windfury** — acts twice per action phase (two full attacks; second attack hits shieldless/face if the first broke a shield).
 - **Battlecry** — triggers when the unit ENTERS PLAY (lands on the board), NOT when revealed/charging.
 
-## Card pool (31)
+## Card pool (36)
 Stat scale tuned for 40 hero HP and small decks.
 
 **Cost 1 (13):**
@@ -44,7 +44,7 @@ Stat scale tuned for 40 hero HP and small decks.
 12. Scout — 2/1, Battlecry: reveal the identity of the enemy's charging card
 13. Oathbound — 2/4
 
-**Cost 2 (10):**
+**Cost 2 (14):**
 14. Road Ogre — 3/4
 15. Aegis Knight — 2/4 Divine Shield
 16. Venom Hound — 3/2 Poisonous
@@ -55,16 +55,23 @@ Stat scale tuned for 40 hero HP and small decks.
 21. Hexblade — 2/1, Battlecry: set the unit opposite to 1/1
 22. Gravedigger — 2/2, Battlecry: summon a 1/1 for each unit that died this combat
 23. Meddler — 2/2, Battlecry: put the enemy's charging card back on top of their deck
+24. Headsman — 3/3, after this kills a unit, gain +2/+2
+25. Firebelcher — 2/3, Battlecry: deal 1 damage to ALL enemy units
+26. Shield Saint — 3/1 Divine Shield
+27. Bristleback — 1/4, when this takes damage and survives, gain +3 Attack
 
-**Cost 3 (8):**
-24. Colossus — 6/6
-25. Inquisitor — 4/5, Battlecry: deal 3 to highest-ATK enemy
-26. Brood Queen — 3/6, Deathrattle: summon two 2/2s
-27. Doomcaller — 4/4, Battlecry: destroy the enemy's charging card
-28. Copycat — 3/3, Battlecry: copy the ATK/HP of the unit opposite
-29. Overlord — 2/4, Aura: all your units +1/+1
-30. Cultist — 3/2, Battlecry: destroy your leftmost other unit, gain its ATK and HP
-31. Cataclysm — 1/1, Battlecry: deal 2 to ALL units (both sides)
+**Cost 3 (9):**
+28. Colossus — 6/6
+29. Inquisitor — 4/5, Battlecry: deal 3 to highest-ATK enemy
+30. Brood Queen — 3/6, Deathrattle: summon two 2/2s
+31. Doomcaller — 4/4, Battlecry: destroy the enemy's charging card
+32. Copycat — 3/3, Battlecry: copy the ATK/HP of the unit opposite
+33. Overlord — 2/4, Aura: all your units +1/+1
+34. Cultist — 3/2, Battlecry: destroy your leftmost other unit, gain its ATK and HP
+35. Cataclysm — 1/1, Battlecry: deal 2 to ALL units (both sides)
+36. Quillback Elder — 3/6, when any other unit enters a battlefield, deal 1 damage to it
+
+Owner tuning: counter package vs boss engines.
 
 ## Fixed starter deck (8)
 Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogre.
