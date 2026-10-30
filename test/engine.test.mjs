@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   CARD_POOL, HERO_HP, createFight, createRun, effectiveStats, exchange, finishRunFight,
-  getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
+  enemyDeckFor, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 
 let passed = 0;
@@ -188,6 +188,37 @@ test('Meddler bounce returns to top and re-enters charger next reveal', () => {
 
 test('deck-out does nothing and stalemate valve favors player on tie', () => {
   const s = empty(); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.hp, HERO_HP);
+});
+
+test('enemy line starts fully pre-boarded with an empty deck', () => {
+  const first = createFight({ fight: 1, rng: () => 0 });
+  assert.equal(first.enemy.board.length, 8); assert.equal(first.enemy.deck.length, 0); assert.equal(first.enemy.board.some(unit => unit.boss), false);
+  for (const fight of [2, 3]) {
+    const state = createFight({ fight, rng: () => 0 });
+    assert.equal(state.enemy.board.length, 8); assert.ok(state.enemy.board[0].boss); assert.equal(state.enemy.deck.length, 0);
+  }
+});
+
+test('pre-boarded enemy emits no reveal and keeps its charger empty', () => {
+  const s = createFight({ fight: 1, playerDeck: [getCard('sellsword')], rng: () => 0 });
+  runRound(s);
+  assert.equal(s.events.some(event => event.type === 'reveal' && event.side === 'enemy'), false);
+  assert.equal(s.enemy.charger, null);
+});
+
+test('normal pre-boarded opening does not trip the stalemate valve on round 1', () => {
+  const s = createFight({ fight: 1, rng: () => 0 });
+  runRound(s);
+  assert.equal(s.round, 1); assert.equal(s.over, false); assert.ok(s.player.charger);
+  assert.equal(s.events.some(event => event.type === 'stalemate'), false);
+});
+
+test('next enemy line is previewed once and reused by the following fight', () => {
+  const run = createRun(() => 0), first = startRunFight(run);
+  first.over = true; first.winner = 'player'; finishRunFight(run, first);
+  const preview = run.enemyLine.map(card => card.id), second = startRunFight(run);
+  assert.deepEqual(second.enemy.board.slice(1).map(unit => unit.cardId), preview);
+  assert.equal(run.enemyLine, null); assert.equal(enemyDeckFor(2, () => 0).length, 7);
 });
 
 test('fight-2 boss token appears only after attack damage and only with room', () => {

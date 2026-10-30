@@ -52,6 +52,7 @@ const DEATHRATTLE_TEXT = Object.freeze({
   oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
+const BOSS_TEXT = Object.freeze({ hive: 'After this attacks, summon a 1/1 token.', herald: 'Friendly units enter play with +1/+1.' });
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
@@ -146,14 +147,15 @@ export function mountBattleScreen(initialState, root = app) {
   header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / 3`), phase);
   const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
   const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'); banner.hidden = true;
-  battle.append(header, enemy.root, log, player.root, flight, banner); root.append(battle);
+  const openingPreview = createEnemyPreview(initialState.fight, initialState.enemy.board); openingPreview.classList.add('enemy-preview--opening');
+  battle.append(header, enemy.root, log, player.root, flight, banner, openingPreview); root.append(battle);
   const history = el('div', 'battle-log__history'), detail = el('div', 'battle-detail'), live = el('span', 'sr-only'), toggle = el('button', 'log-toggle', 'Log');
   detail.hidden = true; live.setAttribute('aria-live', 'polite'); toggle.setAttribute('aria-expanded', 'false'); history.id = 'battle-history'; toggle.setAttribute('aria-controls', history.id);
   for (let i = 0; i < 4; i++) history.append(el('p', 'battle-log__line', i === 3 ? 'Combat proceeds automatically' : ''));
   log.append(history, detail, live, toggle);
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
-  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, enemy, player };
+  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, enemy, player };
   const styles = getComputedStyle(battle);
   slotWidth = parseFloat(styles.getPropertyValue('--slot-w')) || 128; slotGap = parseFloat(styles.getPropertyValue('--slot-gap')) || 12; slotPitch = slotWidth + slotGap; cardHeight = parseFloat(styles.getPropertyValue('--card-h'));
   for (const key of ['--slot-w', '--slot-gap', '--card-h', '--name-size', '--name-line', '--pip-size', '--stat-size', '--badge-size', '--name-bottom']) battle.style.setProperty(key, styles.getPropertyValue(key));
@@ -392,11 +394,26 @@ async function playTurnBanner(round) {
 }
 
 function button(label, handler) { const node = el('button', 'primary', label); node.addEventListener('click', handler); return node; }
+export function createEnemyPreview(fightNumber, line) {
+  const panel = el('aside', 'enemy-preview');
+  const boss = line.find(unit => unit.boss), bossBlock = el('div', 'enemy-preview__boss');
+  if (boss) bossBlock.append(el('strong', '', `${boss.name} · ${boss.baseAtk ?? boss.atk}/${boss.baseMaxHp ?? boss.hp}`), el('p', '', BOSS_TEXT[boss.boss] || 'Boss unit.'));
+  else bossBlock.append(el('strong', '', 'NO BOSS'), el('p', '', 'The enemy line is entirely made of regular units.'));
+  const counts = new Map();
+  for (const unit of line.filter(unit => !unit.boss)) {
+    const key = unit.cardId || unit.id;
+    const current = counts.get(key) || { count: 0, name: unit.name, atk: unit.baseAtk ?? unit.atk, hp: unit.baseMaxHp ?? unit.hp };
+    current.count++; counts.set(key, current);
+  }
+  const list = el('ul', 'enemy-preview__units');
+  for (const unit of counts.values()) list.append(el('li', '', `${unit.count}× ${unit.name} ${unit.atk}/${unit.hp}`));
+  panel.append(el('h2', 'enemy-preview__title', `FIGHT ${fightNumber} · ENEMY LINE`), bossBlock, list); return panel;
+}
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }
-async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.deathFallback); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
+async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
 export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => choose(def)); return node; }
-function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`)); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
+function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`), createEnemyPreview(run.fight, run.enemyLine || [])); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
 function showEnd(won) { stopped = true; const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

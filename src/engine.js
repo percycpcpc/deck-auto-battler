@@ -72,14 +72,16 @@ export function effectiveStats(state, side, unit) {
   return { atk, maxHp: unit.baseMaxHp + hpBonus, hp: unit.baseMaxHp + hpBonus - unit.damage };
 }
 
-export function createFight({ playerDeck = starterDeck(), enemyDeck = enemyDeckFor(1), fight = 1, playerHp = HERO_HP, rng = Math.random } = {}) {
+export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random } = {}) {
+  const enemyLine = enemyDeck || enemyDeckFor(fight, rng);
   const state = {
     fight, round: 0, phase: 'ready', rng, deaths: 0, events: [], over: false, winner: null,
     player: { hp: playerHp, deck: [...playerDeck], charger: null, board: [], scouted: false },
-    enemy: { hp: HERO_HP, deck: [...enemyDeck], charger: null, board: [], scouted: false },
+    enemy: { hp: HERO_HP, deck: [], charger: null, board: [], scouted: false },
   };
   if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 5), 'enemy', { boss: 'hive' }));
   if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 5), 'enemy', { boss: 'herald' }));
+  for (const def of enemyLine) state.enemy.board.push(makeUnit(def, 'enemy'));
   return state;
 }
 
@@ -316,12 +318,16 @@ function checkHeroEnd(state) {
 
 export function draftOffers(rng = Math.random) { return Array.from({ length: 3 }, () => getCard(CARD_POOL[Math.floor(rng() * CARD_POOL.length)].id)); }
 
-export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, deck: starterDeck(), rng, won: false, lost: false }; }
-export function startRunFight(run) { return createFight({ fight: run.fight, playerHp: run.hp, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyDeckFor(run.fight, run.rng), rng: run.rng }); }
+export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, deck: starterDeck(), rng, enemyLine: null, won: false, lost: false }; }
+export function startRunFight(run) {
+  const enemyLine = run.enemyLine || enemyDeckFor(run.fight, run.rng);
+  run.enemyLine = null;
+  return createFight({ fight: run.fight, playerHp: run.hp, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyLine, rng: run.rng });
+}
 export function finishRunFight(run, fightState) {
   run.hp = Math.max(0, fightState.player.hp);
   if (fightState.winner !== 'player') run.lost = true;
   else if (run.fight === 3) run.won = true;
-  else run.fight++;
+  else { run.fight++; run.enemyLine = enemyDeckFor(run.fight, run.rng); }
   return run;
 }

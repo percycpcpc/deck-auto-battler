@@ -11,6 +11,8 @@ Every ruling below is BINDING for the v0 implementation. Where the spec was ambi
 
 A card revealed on round N with cost 1 deploys on round N+1 and acts that same round.
 
+**Enemy deployment owner test:** the entire enemy line is pre-boarded before round 1. In fights 2 and 3 the boss occupies column 1, followed by every unit from `enemyDeckFor`; fight 1 has all eight regular units. The enemy deck and charger are empty throughout, so charging/reveal economy is player-only. Charger-targeting effects fizzle normally. The full enemy composition is public on the preceding draft and fight opening.
+
 ## Damage
 - **Mutual exchange within sequential sweeps**: when a unit attacks a living defender, attacker and defender both deal their ATK to each other. Every attack is an exchange; Windfury = two exchanges. This supersedes the old within-round interleaving/simultaneous-action interpretation for the owner test, but does not change `exchange`: a defender that survives until its own side's sweep may later initiate its own exchange. (If playtests show fights ending too fast, the fallback is attacker-only damage — config flag.)
 - **Opposite is evaluated at the moment of action**, after any mid-phase shifts. Overkill is lost; it never splashes to the hero (no trample).

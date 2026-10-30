@@ -1,5 +1,14 @@
 # Deck Auto Battler handoff
 
+## Latest update — fully pre-boarded enemy line and public preview
+
+- Phase: maintenance / owner deployment test. No commit made.
+- Outcome: every enemy shell unit begins on the battlefield; fights 2/3 keep the boss in column 1 followed by seven shell units. Enemy deck and charger remain empty. The exact randomized next line is prepared once, shown on both draft picks, and reused by the next fight; the same preview component appears at round-0 opening.
+- Owners changed: `src/engine.js`, `src/ui.js`, `styles.css`, `test/engine.test.mjs`, `tools/invariants.html`, `docs/SPEC.md`, `docs/RULINGS.md`; browser audit: `tools/preboard_audit.py`, evidence: `refs/ui-audit/preboard/`.
+- Verification: engine 31/31, event snapshots PASS, UI harness wiring PASS, installed-Chrome invariant harness PASS (0 forbidden DOM writes/src mutations, max one ghost, Scout 1508ms, deaths 423/433ms), requested desktop/mobile captures present.
+- Raw balance: all fights at n=200 and n=500 produced 0% player wins, `roundsMed=3`; no stats were changed.
+- Limits: installed headless Chrome at 1920×1080 and 390×844, not a physical-device or screen-reader certification. `DEBUG_HANDOFF.md` remains unnecessary because no gameplay defect survived repeated diagnosis.
+
 ## Latest update — five counter units
 
 - Phase: maintenance / counter-package content. No commit made.

@@ -22,7 +22,11 @@
     };
     const scout = engine.getCard('scout');
     const grunt = { id:'enemy_grunt', name:'Ash Grunt', cost:2, atk:2, hp:1 };
-    const fight = engine.createFight({ playerDeck:[scout, engine.getCard('sellsword'), engine.getCard('dagger_imp')], enemyDeck:[grunt, grunt, grunt], rng:()=>.5 });
+    const fight = engine.createFight({ playerDeck:[scout, engine.getCard('sellsword'), engine.getCard('dagger_imp')], enemyDeck:[], rng:()=>.5 });
+    // Synthetic hidden-zone fixture: production enemies are fully pre-boarded,
+    // but the persistent-DOM harness still guards the charger's privacy contract.
+    fight.enemy.charger = { card:grunt, counter:3, justRevealed:true };
+    fight.enemy.board.push(engine.makeUnit(grunt, 'enemy', { uid:'harness-preboarded-grunt' }));
     ui.mountBattleScreen(fight, document.querySelector('#app'));
     const battle = document.querySelector('#battle-screen');
 
