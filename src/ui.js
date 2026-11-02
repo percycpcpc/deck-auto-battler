@@ -53,11 +53,12 @@ const DEATHRATTLE_TEXT = Object.freeze({
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
 const BOSS_TEXT = Object.freeze({ hive: 'After this attacks, summon a 1/2 token.', herald: 'Friendly units enter play with +1/+1.' });
+const bossText = card => BOSS_TEXT[card?.boss] || '';
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
 export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
-const descriptorText = card => [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
+const descriptorText = card => [bossText(card), battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
 const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${descriptorText(unit) ? `. ${descriptorText(unit)}` : ''}`;
 function inspect(node, describe) {
   node.tabIndex = 0; node.setAttribute('role', 'group');
@@ -184,7 +185,7 @@ export function createUnitEl(uid, unit, side, slotIndex, snapshot = lastSnapshot
   const badgeEls = new Map();
   for (const key of ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry']) { const badge = img('card__badge', `assets/${iconFor(key)}`, key); badge.title = key === 'battlecry' ? battlecryText(unit) : key; badges.append(badge); badgeEls.set(key, badge); }
   const more = el('span', 'card__badge card__badge--more'); badges.append(more);
-  card.append(createFace(unit), atk, hp, badges); if (unit.boss) card.append(el('em', 'card__crown', '♛'));
+  card.append(createFace(unit), atk, hp, badges); if (unit.boss) card.append(el('p', 'card__trait', bossText(unit)), el('em', 'card__crown', '♛'));
   inspect(card, () => card.getAttribute('aria-label'));
   bindMouseHover(card, () => { const entry = unitEls.get(uid), current = lastSnapshot?.[side]?.board.find(item => item.uid === uid); return entry && current ? cardTipData(current, { atk: entry.atk, hp: entry.hp, maxHp: effectiveStats(lastSnapshot, side, current).maxHp }) : null; });
 
