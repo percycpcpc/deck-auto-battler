@@ -35,7 +35,7 @@ const BATTLECRY_TEXT = Object.freeze({
   scout: 'On deploy: already scouted — enemy order is known.',
   duelist: 'On deploy: gain +1/+1 for each adjacent ally.',
   hexblade: 'On deploy: set the opposing unit to 1/1.',
-  gravedigger: 'On deploy: summon a 1/1 for every death this combat.',
+  gravedigger: 'On deploy: summon a 1/2 for every death this combat.',
   meddler: "On deploy: return the enemy's charging card to its deck.",
   inquisitor: "On deploy: deal 3 damage to the enemy's strongest unit.",
   doom: "On deploy: destroy the enemy's charging card.",
@@ -45,14 +45,14 @@ const BATTLECRY_TEXT = Object.freeze({
   firebelch: 'On deploy: deal 1 damage to ALL enemy units.',
 });
 const DEATHRATTLE_TEXT = Object.freeze({
-  summon1: 'Deathrattle: summon a 1/1.',
-  summon2x2: 'Deathrattle: summon two 2/2s.',
+  summon1: 'Deathrattle: summon a 1/2.',
+  summon2x2: 'Deathrattle: summon two 2/3s.',
   spite: 'Deathrattle: deal 1 damage to the opposing unit.',
   plague: 'Deathrattle: deal 1 damage to every enemy unit.',
   oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
-const BOSS_TEXT = Object.freeze({ hive: 'After this attacks, summon a 1/1 token.', herald: 'Friendly units enter play with +1/+1.' });
+const BOSS_TEXT = Object.freeze({ hive: 'After this attacks, summon a 1/2 token.', herald: 'Friendly units enter play with +1/+1.' });
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));

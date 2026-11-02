@@ -30,46 +30,46 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 Stat scale tuned for 40 hero HP and small decks.
 
 **Cost 1 (13):**
-1. Dagger Imp — 2/1
-2. Sellsword — 2/2
-3. Twinfang — 1/1 Windfury
-4. Brood Wisp — 1/2, Deathrattle: summon 1/1
-5. Hex Hurler — 1/1, Battlecry: deal 2 to opposite unit
-6. Tax Collector — 1/2, Battlecry: enemy charging card +1 turn
-7. Chrono Imp — 1/1, Battlecry: your charging card ticks down 1 extra
-8. Gate Crasher — 2/1, Battlecry: push the unit opposite to the rightmost empty slot
-9. Leeching Tick — 1/2, when this kills a unit, gain +1/+1
-10. Squire — 1/1, Battlecry: adjacent units get +1/+1
-11. Spiteful Imp — 1/1, Deathrattle: deal 1 to the unit opposite
-12. Scout — 2/1, Battlecry: reveal the identity of the enemy's charging card
-13. Oathbound — 2/4
+1. Dagger Imp — 2/2
+2. Sellsword — 2/3
+3. Twinfang — 1/2 Windfury
+4. Brood Wisp — 1/3, Deathrattle: summon 1/2
+5. Hex Hurler — 1/2, Battlecry: deal 2 to opposite unit
+6. Tax Collector — 1/3, Battlecry: enemy charging card +1 turn
+7. Chrono Imp — 1/2, Battlecry: your charging card ticks down 1 extra
+8. Gate Crasher — 2/2, Battlecry: push the unit opposite to the rightmost empty slot
+9. Leeching Tick — 1/3, when this kills a unit, gain +1/+1
+10. Squire — 1/2, Battlecry: adjacent units get +1/+1
+11. Spiteful Imp — 1/2, Deathrattle: deal 1 to the unit opposite
+12. Scout — 2/2, Battlecry: reveal the identity of the enemy's charging card
+13. Oathbound — 2/6
 
 **Cost 2 (14):**
-14. Road Ogre — 3/4
-15. Aegis Knight — 2/4 Divine Shield
-16. Venom Hound — 3/2 Poisonous
-17. Plague Bearer — 2/3, Deathrattle: deal 1 to all enemies
-18. Warlord — 2/3, Aura: adjacent +1/+0
-19. Bulwark — 1/5, Deathrattle: the unit opposite gets −2 ATK
-20. Duelist — 3/2, Battlecry: +1/+1 for each adjacent friendly unit
-21. Hexblade — 2/1, Battlecry: set the unit opposite to 1/1
-22. Gravedigger — 2/2, Battlecry: summon a 1/1 for each unit that died this combat
-23. Meddler — 2/2, Battlecry: put the enemy's charging card back on top of their deck
-24. Headsman — 3/3, after this kills a unit, gain +2/+2
-25. Firebelcher — 2/3, Battlecry: deal 1 damage to ALL enemy units
-26. Shield Saint — 3/1 Divine Shield
-27. Bristleback — 1/4, when this takes damage and survives, gain +3 Attack
+14. Road Ogre — 3/6
+15. Aegis Knight — 2/6 Divine Shield
+16. Venom Hound — 3/3 Poisonous
+17. Plague Bearer — 2/5, Deathrattle: deal 1 to all enemies
+18. Warlord — 2/5, Aura: adjacent +1/+0
+19. Bulwark — 1/8, Deathrattle: the unit opposite gets −2 ATK
+20. Duelist — 3/3, Battlecry: +1/+1 for each adjacent friendly unit
+21. Hexblade — 2/2, Battlecry: set the unit opposite to 1/1
+22. Gravedigger — 2/3, Battlecry: summon a 1/2 for each unit that died this combat
+23. Meddler — 2/3, Battlecry: put the enemy's charging card back on top of their deck
+24. Headsman — 3/5, after this kills a unit, gain +2/+2
+25. Firebelcher — 2/5, Battlecry: deal 1 damage to ALL enemy units
+26. Shield Saint — 3/2 Divine Shield
+27. Bristleback — 1/6, when this takes damage and survives, gain +3 Attack
 
 **Cost 3 (9):**
-28. Colossus — 6/6
-29. Inquisitor — 4/5, Battlecry: deal 3 to highest-ATK enemy
-30. Brood Queen — 3/6, Deathrattle: summon two 2/2s
-31. Doomcaller — 4/4, Battlecry: destroy the enemy's charging card
-32. Copycat — 3/3, Battlecry: copy the ATK/HP of the unit opposite
-33. Overlord — 2/4, Aura: all your units +1/+1
-34. Cultist — 3/2, Battlecry: destroy your leftmost other unit, gain its ATK and HP
-35. Cataclysm — 1/1, Battlecry: deal 2 to ALL units (both sides)
-36. Quillback Elder — 3/6, when any other unit enters a battlefield, deal 1 damage to it
+28. Colossus — 6/9
+29. Inquisitor — 4/8, Battlecry: deal 3 to highest-ATK enemy
+30. Brood Queen — 3/9, Deathrattle: summon two 2/3s
+31. Doomcaller — 4/6, Battlecry: destroy the enemy's charging card
+32. Copycat — 3/5, Battlecry: copy the ATK/HP of the unit opposite
+33. Overlord — 2/6, Aura: all your units +1/+1
+34. Cultist — 3/3, Battlecry: destroy your leftmost other unit, gain its ATK and HP
+35. Cataclysm — 1/2, Battlecry: deal 2 to ALL units (both sides)
+36. Quillback Elder — 3/9, when any other unit enters a battlefield, deal 1 damage to it
 
 Owner tuning: counter package vs boss engines.
 
@@ -79,9 +79,9 @@ Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogr
 Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Enemies (scripted, escalating)
-- **Fight 1 — Vanilla midrange**: deck of 2/2s and 3/4s. Teaches reveal/charging; beatable by starter deck.
-- **Fight 2 — Token boss**: starts with a boss unit on board: 1/5 (owner test: boss HP 10→5), "create a 1/1 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
-- **Fight 3 — Aura boss**: starts with a boss unit on board: 1/5 (owner test: boss HP 10→5), "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
+- **Fight 1 — Vanilla midrange**: deck of 2/2 Ash Grunts and 2/5 Camp Brutes. Teaches reveal/charging; beatable by starter deck.
+- **Fight 2 — Token boss**: starts with Hivematron on board: 1/8, "create a 1/2 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
+- **Fight 3 — Aura boss**: starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
 - Enemy regular units use the same reveal, charge, and leftmost-deploy rules as the player. Bosses remain the pre-board exception in column 1. Enemy draw order is fixed and public; `enemyDeckFor(fight)` never shuffles it:
   - Fight 1: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
   - Fight 2: Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt.

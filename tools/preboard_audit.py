@@ -26,7 +26,7 @@ with sync_playwright() as playwright:
         const prompt = document.createElement('p'); prompt.textContent = 'Pick 1 of 2 · Deck 8 cards';
         const offers = document.createElement('div'); offers.id = 'offers';
         for (const id of ['venom_hound','firebelcher','cataclysm']) offers.append(ui.draftCard(e.getCard(id)));
-        const boss = fightNumber === 2 ? e.makeUnit({id:'boss_hivematron',name:'Hivematron',cost:0,atk:1,hp:5},'enemy',{boss:'hive'}) : null;
+        const boss = fightNumber === 2 ? e.makeUnit({id:'boss_hivematron',name:'Hivematron',cost:0,atk:1,hp:8},'enemy',{boss:'hive'}) : null;
         screen.append(heading, prompt, ui.createEnemyPreview(fightNumber, boss ? [boss,...line.map(x=>e.makeUnit(x,'enemy'))] : line), offers);
         document.querySelector('#app').replaceChildren(screen);
       };

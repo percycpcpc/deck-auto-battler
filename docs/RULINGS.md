@@ -50,8 +50,9 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Numeric decisions
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
+- **Global toughness pass (owner): all unit HP ×1.5 half-up, min +1; ATK unchanged; hero HP unchanged.**
 - **Stalemate safety valve** (new rule): if both decks are empty and nothing is charging, and a full round passes with no change in total **live** unit count on either side, the fight ends immediately — higher hero HP wins; tie goes to the player. Corpses never delay this valve.
-- **Enemy decks**: Fight 1 = 6× 2/1 (cost 1) + 2× 2/3 (cost 2); fights 2–3 use five 2/1s + two 2/3s plus the pre-boarded boss. These shells use the fixed, unshuffled scripts in `SPEC.md`. (Owner-approved balance fix 2026-10-29: the original 5× 2/2 + 3× 3/4 shell out-statted the starter deck 19/22 vs 12/14 and went 0/500 in simulation.)
+- **Enemy decks**: Fight 1 = 6× 2/2 Ash Grunts (cost 1) + 2× 2/5 Camp Brutes (cost 2); fights 2–3 use five 2/2s + two 2/5s plus the pre-boarded 1/8 boss. These shells use the fixed, unshuffled scripts in `SPEC.md`.
 
 ## Information
 - Owner sees their own charging card's identity only (not the card beneath it). Opponent sees cost dot + counter only.

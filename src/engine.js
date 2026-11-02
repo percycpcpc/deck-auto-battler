@@ -4,48 +4,48 @@ export const BOARD_CAP = 20;
 const card = (id, name, cost, atk, hp, extra = {}) => ({ id, name, cost, atk, hp, ...extra });
 
 export const CARD_POOL = [
-  card('dagger_imp', 'Dagger Imp', 1, 2, 1), card('sellsword', 'Sellsword', 1, 2, 2),
-  card('twinfang', 'Twinfang', 1, 1, 1, { keywords: ['windfury'] }),
-  card('brood_wisp', 'Brood Wisp', 1, 1, 2, { deathrattle: 'summon1' }),
-  card('hex_hurler', 'Hex Hurler', 1, 1, 1, { battlecry: 'hex_hurler' }),
-  card('tax_collector', 'Tax Collector', 1, 1, 2, { battlecry: 'tax' }),
-  card('chrono_imp', 'Chrono Imp', 1, 1, 1, { battlecry: 'chrono' }),
-  card('gate_crasher', 'Gate Crasher', 1, 2, 1, { battlecry: 'gate' }),
-  card('leeching_tick', 'Leeching Tick', 1, 1, 2, { onKill: 'grow' }),
-  card('squire', 'Squire', 1, 1, 1, { battlecry: 'squire' }),
-  card('spiteful_imp', 'Spiteful Imp', 1, 1, 1, { deathrattle: 'spite' }),
-  card('scout', 'Scout', 1, 2, 1, { battlecry: 'scout' }),
-  card('oathbound', 'Oathbound', 1, 2, 4, { portraitId: 'aegis_knight' }),
-  card('road_ogre', 'Road Ogre', 2, 3, 4),
-  card('aegis_knight', 'Aegis Knight', 2, 2, 4, { keywords: ['shield'] }),
-  card('venom_hound', 'Venom Hound', 2, 3, 2, { keywords: ['poisonous'] }),
-  card('plague_bearer', 'Plague Bearer', 2, 2, 3, { deathrattle: 'plague' }),
-  card('warlord', 'Warlord', 2, 2, 3, { aura: 'adjacentAtk' }),
-  card('bulwark', 'Bulwark', 2, 1, 5, { deathrattle: 'oppositeAtkDown' }),
-  card('duelist', 'Duelist', 2, 3, 2, { battlecry: 'duelist' }),
-  card('hexblade', 'Hexblade', 2, 2, 1, { battlecry: 'hexblade' }),
-  card('gravedigger', 'Gravedigger', 2, 2, 2, { battlecry: 'gravedigger' }),
-  card('meddler', 'Meddler', 2, 2, 2, { battlecry: 'meddler' }),
-  card('headsman', 'Headsman', 2, 3, 3, { onKill: 2, portraitId: 'doomcaller' }),
-  card('firebelcher', 'Firebelcher', 2, 2, 3, { battlecry: 'firebelch', portraitId: 'plague_bearer' }),
-  card('shield_saint', 'Shield Saint', 2, 3, 1, { keywords: ['shield'], portraitId: 'aegis_knight' }),
-  card('bristleback', 'Bristleback', 2, 1, 4, { onDamaged: 3, portraitId: 'venom_hound' }),
-  card('colossus', 'Colossus', 3, 6, 6),
-  card('inquisitor', 'Inquisitor', 3, 4, 5, { battlecry: 'inquisitor' }),
-  card('brood_queen', 'Brood Queen', 3, 3, 6, { deathrattle: 'summon2x2' }),
-  card('doomcaller', 'Doomcaller', 3, 4, 4, { battlecry: 'doom' }),
-  card('copycat', 'Copycat', 3, 3, 3, { battlecry: 'copycat' }),
-  card('overlord', 'Overlord', 3, 2, 4, { aura: 'all' }),
-  card('cultist', 'Cultist', 3, 3, 2, { battlecry: 'cultist' }),
-  card('cataclysm', 'Cataclysm', 3, 1, 1, { battlecry: 'cataclysm' }),
-  card('quillback_elder', 'Quillback Elder', 3, 3, 6, { onSummonPing: 1, portraitId: 'warlord' }),
+  card('dagger_imp', 'Dagger Imp', 1, 2, 2), card('sellsword', 'Sellsword', 1, 2, 3),
+  card('twinfang', 'Twinfang', 1, 1, 2, { keywords: ['windfury'] }),
+  card('brood_wisp', 'Brood Wisp', 1, 1, 3, { deathrattle: 'summon1' }),
+  card('hex_hurler', 'Hex Hurler', 1, 1, 2, { battlecry: 'hex_hurler' }),
+  card('tax_collector', 'Tax Collector', 1, 1, 3, { battlecry: 'tax' }),
+  card('chrono_imp', 'Chrono Imp', 1, 1, 2, { battlecry: 'chrono' }),
+  card('gate_crasher', 'Gate Crasher', 1, 2, 2, { battlecry: 'gate' }),
+  card('leeching_tick', 'Leeching Tick', 1, 1, 3, { onKill: 'grow' }),
+  card('squire', 'Squire', 1, 1, 2, { battlecry: 'squire' }),
+  card('spiteful_imp', 'Spiteful Imp', 1, 1, 2, { deathrattle: 'spite' }),
+  card('scout', 'Scout', 1, 2, 2, { battlecry: 'scout' }),
+  card('oathbound', 'Oathbound', 1, 2, 6, { portraitId: 'aegis_knight' }),
+  card('road_ogre', 'Road Ogre', 2, 3, 6),
+  card('aegis_knight', 'Aegis Knight', 2, 2, 6, { keywords: ['shield'] }),
+  card('venom_hound', 'Venom Hound', 2, 3, 3, { keywords: ['poisonous'] }),
+  card('plague_bearer', 'Plague Bearer', 2, 2, 5, { deathrattle: 'plague' }),
+  card('warlord', 'Warlord', 2, 2, 5, { aura: 'adjacentAtk' }),
+  card('bulwark', 'Bulwark', 2, 1, 8, { deathrattle: 'oppositeAtkDown' }),
+  card('duelist', 'Duelist', 2, 3, 3, { battlecry: 'duelist' }),
+  card('hexblade', 'Hexblade', 2, 2, 2, { battlecry: 'hexblade' }),
+  card('gravedigger', 'Gravedigger', 2, 2, 3, { battlecry: 'gravedigger' }),
+  card('meddler', 'Meddler', 2, 2, 3, { battlecry: 'meddler' }),
+  card('headsman', 'Headsman', 2, 3, 5, { onKill: 2, portraitId: 'doomcaller' }),
+  card('firebelcher', 'Firebelcher', 2, 2, 5, { battlecry: 'firebelch', portraitId: 'plague_bearer' }),
+  card('shield_saint', 'Shield Saint', 2, 3, 2, { keywords: ['shield'], portraitId: 'aegis_knight' }),
+  card('bristleback', 'Bristleback', 2, 1, 6, { onDamaged: 3, portraitId: 'venom_hound' }),
+  card('colossus', 'Colossus', 3, 6, 9),
+  card('inquisitor', 'Inquisitor', 3, 4, 8, { battlecry: 'inquisitor' }),
+  card('brood_queen', 'Brood Queen', 3, 3, 9, { deathrattle: 'summon2x2' }),
+  card('doomcaller', 'Doomcaller', 3, 4, 6, { battlecry: 'doom' }),
+  card('copycat', 'Copycat', 3, 3, 5, { battlecry: 'copycat' }),
+  card('overlord', 'Overlord', 3, 2, 6, { aura: 'all' }),
+  card('cultist', 'Cultist', 3, 3, 3, { battlecry: 'cultist' }),
+  card('cataclysm', 'Cataclysm', 3, 1, 2, { battlecry: 'cataclysm' }),
+  card('quillback_elder', 'Quillback Elder', 3, 3, 9, { onSummonPing: 1, portraitId: 'warlord' }),
 ];
 
 export const STARTER_IDS = ['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre'];
 const byId = new Map(CARD_POOL.map(c => [c.id, c]));
 export const getCard = id => ({ ...byId.get(id), keywords: [...(byId.get(id)?.keywords || [])] });
 export const starterDeck = () => STARTER_IDS.map(getCard);
-export const tokenCard = (atk = 1, hp = 1) => card(`token_${atk}_${hp}`, `${atk}/${hp} Token`, 0, atk, hp, { token: true });
+export const tokenCard = (atk = 1, hp = 2) => card(`token_${atk}_${hp}`, `${atk}/${hp} Token`, 0, atk, hp, { token: true });
 
 export function makeUnit(def, side = 'player', extras = {}) {
   return {
@@ -82,8 +82,8 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = null, figh
     player: { hp: playerHp, deck: [...playerDeck], charger: null, board: [], scouted: false },
     enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false },
   };
-  if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 5), 'enemy', { boss: 'hive' }));
-  if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 5), 'enemy', { boss: 'herald' }));
+  if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive' }));
+  if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald' }));
   return state;
 }
 
@@ -99,8 +99,8 @@ const ENEMY_SCRIPTS = Object.freeze({
   3: ['brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt', 'grunt'],
 });
 const enemyCard = kind => kind === 'brute'
-  ? card('enemy_brute', 'Camp Brute', 2, 2, 3)
-  : card('enemy_grunt', 'Ash Grunt', 1, 2, 1);
+  ? card('enemy_brute', 'Camp Brute', 2, 2, 5)
+  : card('enemy_grunt', 'Ash Grunt', 1, 2, 2);
 export function enemyDeckFor(fight) { return (ENEMY_SCRIPTS[fight] || ENEMY_SCRIPTS[1]).map(enemyCard); }
 
 const other = side => side === 'player' ? 'enemy' : 'player';
@@ -175,7 +175,7 @@ function cleanupCorpses(state) {
 function triggerDeathrattle(state, side, unit, oldIndex) {
   const foe = other(side);
   if (unit.deathrattle === 'summon1') summon(state, side, tokenCard(), { summonedThisAction: true });
-  if (unit.deathrattle === 'summon2x2') { summon(state, side, tokenCard(2, 2), { summonedThisAction: true }); summon(state, side, tokenCard(2, 2), { summonedThisAction: true }); }
+  if (unit.deathrattle === 'summon2x2') { summon(state, side, tokenCard(2, 3), { summonedThisAction: true }); summon(state, side, tokenCard(2, 3), { summonedThisAction: true }); }
   if (unit.deathrattle === 'spite') dealDamage(state, unit, liveAt(state[foe].board, oldIndex), 1);
   if (unit.deathrattle === 'plague') for (const target of liveUnits(state[foe].board)) dealDamage(state, unit, target, 1);
   if (unit.deathrattle === 'oppositeAtkDown') { const t = liveAt(state[foe].board, oldIndex); if (t) t.baseAtk = Math.max(0, t.baseAtk - 1); }

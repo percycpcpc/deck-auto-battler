@@ -20,8 +20,9 @@ test('round ordering and cost-1 deploys on the following round', () => {
   assert.deepEqual([...new Set(s.events.map(e => e.phase))], ['reveal', 'tick', 'deploy', 'action', 'cleanup']);
 });
 
-test('mutual exchange: 2/2 versus 2/2 both die', () => {
+test('mutual exchange: 2/3 versus 2/3 survive once and die on the second trade', () => {
   const s = empty(), a = summon(s, 'player', getCard('sellsword')), b = summon(s, 'enemy', getCard('sellsword'));
+  exchange(s, 'player', a, b); assert.equal(!!a.dead, false); assert.equal(!!b.dead, false);
   exchange(s, 'player', a, b); assert.equal(s.player.board.length, 1); assert.equal(s.enemy.board.length, 1); assert.equal(a.dead, true); assert.equal(b.dead, true);
 });
 
@@ -64,9 +65,9 @@ test('Headsman gains +2/+2 only after killing a unit', () => {
   const s = empty(), headsman = summon(s, 'player', getCard('headsman'));
   let target = summon(s, 'enemy', { id: 'survivor', name: 'Survivor', cost: 0, atk: 0, hp: 4 });
   exchange(s, 'player', headsman, target);
-  assert.equal(headsman.baseAtk, 3); assert.equal(headsman.baseMaxHp, 3);
+  assert.equal(headsman.baseAtk, 3); assert.equal(headsman.baseMaxHp, 5);
   target.damage = 3; exchange(s, 'player', headsman, target);
-  assert.equal(headsman.baseAtk, 5); assert.equal(headsman.baseMaxHp, 5);
+  assert.equal(headsman.baseAtk, 5); assert.equal(headsman.baseMaxHp, 7);
   const change = s.events.find(event => event.type === 'statChange' && event.reason === 'onKill');
   assert.equal(change.amount, 2); assert.ok(s.events.findIndex(event => event.type === 'damage' && event.uid === target.uid) < s.events.indexOf(change));
 });
@@ -96,11 +97,12 @@ test('Bristleback gains +3 Attack per surviving damage instance but not when kil
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 1); assert.equal(bristle.dead, true);
 });
 
-test('Quillback Elder pings enemy and friendly arrivals, can kill entry, and ignores its own entry', () => {
+test('Quillback Elder pings enemy and friendly arrivals, can kill a fragile entry, and ignores its own entry', () => {
   const s = empty(); const elder = summon(s, 'player', getCard('quillback_elder'));
   assert.equal(elder.damage, 0); assert.equal(s.events.some(event => event.type === 'summonPing'), false);
   const grunt = summon(s, 'enemy', getCard('sellsword')); assert.equal(grunt.damage, 1);
-  const token = summon(s, 'player', tokenCard()); assert.equal(token.dead, true); assert.ok(s.player.board.includes(token));
+  const token = summon(s, 'player', tokenCard()); assert.equal(token.damage, 1); assert.equal(!!token.dead, false); assert.ok(s.player.board.includes(token));
+  const fragile = summon(s, 'player', { id: 'fragile', name: 'Fragile', cost: 0, atk: 0, hp: 1 }); assert.equal(fragile.dead, true);
   const ping = s.events.find(event => event.type === 'summonPing' && event.targetUid === grunt.uid);
   assert.ok(ping); assert.ok(s.events.indexOf(ping) < s.events.findIndex(event => event.type === 'damage' && event.uid === grunt.uid));
 });
@@ -108,9 +110,9 @@ test('Quillback Elder pings enemy and friendly arrivals, can kill entry, and ign
 test('Quillback Elder pings Hivematron boss-spawned tokens', () => {
   const s = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }); summon(s, 'player', getCard('quillback_elder'));
   s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
-  const tokenSummon = s.events.find(event => event.type === 'summon' && event.unit === '1/1 Token');
+  const tokenSummon = s.events.find(event => event.type === 'summon' && event.unit === '1/2 Token');
   assert.ok(tokenSummon); assert.ok(s.events.some(event => event.type === 'summonPing' && event.targetUid === tokenSummon.uid));
-  assert.equal(s.enemy.board.some(unit => unit.uid === tokenSummon.uid), false);
+  assert.equal(s.enemy.board.find(unit => unit.uid === tokenSummon.uid)?.damage, 1);
 });
 
 test('an entrant killed by Quillback Elder does not fire its Battlecry', () => {
@@ -226,7 +228,7 @@ test('next enemy script is previewed once and reused by the following fight', ()
 
 test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
   const state = createFight({ fight: 2 });
-  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].boss, 'hive'); assert.equal(state.enemy.board[0].baseMaxHp, 5);
+  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].boss, 'hive'); assert.equal(state.enemy.board[0].baseMaxHp, 8);
   assert.equal(state.enemy.deck.length, 7); runRound(state);
   assert.ok(state.enemy.board.some(unit => unit.boss === 'hive')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 6);
 });
@@ -234,13 +236,21 @@ test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
 test('fight-2 boss token appears only after attack damage and only with room', () => {
   const s = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }); summon(s, 'player', getCard('sellsword'));
   s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
-  const attackAt = s.events.findIndex(e => e.type === 'attack' && e.unit === 'Hivematron'); const summonAt = s.events.findIndex((e, i) => i > attackAt && e.type === 'summon' && e.unit === '1/1 Token');
+  const attackAt = s.events.findIndex(e => e.type === 'attack' && e.unit === 'Hivematron'); const summonAt = s.events.findIndex((e, i) => i > attackAt && e.type === 'summon' && e.unit === '1/2 Token');
   assert.ok(attackAt >= 0 && summonAt > attackAt);
 });
 
 test('fight-3 entry buff applies to tokens, not the pre-boarded boss', () => {
   const s = createFight({ fight: 3, playerDeck: [], enemyDeck: [] }); const boss = s.enemy.board[0], token = summon(s, 'enemy', tokenCard());
-  assert.equal(boss.baseAtk, 1); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 2);
+  assert.equal(boss.baseAtk, 1); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 3);
+});
+
+test('global toughness pass applies half-up HP scaling without changing ATK or hero HP', () => {
+  const oathbound = getCard('oathbound'), dagger = getCard('dagger_imp'), boss = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }).enemy.board[0];
+  assert.deepEqual([oathbound.atk, oathbound.hp], [2, 6]);
+  assert.deepEqual([dagger.atk, dagger.hp], [2, 2]);
+  assert.deepEqual([boss.baseAtk, boss.baseMaxHp], [1, 8]);
+  assert.equal(HERO_HP, 40);
 });
 
 test('a later attacker treats an opposite corpse as an empty lane and hits the hero', () => {
@@ -274,10 +284,10 @@ test('cleanup emits one batch shift for an affected side', () => {
 });
 
 test('deathrattle fires immediately at lethal while its corpse stays in lane', () => {
-  const s = empty(), wisp = summon(s, 'player', getCard('brood_wisp')), killer = summon(s, 'enemy', getCard('sellsword'));
+  const s = empty(), wisp = summon(s, 'player', getCard('brood_wisp')), killer = summon(s, 'enemy', getCard('colossus'));
   s.events = []; exchange(s, 'enemy', killer, wisp);
   const deathAt = s.events.findIndex(event => event.type === 'death' && event.uid === wisp.uid);
-  const summonAt = s.events.findIndex((event, index) => index > deathAt && event.type === 'summon' && event.unit === '1/1 Token');
+  const summonAt = s.events.findIndex((event, index) => index > deathAt && event.type === 'summon' && event.unit === '1/2 Token');
   assert.ok(deathAt >= 0 && summonAt > deathAt); assert.ok(s.player.board.includes(wisp)); assert.equal(wisp.dead, true);
 });
 
