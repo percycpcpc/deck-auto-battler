@@ -1,7 +1,8 @@
 import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
+import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, impactDelay: 140, hitStop: 75, shakeSmall: 130, shakeMedium: 155, shakeLarge: 175, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
 export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
@@ -162,17 +163,20 @@ export function mountBattleScreen(initialState, root = app) {
   const header = el('header', 'battle-header'), phase = el('span', 'battle-phase', `READY · ROUND ${initialState.round || 0}`), speedControl = el('div', 'speed-control'), speedLabel = el('span', 'sr-only', 'Playback speed');
   speedControl.setAttribute('role', 'group'); speedControl.setAttribute('aria-label', 'Playback speed');
   for (const value of SPEEDS) { const speedButton = el('button', 'speed-control__button', `${value}x`); speedButton.type = 'button'; speedButton.dataset.speed = String(value); speedButton.setAttribute('aria-pressed', String(value === playbackSpeed)); speedButton.addEventListener('click', () => setPlaybackSpeed(value)); speedControl.append(speedButton); }
+  const muteButton = el('button', 'speed-control__button mute-toggle', isMuted() ? 'Sound off' : 'Sound on'); muteButton.type = 'button'; muteButton.setAttribute('aria-pressed', String(isMuted())); muteButton.addEventListener('click', () => { const muted = setMuted(!isMuted()); muteButton.textContent = muted ? 'Sound off' : 'Sound on'; muteButton.setAttribute('aria-pressed', String(muted)); }); speedControl.append(muteButton);
   header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / 3`), phase);
   const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
-  const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'), queue = createEnemyQueuePanel(); banner.hidden = true;
+  const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'), queue = createEnemyQueuePanel(), embers = el('div', 'ember-layer'); banner.hidden = true;
+  embers.setAttribute('aria-hidden', 'true'); for (let i = 0; i < 16; i++) { const ember = el('i', 'ember'); ember.style.setProperty('--ember-x', `${(i * 37) % 101}%`); ember.style.setProperty('--ember-drift', `${(i % 5 - 2) * 13}px`); ember.style.setProperty('--ember-delay', `${-dur(i * 510)}ms`); ember.style.setProperty('--ember-duration', `${dur(TIMING.emberMin + (i % 7) * TIMING.emberStep)}ms`); embers.append(ember); }
   const openingPreview = createEnemyPreview(initialState.fight, initialState.enemy.deck, initialState.enemy.board); openingPreview.classList.add('enemy-preview--opening');
-  battle.append(header, enemy.root, log, player.root, flight, banner, queue.panel, openingPreview); root.append(battle);
+  battle.style.setProperty('--idle-duration', `${dur(TIMING.idle)}ms`); battle.append(embers, header, enemy.root, log, player.root, flight, banner, queue.panel, openingPreview); root.append(battle);
   const history = el('div', 'battle-log__history'), detail = el('div', 'battle-detail'), live = el('span', 'sr-only'), toggle = el('button', 'log-toggle', 'Log');
   detail.hidden = true; live.setAttribute('aria-live', 'polite'); toggle.setAttribute('aria-expanded', 'false'); history.id = 'battle-history'; toggle.setAttribute('aria-controls', history.id);
   for (let i = 0; i < 4; i++) history.append(el('p', 'battle-log__line', i === 3 ? 'Combat proceeds automatically' : ''));
   log.append(history, detail, live, toggle);
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
+  battle.addEventListener('click', event => { if (event.target.closest('button')) playSfx('uiClick'); });
   els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player }; bindSynchronizedBattleLanes();
   const toggleQueue = open => { queue.panel.hidden = open === undefined ? !queue.panel.hidden : !open; enemy.deck.stack.setAttribute('aria-expanded', String(!queue.panel.hidden)); };
   enemy.deck.stack.tabIndex = 0; enemy.deck.stack.setAttribute('role', 'button'); enemy.deck.stack.setAttribute('aria-controls', queue.panel.id); enemy.deck.stack.setAttribute('aria-expanded', 'false');
@@ -186,6 +190,7 @@ export function mountBattleScreen(initialState, root = app) {
   updateEnemyQueuePanel();
   for (const side of SIDES) if (initialState[side]?.charger) populateCharger(side, initialState[side].charger);
   for (const side of SIDES) (initialState[side]?.board || []).forEach((unit, index) => createUnitEl(unit.uid, unit, side, index, initialState));
+  if ((initialState.enemy?.board || []).some(unit => unit.boss)) { playSfx('deploy'); shakeBattle('large'); }
   reconcile(snapshotView(initialState)); return els;
 }
 
@@ -195,11 +200,11 @@ export function createUnitEl(uid, unit, side, slotIndex, snapshot = lastSnapshot
   if (unitEls.has(uid)) return unitEls.get(uid).el;
   const card = el('article', `card${unit.boss ? ' boss' : ''}`); card.dataset.uid = uid; card.style.transform = `translate3d(${slotIndex * slotPitch}px, 0, 0)`;
   const stats = snapshot ? effectiveStats(snapshot, side, unit) : { atk: unit.baseAtk ?? unit.atk, hp: (unit.baseMaxHp ?? unit.hp) - (unit.damage || 0) };
-  const atk = el('span', 'card__atk', String(stats.atk)), hp = el('span', 'card__hp', String(stats.hp)), badges = el('div', 'card__badges');
+  const idle = el('div', `card__idle card__idle--${side}`), atk = el('span', 'card__atk', String(stats.atk)), hp = el('span', 'card__hp', String(stats.hp)), badges = el('div', 'card__badges');
   const badgeEls = new Map();
   for (const key of ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry']) { const badge = img('card__badge', `assets/${iconFor(key)}`, key); badge.title = key === 'battlecry' ? battlecryText(unit) : key; badges.append(badge); badgeEls.set(key, badge); }
   const more = el('span', 'card__badge card__badge--more'); badges.append(more);
-  card.append(createFace(unit), atk, hp, badges); if (unit.boss) card.append(el('p', 'card__trait', bossText(unit)), el('em', 'card__crown', '♛'));
+  idle.append(createFace(unit), atk, hp, badges); if (unit.boss) idle.append(el('p', 'card__trait', bossText(unit)), el('em', 'card__crown', '♛')); card.append(idle);
   inspect(card, () => card.getAttribute('aria-label'));
   bindMouseHover(card, () => { const entry = unitEls.get(uid), current = lastSnapshot?.[side]?.board.find(item => item.uid === uid); return entry && current ? cardTipData(current, { atk: entry.atk, hp: entry.hp, maxHp: effectiveStats(lastSnapshot, side, current).maxHp }) : null; });
 
@@ -286,14 +291,14 @@ async function playReveal(event) {
   const side = event.side, source = els[side].deck.top || els[side].deck.stack, charger = event.state[side].charger;
   if (!source || !charger) { await wait(TIMING.reveal); return; }
   const destination = els[side].charger.getBoundingClientRect(), ghost = makeFlightVisual(charger.card, true);
-  await flyCard(source, destination, ghost, TIMING.reveal); populateCharger(side, charger); if (side === 'enemy' && event.state.enemy.deck) deckQueues.enemy = [...event.state.enemy.deck]; else { if (deckQueues[side][0]?.id !== charger.card.id) deckKnown[side] = false; if (deckKnown[side]) deckQueues[side].shift(); } replaceDeckTop(side, deckQueues[side][0]); updateEnemyQueuePanel();
+  await flyCard(source, destination, ghost, TIMING.reveal); playSfx('reveal'); populateCharger(side, charger); if (side === 'enemy' && event.state.enemy.deck) deckQueues.enemy = [...event.state.enemy.deck]; else { if (deckQueues[side][0]?.id !== charger.card.id) deckKnown[side] = false; if (deckKnown[side]) deckQueues[side].shift(); } replaceDeckTop(side, deckQueues[side][0]); updateEnemyQueuePanel();
 }
 function autoScrollFor(side, slotIndex) { const scroll = els[side].scroll, left = slotIndex * slotPitch, right = left + slotWidth; if (right > scroll.scrollLeft + scroll.clientWidth - 8 || left < scroll.scrollLeft + 8) setBattleScrollLeft(left + slotWidth / 2 - scroll.clientWidth / 2); }
 function destinationRect(side, slotIndex) { const rect = els[side].lane.getBoundingClientRect(); return { left: rect.left + slotIndex * slotPitch, top: rect.top, width: slotWidth, height: cardHeight }; }
 async function playDeploy(event) {
   const side = event.side, unit = event.state[side].board.find(item => item.uid === event.uid); if (!unit) { await wait(TIMING.deploy); return; }
   const slotIndex = event.state[side].board.findIndex(item => item.uid === event.uid); autoScrollFor(side, slotIndex); const dest = destinationRect(side, slotIndex), ghost = makeFlightVisual(unit, true, true);
-  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', TIMING.pop); if (unit.dead) scheduleDeath(unit.uid); clearCharger(side); reconcile(event.state);
+  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); playSfx('deploy'); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', TIMING.pop); if (unit.boss) shakeBattle('large'); if (unit.dead) scheduleDeath(unit.uid); clearCharger(side); reconcile(event.state);
 }
 
 let hoverTip = null, hoverTimer = null, hoverOwner = null;
@@ -329,6 +334,7 @@ function cardTipData(card, stats = null) {
   return { name: card.name || def.name, cost: def.cost ?? 0, atk: resolved.atk, hp: resolved.hp, maxHp: resolved.maxHp ?? resolved.hp, base: { atk: card.baseAtk ?? def.atk, hp: card.baseMaxHp ?? def.hp }, keys: printedKeywordsFor(card), text: descriptorText(card) };
 }
 function pulse(node, className, duration) { if (node) { const scaled = dur(duration); node.style.setProperty('--fx-duration', `${scaled}ms`); node.classList.add(className); setTimeout(() => { node.classList.remove(className); node.style.removeProperty('--fx-duration'); }, scaled); } }
+function shakeBattle(tier) { if (!els?.battle || reducedMotion()) return; const duration = { small: TIMING.shakeSmall, medium: TIMING.shakeMedium, large: TIMING.shakeLarge }[tier], className = `fx-shake-${tier}`, scaled = dur(duration); els.battle.classList.remove('fx-shake-small', 'fx-shake-medium', 'fx-shake-large'); void els.battle.offsetWidth; els.battle.style.setProperty('--shake-duration', `${scaled}ms`); els.battle.classList.add(className); setTimeout(() => { els?.battle?.classList.remove(className); els?.battle?.style.removeProperty('--shake-duration'); }, scaled); }
 function battlecryCaption(event) {
   const target = event.target || event.targets?.join(' and ');
   if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}` : 'Battlecry: no opposing unit';
@@ -362,7 +368,16 @@ async function playBattlecry(event) {
   setTimeout(() => caption.remove(), dur(TIMING.battlecry + TIMING.captionFade));
   await wait(TIMING.battlecry);
 }
-async function playAttack(event) { const attacker = getUnitEl(event.uid), target = event.targetUid ? getUnitEl(event.targetUid) : els[event.side === 'player' ? 'enemy' : 'player'].hero.portrait; if (attacker && target) { const a = attacker.getBoundingClientRect(), b = target.getBoundingClientRect(); els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2, factor = reducedMotion() ? 0 : Math.min(.28, 60 / (Math.hypot(dx, dy) || 1)); attacker.style.setProperty('--lunge-x', `${dx * factor}px`); attacker.style.setProperty('--lunge-y', `${dy * factor}px`); attacker.classList.add('is-attacker'); target.classList.add('is-target'); pulse(attacker, 'fx-lunge', TIMING.attack); } await wait(TIMING.attack); }
+async function playAttack(event) {
+  const attacker = getUnitEl(event.uid), target = event.targetUid ? getUnitEl(event.targetUid) : els[event.side === 'player' ? 'enemy' : 'player'].hero.portrait;
+  if (!attacker || !target) { await wait(TIMING.attack); return; }
+  const a = attacker.getBoundingClientRect(), b = target.getBoundingClientRect(); els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target'));
+  const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2, factor = reducedMotion() ? 0 : Math.min(.28, 60 / (Math.hypot(dx, dy) || 1));
+  attacker.style.setProperty('--lunge-x', `${dx * factor}px`); attacker.style.setProperty('--lunge-y', `${dy * factor}px`); attacker.style.setProperty('--fx-duration', `${dur(TIMING.attack + (event.targetUid ? TIMING.hitStop : 0))}ms`); attacker.classList.add('is-attacker', 'fx-lunge'); target.classList.add('is-target');
+  if (event.targetUid) { await wait(TIMING.impactDelay); attacker.classList.add('fx-hit-stop'); playSfx('impact'); shakeBattle('small'); await wait(TIMING.hitStop); attacker.classList.remove('fx-hit-stop'); await wait(TIMING.attack - TIMING.impactDelay); }
+  else await wait(TIMING.attack);
+  attacker.classList.remove('fx-lunge'); attacker.style.removeProperty('--fx-duration');
+}
 function damageFloater(target, amount, rect = target?.getBoundingClientRect()) { if (!target) return; const offset = target._floatAlternate ? 16 : -16; target._floatAlternate = !target._floatAlternate; const floater = el('span', 'damage-floater', typeof amount === 'number' ? `-${amount}` : amount); floater.style.left = `${rect.left + rect.width / 2 + offset}px`; floater.style.top = `${rect.top + rect.height * .35}px`; floater.style.setProperty('--fx-duration', `${dur(TIMING.floater)}ms`); els.flight.append(floater); setTimeout(() => floater.remove(), dur(TIMING.floater)); }
 function scheduleDeath(uid) { const entry = unitEls.get(uid); if (!entry || entry.dying) return; entry.dying = true; entry.el.style.setProperty('--fx-duration', `${dur(TIMING.death)}ms`); entry.el.classList.add('fx-death'); entry.el.style.pointerEvents = 'none'; entry.el.setAttribute('aria-disabled', 'true'); setTimeout(() => entry.el.classList.add('is-corpse'), dur(TIMING.death)); }
 async function playShift(event) {
@@ -385,12 +400,12 @@ async function playEvent(event, deployUids) {
   if (event.type === 'battlecry') return playBattlecry(event);
   if (event.type === 'summonPing') { pulse(getUnitEl(event.uid), 'fx-battlecry-source', TIMING.summonPing); pulse(getUnitEl(event.targetUid), 'fx-battlecry-target', TIMING.summonPing); await wait(TIMING.summonPing); return; }
   if (event.type === 'summon') { if (!deployUids.has(event.uid)) { const unit = event.state[event.side].board.find(item => item.uid === event.uid), index = event.state[event.side].board.findIndex(item => item.uid === event.uid); if (unit) pulse(createUnitEl(unit.uid, unit, event.side, index, event.state), 'fx-deploy-pop', TIMING.summon); } reconcile(event.state); await wait(TIMING.summon); return; }
-  if (event.type === 'tick') { reconcile(event.state); pulse(els[event.side].charger.querySelector('.cost-dot__count'), 'fx-tick', TIMING.tick); await wait(TIMING.tick); return; }
+  if (event.type === 'tick') { reconcile(event.state); playSfx('charge'); pulse(els[event.side].charger.querySelector('.cost-dot__count'), 'fx-tick', TIMING.tick); await wait(TIMING.tick); return; }
   if (event.type === 'attack') return playAttack(event);
   if (event.type === 'damage') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); pulse(target, 'fx-hit', TIMING.damage); damageFloater(target, event.amount, rect); await wait(TIMING.damage); return; }
   if (event.type === 'statChange') { reconcile(event.state); pulse(getUnitEl(event.uid), 'fx-deploy-pop', TIMING.statChange); await wait(TIMING.statChange); return; }
-  if (event.type === 'death') { scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
-  if (event.type === 'heroHit') { reconcile(event.state); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
+  if (event.type === 'death') { playSfx('death'); shakeBattle('medium'); scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
+  if (event.type === 'heroHit') { reconcile(event.state); playSfx('heroDamage'); shakeBattle('medium'); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
   if (event.type === 'shield') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); damageFloater(target, 'BLOCKED', rect); pulse(getUnitEl(event.uid), 'fx-shield', TIMING.shield); await wait(TIMING.shield); return; }
   if (event.type === 'chargerDestroyed') { pulse(els[event.side].charger, 'fx-shatter', TIMING.chargerDestroyed); await wait(TIMING.chargerDestroyed); clearCharger(event.side); reconcile(event.state); return; }
   if (event.type === 'stalemate') { pulse(els.player.hero.panel, 'fx-stalemate', TIMING.stalemate); pulse(els.enemy.hero.panel, 'fx-stalemate', TIMING.stalemate); appendLog(`Stalemate: ${event.winner} wins`); await wait(TIMING.stalemate); return; }
@@ -429,7 +444,7 @@ async function playTurnBanner(round) {
   try { await leave.finished; } catch { /* remounted */ } banner.hidden = true;
 }
 
-function button(label, handler) { const node = el('button', 'primary', label); node.addEventListener('click', handler); return node; }
+function button(label, handler) { const node = el('button', 'primary', label); node.addEventListener('click', event => { if (label === 'Start Run') initAudio(); playSfx('uiClick'); handler(event); }); return node; }
 function updateEnemyQueuePanel() {
   if (!els?.queue) return;
   els.queue.items.forEach((item, index) => { const card = deckQueues.enemy[index]; item.hidden = !card; setText(item, card ? `${card.name} · ${card.cost} cost · ${card.atk}/${card.hp}` : ''); });
@@ -447,7 +462,7 @@ function showTitle() { stopped = true; const screen = el('section', 'screen titl
 function startRun() { run = createRun(); stopped = false; beginFight(); }
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
-export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => choose(def)); return node; }
+export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); return node; }
 function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`), createEnemyPreview(run.fight, run.enemyLine || [])); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
-function showEnd(won) { stopped = true; const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
+function showEnd(won) { stopped = true; playSfx(won ? 'victory' : 'defeat'); const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

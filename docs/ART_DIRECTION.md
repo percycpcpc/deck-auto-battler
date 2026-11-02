@@ -115,6 +115,14 @@ Reference resolution 1920×1080. Enemy row of slots across the **top** (y≈180)
 - **Shift-left** (300ms): surviving units glide left into place with slight stagger (40ms apart, nearest first).
 - **Hero hit**: hero portrait ring flashes red, screen-edge vignette pulse, HP bar chunk-drains (animated fill, 250ms).
 
+### Motion & juice
+
+The shipped presentation pass keeps simulation timing untouched and scales all new event feedback through the playback-speed helper. Attack impact uses a 140ms lead-in, then a 75ms hit-stop on the acting unit. The battle root shakes without layout shift or page overflow: small impact shake is 2px for 130ms, medium death/hero-damage shake is 4px for 155ms, and large boss-deploy shake is 6px for 175ms. Reduced-motion mode removes spatial shake and perpetual motion while retaining event pacing and static combat feedback.
+
+Board units breathe only on an inner wrapper, never on the uid-keyed lifecycle root: 2px upward travel with scale 1 to 1.015 over 2400ms, ease-in-out, infinite alternate. Their frame glow pulses faintly in the existing allegiance accent (teal for player, crimson for enemy). Sixteen noninteractive orange/violet embers drift slowly behind the board on 9000ms to 11520ms cycles at opacity no higher than 0.32.
+
+All audio is synthesized at runtime with WebAudio and routes through one master gain set to 0.16. Reveal and charge are short filtered triangle ticks; deploy and hero damage layer low sine thuds with filtered noise; attack impact layers a tight low-pass noise burst with a descending triangle body; death is a quiet descending saw/rumble; victory and defeat use restrained three-note and two-note stings. Every cue is generic to its event type, peaks below the master ceiling, and lasts no more than 260ms. Audio initializes or resumes on the Start Run gesture, and the persisted `dab_muted` toggle defaults to sound on.
+
 ### Asset list
 All portraits: painterly flat gouache style, dark `#1E1830` background, strong rim light from upper-left, single character centered, no text, no borders. Frames/UI: flat vector-clean style.
 
