@@ -37,6 +37,7 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogre.
 
 Owner tuning: 1-cost 2/4 to soften early game.
+Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-value the boss after clearing the line.
 
 ## Keyword interactions
 - Windfury vs Divine Shield: first exchange pops the shield (whole instance negated), second exchange damages normally. Poisonous only triggers if damage actually lands — a negated hit does not kill.

@@ -204,8 +204,15 @@ test('regular enemies remain in the trickle deck and reveal one charger at a tim
 });
 
 test('enemy order is identical across 100 runs of the same fight', () => {
-  const expected = enemyDeckFor(1).map(card => card.id);
-  for (let run = 0; run < 100; run++) assert.deepEqual(enemyDeckFor(1, Math.random).map(card => card.id), expected);
+  const expected = {
+    1: ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt'],
+    2: ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt'],
+    3: ['enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute'],
+  };
+  for (const fight of [1, 2, 3]) {
+    assert.equal(enemyDeckFor(fight).length, expected[fight].length);
+    for (let run = 0; run < 100; run++) assert.deepEqual(enemyDeckFor(fight, Math.random).map(card => card.id), expected[fight]);
+  }
 });
 
 test('player order still varies while enemy NEXT stays deterministic', () => {
@@ -223,14 +230,14 @@ test('next enemy script is previewed once and reused by the following fight', ()
   first.over = true; first.winner = 'player'; finishRunFight(run, first);
   const preview = run.enemyLine.map(card => card.id), second = startRunFight(run);
   assert.deepEqual(second.enemy.deck.map(card => card.id), preview);
-  assert.equal(run.enemyLine, null); assert.equal(enemyDeckFor(2, () => 0).length, 7);
+  assert.equal(run.enemyLine, null); assert.equal(enemyDeckFor(2, () => 0).length, 4);
 });
 
 test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
   const state = createFight({ fight: 2 });
   assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].boss, 'hive'); assert.equal(state.enemy.board[0].baseMaxHp, 8);
-  assert.equal(state.enemy.deck.length, 7); runRound(state);
-  assert.ok(state.enemy.board.some(unit => unit.boss === 'hive')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 6);
+  assert.equal(state.enemy.deck.length, 4); runRound(state);
+  assert.ok(state.enemy.board.some(unit => unit.boss === 'hive')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 3);
 });
 
 test('fight-2 boss token appears only after attack damage and only with room', () => {

@@ -84,8 +84,8 @@ Owner tuning: 1-cost 2/4 to soften early game.
 - **Fight 3 — Aura boss**: starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
 - Enemy regular units use the same reveal, charge, and leftmost-deploy rules as the player. Bosses remain the pre-board exception in column 1. Enemy draw order is fixed and public; `enemyDeckFor(fight)` never shuffles it:
   - Fight 1: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
-  - Fight 2: Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt.
-  - Fight 3: Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt.
+  - Fight 2: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
+  - Fight 3: Ash Grunt, Camp Brute, Ash Grunt, Camp Brute.
 - Scout remains in the pool. Its Battlecry is a narrated fizzle: **“Already scouted — enemy order is known.”**
 
 ## Balance flags (watch in playtests)

@@ -95,8 +95,8 @@ export function shuffle(items, rng = Math.random) {
 
 const ENEMY_SCRIPTS = Object.freeze({
   1: ['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt'],
-  2: ['grunt', 'brute', 'grunt', 'grunt', 'brute', 'grunt', 'grunt'],
-  3: ['brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt', 'grunt'],
+  2: ['grunt', 'grunt', 'brute', 'grunt'],
+  3: ['grunt', 'brute', 'grunt', 'brute'],
 });
 const enemyCard = kind => kind === 'brute'
   ? card('enemy_brute', 'Camp Brute', 2, 2, 5)
