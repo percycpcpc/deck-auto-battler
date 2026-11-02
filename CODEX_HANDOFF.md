@@ -2,7 +2,7 @@
 
 ## Project Goal
 
-Increase every unit's base HP by ×1.5 (half-up, minimum +1) so formations survive long enough to develop horizontally; keep ATK and hero HP unchanged.
+Keep enemy and player combat rows horizontally aligned for the full fight so the same slot indices always face one another.
 
 ## Current Phase
 
@@ -11,32 +11,32 @@ Increase every unit's base HP by ×1.5 (half-up, minimum +1) so formations survi
 
 ## Latest Completed Work
 
-- All 36 pool cards, enemy Grunt/Brute, Hivematron/Warherald, and 1/2 and 2/3 tokens use the owner-specified toughness formula.
-- ATK, costs, keywords, triggers, and 40 hero HP are unchanged.
-- Token descriptors, binding docs, and all affected HP assertions were updated; a formula sanity test covers 2/4→2/6, 2/1→2/2, and boss 1/8.
-- Desktop/mobile Chrome evidence records a reproducible standard fight-1 state with five live player columns at round 15.
+- The existing named enemy/player scroll regions now share one guarded logical `scrollLeft`.
+- Native wheel/touch scrolling on either lane mirrors to the other; arrows, keyboard arrows, and deploy auto-scroll update both synchronously.
+- Both arrow pairs derive disabled state from the shared position.
+- Browser invariant check 11 covers slot 6+, reverse-source scrolling, first-visible index equality, and <=1px drift.
+- Desktop mid-scroll, desktop right-edge, and 390x844 mobile evidence is in `refs/ui-audit/sync-scroll/`.
 
 ## Important Modified Files
 
-- `src/engine.js`, `src/ui.js`
-- `test/engine.test.mjs`, `tools/preboard_audit.py`, `tools/preseed_audit.py`, `tools/toughness_audit.py`
-- `docs/SPEC.md`, `docs/RULINGS.md`
-- `refs/ui-audit/toughness/`
+- `src/ui.js`
+- `docs/UI_ARCHITECTURE.md`, `docs/FIGHT_UI_DESIGN.md`
+- `tools/invariants.html`, `tools/invariants_check.mjs`, `tools/sync_scroll_audit.py`
+- `refs/ui-audit/sync-scroll/`
 
 ## Verification
 
 - `node test/engine.test.mjs`: 39/39 passed
 - `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/ui_invariants_check.mjs`: PASS (static wiring)
-- Installed headless Chrome invariant harness: PASS
-- Installed headless Chrome toughness audit: PASS; desktop/mobile screenshots captured
-- Balance n=300: fight 1 98%, roundsMed 18; fight 2 4%, roundsMed 10; fight 3 6%, roundsMed 13
+- `node tools/ui_invariants_check.mjs`: PASS (static wiring includes check 11)
+- Installed headless Chrome real-browser invariant harness: PASS checks 1, 2, 3, 6, 8, 10, 11
+- Installed headless Chrome sync audit: slot 6 aligned at 1440px; enemy wheel moved both to 1800px with 0px drift; right edge 3600px with both next arrows disabled; mobile slot 6 aligned at 744px
 
 ## Known Risks / Untested Areas
 
-- Browser evidence uses installed headless Chrome, not a physical mobile device or screen reader.
-- Fight 2 and fight 3 remain difficult at 4% and 6% starter-deck win rates; reported raw per owner request.
+- Browser evidence uses installed headless Chrome, not a physical touch device or screen reader.
+- Touch uses the same native scroll-event synchronization path verified by wheel input, but no physical swipe automation was available.
 
 ## Next Safest Task
 
-Owner review of the five-column board evidence and whether fights 2/3 need a separate difficulty pass.
+Owner visual review of the aligned desktop/mobile screenshots.

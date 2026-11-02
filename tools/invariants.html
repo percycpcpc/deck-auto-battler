@@ -77,6 +77,18 @@
     const persisted = completedDeaths.every(([, window]) => window.corpseAt && window.corpseAt < window.end);
     const shiftedAtCleanup = cleanupShifts.length > 0 && cleanupShifts.every(event => event.phase === 'cleanup' && event.removedUids.length > 0 && event.removedUids.every(uid => !event.state[event.side].board.some(unit => unit.uid === uid)));
     report(10, deathDurations.length > 0 && deathDurations.every(ms => ms >= 400) && persisted && shiftedAtCleanup, `death-to-cleanup removals [${deathDurations.map(Math.round).join(', ')}]ms; corpse state observed ${persisted}; cleanup batches ${cleanupShifts.map(event => `${event.side}:${event.removedUids.length}`).join(', ')}`);
+    const scrollFight = engine.createFight({ playerDeck:[], enemyDeck:[] });
+    for (const side of ['player', 'enemy']) for (let index = 0; index < 8; index++) scrollFight[side].board.push(engine.makeUnit(engine.getCard(index % 2 ? 'sellsword' : 'aegis_knight'), side, { uid:`scroll-${side}-${index}` }));
+    ui.mountBattleScreen(scrollFight, document.querySelector('#app'));
+    const enemyScroll = document.querySelector('.side--enemy .board-scroll'), playerScroll = document.querySelector('.side--player .board-scroll');
+    const battleStyles = getComputedStyle(document.querySelector('#battle-screen'));
+    const pitch = parseFloat(battleStyles.getPropertyValue('--slot-w')) + parseFloat(battleStyles.getPropertyValue('--slot-gap'));
+    playerScroll.scrollLeft = pitch * 6; await new Promise(requestAnimationFrame);
+    const firstVisible = node => Math.floor((node.scrollLeft + 1) / pitch);
+    const programmaticAligned = firstVisible(enemyScroll) === firstVisible(playerScroll) && Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft) <= 1;
+    enemyScroll.scrollLeft += pitch; await new Promise(requestAnimationFrame);
+    const enemyFollowed = Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft) <= 1;
+    report(11, programmaticAligned && enemyFollowed, `slot>=6 first-visible enemy/player ${firstVisible(enemyScroll)}/${firstVisible(playerScroll)}; user-source delta ${Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft).toFixed(2)}px`);
     const passed = lines.every(line => line.includes(': PASS'));
     document.title = `INVARIANTS: ${passed ? 'PASS' : 'FAIL'} | ${lines.join(' | ')}`;
   </script>

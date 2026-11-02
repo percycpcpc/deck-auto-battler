@@ -118,10 +118,24 @@ function createSide(side) {
   lane.append(ghosts, empty); scroll.append(lane); scroll.tabIndex = 0; scroll.setAttribute('role', 'region'); scroll.setAttribute('aria-label', side === 'player' ? 'Your line' : 'Enemy line');
   const prev = el('button', 'lane-arrow lane-arrow--prev', '‹'), next = el('button', 'lane-arrow lane-arrow--next', '›');
   prev.setAttribute('aria-label', 'Scroll previous slot'); next.setAttribute('aria-label', 'Scroll next slot');
-  const updateArrows = () => { prev.disabled = scroll.scrollLeft <= 0; next.disabled = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1; };
-  prev.addEventListener('click', () => scroll.scrollBy({ left: -slotPitch, behavior: 'auto' })); next.addEventListener('click', () => scroll.scrollBy({ left: slotPitch, behavior: 'auto' }));
-  scroll.addEventListener('scroll', updateArrows); scroll.addEventListener('keydown', event => { if (event.target === scroll && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); scroll.scrollBy({ left: event.key === 'ArrowLeft' ? -slotPitch : slotPitch }); } });
-  prev.disabled = true; root.append(info, scroll, prev, next); return { root, hero, deck, charger, chargerLabel, plaque, scroll, lane, ghosts, empty };
+  const updateArrows = left => { const position = left ?? scroll.scrollLeft; prev.disabled = position <= 0; next.disabled = position >= scroll.scrollWidth - scroll.clientWidth - 1; };
+  prev.addEventListener('click', () => scrollBattleLanesBy(-slotPitch, scroll)); next.addEventListener('click', () => scrollBattleLanesBy(slotPitch, scroll));
+  scroll.addEventListener('scroll', () => updateArrows()); scroll.addEventListener('keydown', event => { if (event.target === scroll && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); scrollBattleLanesBy(event.key === 'ArrowLeft' ? -slotPitch : slotPitch, scroll); } });
+  prev.disabled = true; root.append(info, scroll, prev, next); return { root, hero, deck, charger, chargerLabel, plaque, scroll, lane, ghosts, empty, updateArrows };
+}
+
+let synchronizingBattleLanes = false;
+function setBattleScrollLeft(left) {
+  if (!els?.enemy || !els?.player) return;
+  const max = Math.min(...SIDES.map(side => Math.max(0, els[side].scroll.scrollWidth - els[side].scroll.clientWidth)));
+  const position = Math.max(0, Math.min(left, max)); synchronizingBattleLanes = true;
+  for (const side of SIDES) { els[side].scroll.scrollLeft = position; els[side].updateArrows(position); }
+  synchronizingBattleLanes = false;
+}
+function scrollBattleLanesBy(delta, source) { setBattleScrollLeft((source?.scrollLeft ?? els?.player?.scroll.scrollLeft ?? 0) + delta); }
+function bindSynchronizedBattleLanes() {
+  for (const side of SIDES) els[side].scroll.addEventListener('scroll', () => { if (!synchronizingBattleLanes) setBattleScrollLeft(els[side].scroll.scrollLeft); });
+  setBattleScrollLeft(0);
 }
 
 function replaceDeckTop(side, card) {
@@ -159,7 +173,7 @@ export function mountBattleScreen(initialState, root = app) {
   log.append(history, detail, live, toggle);
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
-  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player };
+  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player }; bindSynchronizedBattleLanes();
   const toggleQueue = open => { queue.panel.hidden = open === undefined ? !queue.panel.hidden : !open; enemy.deck.stack.setAttribute('aria-expanded', String(!queue.panel.hidden)); };
   enemy.deck.stack.tabIndex = 0; enemy.deck.stack.setAttribute('role', 'button'); enemy.deck.stack.setAttribute('aria-controls', queue.panel.id); enemy.deck.stack.setAttribute('aria-expanded', 'false');
   enemy.deck.stack.addEventListener('pointerdown', () => { enemy.deck.stack._queueWasOpen = !queue.panel.hidden; });
@@ -274,7 +288,7 @@ async function playReveal(event) {
   const destination = els[side].charger.getBoundingClientRect(), ghost = makeFlightVisual(charger.card, true);
   await flyCard(source, destination, ghost, TIMING.reveal); populateCharger(side, charger); if (side === 'enemy' && event.state.enemy.deck) deckQueues.enemy = [...event.state.enemy.deck]; else { if (deckQueues[side][0]?.id !== charger.card.id) deckKnown[side] = false; if (deckKnown[side]) deckQueues[side].shift(); } replaceDeckTop(side, deckQueues[side][0]); updateEnemyQueuePanel();
 }
-function autoScrollFor(side, slotIndex) { const scroll = els[side].scroll, left = slotIndex * slotPitch, right = left + slotWidth; if (right > scroll.scrollLeft + scroll.clientWidth - 8 || left < scroll.scrollLeft + 8) scroll.scrollTo({ left: Math.max(0, left + slotWidth / 2 - scroll.clientWidth / 2), behavior: 'auto' }); }
+function autoScrollFor(side, slotIndex) { const scroll = els[side].scroll, left = slotIndex * slotPitch, right = left + slotWidth; if (right > scroll.scrollLeft + scroll.clientWidth - 8 || left < scroll.scrollLeft + 8) setBattleScrollLeft(left + slotWidth / 2 - scroll.clientWidth / 2); }
 function destinationRect(side, slotIndex) { const rect = els[side].lane.getBoundingClientRect(); return { left: rect.left + slotIndex * slotPitch, top: rect.top, width: slotWidth, height: cardHeight }; }
 async function playDeploy(event) {
   const side = event.side, unit = event.state[side].board.find(item => item.uid === event.uid); if (!unit) { await wait(TIMING.deploy); return; }

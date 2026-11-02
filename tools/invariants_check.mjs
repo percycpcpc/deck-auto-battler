@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const harness = resolve(here, 'invariants.html');
 const source = await readFile(harness, 'utf8');
-const required = [1, 2, 3, 6, 8, 10];
+const required = [1, 2, 3, 6, 8, 10, 11];
 const missing = required.filter(number => !source.includes(`report(${number},`));
 if (missing.length) {
   console.error(`FAIL: invariants harness missing checks ${missing.join(', ')}`);

@@ -42,7 +42,7 @@
 </div>
 ```
 
-- `.board-scroll` is the horizontal scroll container (`overflow-x: auto`). `.board-lane` is `position: relative`, width = `20 * slotPitch`, height = card height. Scrolling moves lane content; unit positions are **lane-relative**, so scroll never invalidates them.
+- Each named line retains its `.board-scroll` region (`overflow-x: auto`), but both regions expose one shared logical horizontal position. A guarded coordinator mirrors native wheel/touch movement and routes arrows, keyboard, and deploy auto-scroll to both regions synchronously. `.board-lane` is `position: relative`, width = `20 * slotPitch`, height = card height. Scrolling moves lane content; unit positions are **lane-relative**, so scroll never invalidates them.
 - `.flight-layer` is `position: fixed; inset: 0; pointer-events: none; z-index` above both sides and the log, below nothing. Only ghost elements (§2) and floating damage numbers live here.
 
 ### 1.2 Element identity — uid-keyed persistent units
@@ -88,6 +88,7 @@ Deaths do not free slot-index bookkeeping. At cleanup, remove the batch of dead 
 
 - Ghost placeholders: `.slot-ghosts` renders exactly **5 dashed slot frames** (slots 0–4, the visible window) as a non-interactive background layer. No ghosts beyond slot 4 — the extended lane is bare. (Decision made here; do not re-decide.)
 - Slot geometry never changes during a fight (fixed 20-slot lane width), so `translate3d` positions are stable across scrolls. No re-measurement of units on scroll.
+- Enemy and player `.board-scroll` values remain equal within 1px for the life of a fight, so opposing slot indices always share the same screen-space column.
 - Scroll is user-driven except during DEPLOY auto-scroll (§2.4). Never call `scrollTo` during reconcile.
 
 ### 1.6 Anti-blink specifics (hard rules)
@@ -145,7 +146,7 @@ During flight, ghost gets `.is-flying` → `z-index` top of flight-layer, `scale
 
 ### 2.5 Auto-scroll during deploy
 
-Before measuring rects for journey (b): compute the destination slot's lane-space rect. If its right edge > `.board-scroll` visible right edge − 8px, or left edge < visible left edge + 8px: `boardScroll.scrollTo({ left: slotCenter − scrollViewportWidth / 2, behavior: 'auto' })` (instant — a smooth scroll mid-measurement would desync the flight start). **Then** measure. Instant scrolling before measurement keeps the ghost path coherent; the board never scrolls during the flight itself.
+Before measuring rects for journey (b): compute the destination slot's lane-space rect. If its right edge > `.board-scroll` visible right edge − 8px, or left edge < visible left edge + 8px: set the shared lane position to `slotCenter − scrollViewportWidth / 2` (instant — a smooth scroll mid-measurement would desync the flight start). **Then** measure. Both lines move before measurement, keeping the opposing slot aligned and the ghost path coherent; the board never scrolls during the flight itself.
 
 ---
 
