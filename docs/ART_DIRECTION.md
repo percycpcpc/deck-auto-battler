@@ -31,7 +31,7 @@ Tax Collector (+1 turn), Chrono Imp (−1 turn), Doomcaller (destroy), Meddler (
 Brood Wisp, Brood Queen, Gravedigger, and the Fight-2 boss summon tokens with no stated destination. *Resolution:* all tokens enter the **leftmost empty slot**; if the board is full, the summon is lost. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
 **7. Draft mechanics unspecified.**
-*Resolution:* each draft is two sequential 1-of-3 picks (pick → new set of 3); offers are drawn uniformly from the full 30-card pool **with duplicates allowed** (you can be offered a card already in your deck); starter cards are never removed. Deck grows 8 → 10 → 12.
+*Resolution:* each draft is two sequential 1-of-3 picks (pick → new set of 3). Each offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier, **with duplicates allowed**; starter cards are never removed. Deck grows 8 → 10 → 12.
 
 ### B. Keyword interactions the spec doesn't pin down
 
@@ -53,8 +53,8 @@ Rough model: the starter deck is 7× cost-1 + 1× cost-2, so from round 2 onward
 **14. Stalemate is possible and the spec has no clock.**
 Deck-out = "nothing happens," and with no fatigue, a fight where both boards and decks empty (very plausible in a symmetric fight 1) **never ends**. This is a hard prototype blocker — a soft-locked run is the worst possible demo outcome. *Resolution:* add an end condition: if both decks are empty and no cards are charging, and a full round passes with no change in total unit count on either side, the fight ends immediately — higher hero HP wins, tie goes to the player. One sentence of rules, one `if` in code, eliminates the soft-lock.
 
-**15. Enemy deck composition is unspecified.**
-"Fight 1: vanilla midrange (2/2s, 3/4s)" gives no counts or costs, so the fight is literally unimplementable. *Resolution — bind this:* Fight 1 deck = 5× 2/2 (cost 1) + 3× 3/4 (cost 2), shuffled. Fights 2–3: same shell plus the pre-boarded boss, minus one card (boss occupies board slot, not deck).
+**15. Enemy deck composition.**
+*Resolution — bind this:* Ash Grunts are Common 2/3s (cost 1) and Camp Brutes are Common 2/6s (cost 2). Fight 1 uses the fixed script of six Grunts and two Brutes; fights 2–3 use the fixed, thinned scripts in `SPEC.md` plus their pre-boarded boss.
 
 ### D. Contradictions and wording traps
 
@@ -94,7 +94,7 @@ Dark-fantasy "infernal war-room": a gritty, painterly-but-flat storybook look �
 | `#E8C468` | Gold UI (buttons, victory banner, draft banner trim) |
 
 ### Card layout (portrait, 256×384 master, rendered in-game at 128×192)
-- **Cost dot**: 48px circle, top-left corner, overlapping the frame edge; interior is `#14101C` with the cost numeral in `#EDE6D6`; the dot's ring uses the cost-trim color (bronze/silver/gold).
+- **Cost gem**: 48px `cost_gem.png`, top-left corner, overlapping the frame edge; the cost numeral remains bone `#EDE6D6` over the gem. Frames encode rarity, not cost.
 - **Art window**: centered, 200×176, top ~56px, gently arched top.
 - **Name banner**: horizontal plaque below art window, 224×36, `#1E1830` fill, cost-trim 2px outline, name centered in bone text.
 - **Keyword badges**: up to two 40×40 circular icons stacked on the **right edge** of the art window, half-overlapping the frame.
@@ -130,9 +130,10 @@ All portraits: painterly flat gouache style, dark `#1E1830` background, strong r
 | File | Size | Prompt notes |
 |---|---|---|
 | `card_back.png` | 256×384 | Ornate dark card back, deep violet-black, symmetrical embossed demon-eye motif in bronze, subtle scratch texture, no text |
-| `frame_cost1.png` | 256×384 | Portrait card frame only, weathered bronze trim, arched art window filled solid magenta `#FF00FF` for keying, empty banner plaque, two empty corner circles |
-| `frame_cost2.png` | 256×384 | Identical frame, trim recolored brushed silver |
-| `frame_cost3.png` | 256×384 | Identical frame, trim recolored ornate gold with small gem accents |
+| `frame_common.png` | 256×384 | Common portrait card frame only, weathered bronze trim, arched art window filled solid magenta `#FF00FF` for keying, empty banner plaque, two empty corner circles |
+| `frame_rare.png` | 256×384 | Rare version of the identical frame, trim recolored brushed silver |
+| `frame_mythic.png` | 256×384 | Mythic version of the identical frame, trim recolored ornate gold with small gem accents |
+| `cost_gem.png` | 96×96 | Gold-encased gem medallion, transparent background, no text |
 
 **Unit portraits (all 256×256, `portrait_*.png`)**
 1. `portrait_dagger_imp.png` — small wiry red imp dual-wielding oversized daggers, grinning

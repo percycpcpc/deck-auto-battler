@@ -6,9 +6,9 @@ OUT = Path(__file__).resolve().parents[1] / "assets"
 
 FILES = {
     "card_back.png": ("exec-9e82d632-5518-4428-a7f6-0b25ea41aa33.png", (256, 384), False),
-    "frame_cost1.png": ("exec-872513dd-1488-476e-bfc6-a28e53c637cb.png", (256, 384), True),
-    "frame_cost2.png": ("exec-17b97329-76fc-4d21-aad8-e643482015cb.png", (256, 384), True),
-    "frame_cost3.png": ("exec-ff1dfcdf-0a74-43f2-b062-37bde1ab9889.png", (256, 384), True),
+    "frame_common.png": ("exec-872513dd-1488-476e-bfc6-a28e53c637cb.png", (256, 384), True),
+    "frame_rare.png": ("exec-17b97329-76fc-4d21-aad8-e643482015cb.png", (256, 384), True),
+    "frame_mythic.png": ("exec-ff1dfcdf-0a74-43f2-b062-37bde1ab9889.png", (256, 384), True),
     "bg_battlefield.png": ("exec-d5f1652f-99ec-40d5-b6db-27cf50337f4e.png", (1920, 1080), False),
     "banner_draft.png": ("exec-6e506c31-6892-42bc-bfd6-e04e6749e968.png", (1024, 256), False),
     "banner_victory.png": ("exec-d253d806-18bb-44e9-bf4f-023bdfa1a48a.png", (1024, 256), False),

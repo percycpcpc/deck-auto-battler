@@ -31,7 +31,7 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
 ## Draft
-- Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Offers are uniform random from the full 36-card pool, duplicates allowed. Starter cards are never removed. Deck grows 8 → 10 → 12.
+- Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Each offer slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier; duplicates are allowed. Starter cards are never removed. Deck grows 8 → 10 → 12.
 
 ## Fixed starter deck (8)
 Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogre.
@@ -53,7 +53,7 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
 - **Global toughness pass (owner): all unit HP ×1.5 half-up, min +1; ATK unchanged; hero HP unchanged.**
 - **Stalemate safety valve** (new rule): if both decks are empty and nothing is charging, and a full round passes with no change in total **live** unit count on either side, the fight ends immediately — higher hero HP wins; tie goes to the player. Corpses never delay this valve.
-- **Enemy decks**: Fight 1 = 6× 2/2 Ash Grunts (cost 1) + 2× 2/5 Camp Brutes (cost 2); fights 2–3 use five 2/2s + two 2/5s plus the pre-boarded 1/8 boss. These shells use the fixed, unshuffled scripts in `SPEC.md`.
+- **Enemy decks**: Fight 1 uses six pumped Common 2/3 Ash Grunts (cost 1) + two pumped Common 2/6 Camp Brutes (cost 2). Fights 2–3 use fixed, thinned support scripts with the legacy weaker Common 2/2 Grunts + Common 2/5 Brutes, alongside the pre-boarded 1/8 boss documented in `SPEC.md`, so the boss fights stay easier.
 
 ## Information
 - Owner sees their own charging card's identity only (not the card beneath it). Opponent sees cost dot + counter only.

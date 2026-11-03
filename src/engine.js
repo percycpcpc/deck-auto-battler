@@ -98,10 +98,10 @@ const ENEMY_SCRIPTS = Object.freeze({
   2: ['grunt', 'grunt', 'brute', 'grunt'],
   3: ['grunt', 'brute', 'grunt', 'brute'],
 });
-const enemyCard = kind => kind === 'brute'
-  ? card('enemy_brute', 'Camp Brute', 2, 2, 5)
-  : card('enemy_grunt', 'Ash Grunt', 1, 2, 2);
-export function enemyDeckFor(fight) { return (ENEMY_SCRIPTS[fight] || ENEMY_SCRIPTS[1]).map(enemyCard); }
+const enemyCard = (kind, fight) => kind === 'brute'
+  ? card('enemy_brute', 'Camp Brute', 2, 2, fight === 1 ? 6 : 5, { tier: 'common' })
+  : card('enemy_grunt', 'Ash Grunt', 1, 2, fight === 1 ? 3 : 2, { tier: 'common' });
+export function enemyDeckFor(fight) { return (ENEMY_SCRIPTS[fight] || ENEMY_SCRIPTS[1]).map(kind => enemyCard(kind, fight)); }
 
 const other = side => side === 'player' ? 'enemy' : 'player';
 export function snapshotView(state) {
@@ -331,7 +331,14 @@ function checkHeroEnd(state) {
   if (state.player.hp <= 0 || state.enemy.hp <= 0) { state.over = true; state.winner = state.player.hp > 0 ? 'player' : state.enemy.hp > 0 ? 'enemy' : 'player'; }
 }
 
-export function draftOffers(rng = Math.random) { return Array.from({ length: 3 }, () => getCard(CARD_POOL[Math.floor(rng() * CARD_POOL.length)].id)); }
+export function draftOffers(rng = Math.random) {
+  const tiers = [['common', 0.5], ['rare', 0.85], ['mythic', 1]];
+  return Array.from({ length: 3 }, () => {
+    const roll = rng(), tier = tiers.find(([, ceiling]) => roll < ceiling)?.[0] || 'mythic';
+    const cards = CARD_POOL.filter(card => card.tier === tier);
+    return getCard(cards[Math.floor(rng() * cards.length)].id);
+  });
+}
 
 export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, deck: starterDeck(), rng, enemyLine: null, won: false, lost: false }; }
 export function startRunFight(run) {

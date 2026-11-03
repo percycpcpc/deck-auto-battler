@@ -542,8 +542,8 @@ button {
 #battle-screen .card__frame,#battle-screen .card-back__image { position:absolute; inset:0; width:100%; height:100%; }
 #battle-screen .card__name { display:none; }
 #battle-screen .charger-card .card__art { opacity:.6; }
-#battle-screen .cost-dot { position:absolute; left:-8px; top:-8px; width:48px; height:48px; z-index:9; border:3px solid #b08d57; border-radius:50%; background:var(--bg); display:grid; place-items:center; font:700 18px/24px system-ui; }
-#battle-screen .cost-dot--t2 { border-color:#c0c6d4; } #battle-screen .cost-dot--t3 { border-color:#e8b84b; }
+#battle-screen .cost-dot { position:absolute; left:-8px; top:-8px; width:48px; height:48px; z-index:9; border:0; background:url('assets/cost_gem.png') center/contain no-repeat; color:var(--bone); text-shadow:0 1px 2px #14101c; display:grid; place-items:center; font:700 18px/24px system-ui; }
+.draft-visual .cost-dot { position:absolute; left:-8px; top:-8px; width:48px; height:48px; z-index:9; background:url('assets/cost_gem.png') center/contain no-repeat; color:#ede6d6; text-shadow:0 1px 2px #14101c; display:grid; place-items:center; font:700 18px/24px system-ui; }
 #battle-screen .cost-dot__count { position:absolute; right:-8px; bottom:20px; width:44px; height:36px; z-index:10; display:grid; place-items:center; border:2px solid var(--bone); border-radius:8px; background:var(--raised); font:800 28px/32px system-ui; }
 #battle-screen .is-scout-revealed { z-index:7; background:var(--panel); }
 #battle-screen .charger-card { z-index:8; } #battle-screen .charger-card:has(~ .is-scout-revealed) .card-back__image { visibility:hidden; }

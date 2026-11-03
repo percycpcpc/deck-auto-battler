@@ -171,10 +171,10 @@ Left → right within each `.side`'s info row: **`hero-panel` → `deck-stack` �
 
 The enemy's **current-fight scripted queue** is public and may be present in the DOM: deck-top identity, charger identity, and every remaining queued card in draw order. This is a scoped exception only. Player deck order, future-fight scripts, and RNG internals remain absent from public DOM.
 
-### 3.3 Cost dot (placement & palette)
+### 3.3 Cost gem (placement)
 
-- 48px circle, positioned top-left of the card with the offset defined in `docs/ART_DIRECTION.md` (`.cost-dot`).
-- Ring color by cost tier: classes `.cost-dot--t1 … .cost-dot--tN` mapping to the tier color tokens defined in `docs/ART_DIRECTION.md`. Use the doc's exact hex/token values and tier boundaries; do not invent colors.
+- 48px `assets/cost_gem.png`, positioned top-left of the card with the offset defined in `docs/ART_DIRECTION.md`; the DOM class remains `.cost-dot`.
+- Cost has no tier color. Card frames denote rarity: bronze/Common, silver/Rare, gold/Mythic.
 - Appears on: both chargers and flight ghosts for journeys (a) and (b). Never on board units or either face-up deck-top beyond what the standard face frame already shows.
 - On chargers, the turn counter is a **separate** element (`.cost-dot__count`, bottom-right per ART_DIRECTION) — not overlaid on the dot.
 

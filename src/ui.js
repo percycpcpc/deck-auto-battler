@@ -12,7 +12,7 @@ const HERO_MAX = 40;
 const app = typeof document === 'undefined' ? null : document.querySelector('#app');
 const wait = ms => new Promise(resolve => setTimeout(resolve, dur(ms)));
 const portrait = id => `assets/portrait_${id}.png`;
-const frameFor = cost => `assets/frame_cost${Math.max(1, Math.min(3, cost || 1))}.png`;
+const frameFor = tier => `assets/frame_${['common', 'rare', 'mythic'].includes(tier) ? tier : 'common'}.png`;
 const iconFor = key => ({ shield: 'icon_ds.png', poisonous: 'icon_poison.png', windfury: 'icon_wf.png', battlecry: 'icon_bc.png', deathrattle: 'icon_dr.png', aura: 'icon_aura.png' }[key]);
 const definitionFor = unit => CARD_POOL.find(card => card.id === unit?.cardId) || unit;
 const unitPortrait = unit => unit?.boss ? portrait(`boss_${unit.boss === 'hive' ? 'hivematron' : 'warherald'}`) : unit?.token ? portrait('brood_wisp') : (unit?.cardId || unit?.id) === 'enemy_grunt' ? portrait('sellsword') : (unit?.cardId || unit?.id) === 'enemy_brute' ? portrait('road_ogre') : portrait(unit?.portraitId || unit?.cardId || unit?.id);
@@ -72,15 +72,15 @@ function inspect(node, describe) {
 }
 // MOUNT
 function createCostDot(cost, withCount = false, count = 0) {
-  const dot = el('span', `cost-dot cost-dot--t${Math.max(1, Math.min(3, cost || 1))}`, String(cost));
+  const dot = el('span', 'cost-dot', String(cost));
   if (withCount) dot.append(el('span', 'cost-dot__count', String(count)));
   return dot;
 }
 
 function createFace(card, classes = '') {
   const node = el('div', `card-face ${classes}`.trim());
-  const def = definitionFor(card); node.style.setProperty('--card-trim', ['#b08d57', '#c0c6d4', '#e8b84b'][Math.max(1, Math.min(3, card?.boss ? 3 : def?.cost || 1)) - 1]);
-  node.append(img('card__art', unitPortrait(card), ''), img('card__frame', frameFor(card?.boss ? 3 : def?.cost), ''), el('span', 'card__name', card?.name || def?.name || 'Unit'));
+  const def = definitionFor(card), tier = card?.boss ? 'mythic' : def?.tier || 'common'; node.style.setProperty('--card-trim', { common: '#b08d57', rare: '#c0c6d4', mythic: '#e8b84b' }[tier]);
+  node.append(img('card__art', unitPortrait(card), ''), img('card__frame', frameFor(tier), ''), el('span', 'card__name', card?.name || def?.name || 'Unit'));
   return node;
 }
 
@@ -462,7 +462,7 @@ function showTitle() { stopped = true; const screen = el('section', 'screen titl
 function startRun() { run = createRun(); stopped = false; beginFight(); }
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
-export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.cost), '')); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); return node; }
+export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); return node; }
 function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`), createEnemyPreview(run.fight, run.enemyLine || [])); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
 function showEnd(won) { stopped = true; playSfx(won ? 'victory' : 'defeat'); const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

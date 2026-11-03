@@ -6,6 +6,7 @@ Web prototype. Auto-battler deckbuilder: 3 scripted fights, draft between fights
 Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-3 (twice) → fight 2 → draft (twice) → fight 3 → run ends (victory screen).
 - Lose = hero HP reaches 0 at any point → run over, restart.
 - HP persists across all 3 fights (Slay-the-Spire model: HP is carried debt).
+- Each draft offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier; duplicates are allowed.
 - No map, no economy, no meta in v0.
 
 ## Combat rules
@@ -33,6 +34,8 @@ Stat scale tuned for 40 hero HP and small decks.
 Common cards follow the vanilla toughness curve (cost 1 = 3 HP, cost 2 = 6 HP, cost 3 = 9 HP) and have no ability. Rare cards target roughly 1.5x curve toughness plus a keyword or minor ability. Mythic cards target 2x curve toughness plus an impactful ability and may cost 1 less than a normal unit. Mythic HP is hard-capped at 10 because literal 2x cost-2/3 toughness (12/18 HP) is unkillable within the 40-HP-hero combat scale.
 
 Keywords count toward the toughness budget: Divine Shield is worth roughly 2 HP, while Poisonous is priced as removal and therefore receives a deliberately below-budget body. Scaling abilities also receive slightly below-budget bodies. Positional/opposite-targeting and charger-hate abilities are valued down because random draw order and leftmost deployment make them whiff often; their printed body is the compensated whiff floor.
+
+Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost is shown by the top-left cost gem.
 
 **Common (5):**
 1. Dagger Imp (cost 1) — 2/2
@@ -84,9 +87,9 @@ Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogr
 Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Enemies (scripted, escalating)
-- **Fight 1 — Vanilla midrange**: deck of 2/2 Ash Grunts and 2/5 Camp Brutes. Teaches reveal/charging; beatable by starter deck.
-- **Fight 2 — Token boss**: starts with Hivematron on board: 1/8, "create a 1/2 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
-- **Fight 3 — Aura boss**: starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
+- **Fight 1 — Vanilla midrange**: deck of 2/3 Ash Grunts and 2/6 Camp Brutes. Both are Common-tier cards. Teaches reveal/charging; beatable by starter deck.
+- **Fight 2 — Token boss**: support deck uses legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Hivematron on board: 1/8, "create a 1/2 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
+- **Fight 3 — Aura boss**: support deck uses the same legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
 - Enemy regular units use the same reveal, charge, and leftmost-deploy rules as the player. Bosses remain the pre-board exception in column 1. Enemy draw order is fixed and public; `enemyDeckFor(fight)` never shuffles it:
   - Fight 1: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
   - Fight 2: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
@@ -101,7 +104,6 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Deferred (consciously, not forgotten)
 - Archetypes 4–7 (buff-combo engine, tokens+lords engine, stax engine, ramp engine) — support cards exist in the pool, engines come later.
-- Draft curation vs doomed runs (pure random 1-of-3 for now).
 - Final number tuning.
 - Mana pool / multi-charger economies.
 - Card-return mechanics (harsh-requirement exceptions, none in v0 pool).

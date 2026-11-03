@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   CARD_POOL, HERO_HP, createFight, createRun, effectiveStats, exchange, finishRunFight,
-  enemyDeckFor, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
+  draftOffers, enemyDeckFor, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 
 let passed = 0;
@@ -213,6 +213,28 @@ test('enemy order is identical across 100 runs of the same fight', () => {
     assert.equal(enemyDeckFor(fight).length, expected[fight].length);
     for (let run = 0; run < 100; run++) assert.deepEqual(enemyDeckFor(fight, Math.random).map(card => card.id), expected[fight]);
   }
+});
+
+test('every scripted enemy card is common tier with per-fight stats', () => {
+  for (const fight of [1, 2, 3]) assert.ok(enemyDeckFor(fight).every(card => card.tier === 'common'));
+  const grunt = enemyDeckFor(1).find(card => card.id === 'enemy_grunt');
+  assert.deepEqual([grunt.cost, grunt.atk, grunt.hp], [1, 2, 3]);
+  const brute = enemyDeckFor(1).find(card => card.id === 'enemy_brute');
+  assert.deepEqual([brute.cost, brute.atk, brute.hp], [2, 2, 6]);
+  for (const fight of [2, 3]) {
+    const support = enemyDeckFor(fight);
+    assert.ok(support.filter(card => card.id === 'enemy_grunt').every(card => card.cost === 1 && card.atk === 2 && card.hp === 2 && card.tier === 'common'));
+    assert.ok(support.filter(card => card.id === 'enemy_brute').every(card => card.cost === 2 && card.atk === 2 && card.hp === 5 && card.tier === 'common'));
+  }
+});
+
+test('draft offers follow the seeded 50/35/15 tier weighting', () => {
+  let value = 1729; const rng = () => ((value = value * 48271 % 2147483647) - 1) / 2147483646;
+  const counts = { common: 0, rare: 0, mythic: 0 };
+  for (let draw = 0; draw < 200; draw++) for (const card of draftOffers(rng)) counts[card.tier]++;
+  assert.ok(counts.common >= 250 && counts.common <= 350, `common=${counts.common}`);
+  assert.ok(counts.rare >= 170 && counts.rare <= 250, `rare=${counts.rare}`);
+  assert.ok(counts.mythic >= 60 && counts.mythic <= 120, `mythic=${counts.mythic}`);
 });
 
 test('player order still varies while enemy NEXT stays deterministic', () => {
