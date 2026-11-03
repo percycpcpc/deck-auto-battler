@@ -75,6 +75,12 @@ export function effectiveStats(state, side, unit) {
 
 export const liveUnits = board => board.filter(unit => !unit.dead);
 
+export const fightBoss = fight => fight === 2
+  ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' })
+  : fight === 3
+    ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' })
+    : null;
+
 export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random } = {}) {
   const enemyLine = enemyDeck || enemyDeckFor(fight);
   const state = {
@@ -82,8 +88,8 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = null, figh
     player: { hp: playerHp, deck: [...playerDeck], charger: null, board: [], scouted: false },
     enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false },
   };
-  if (fight === 2) state.enemy.board.push(makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive' }));
-  if (fight === 3) state.enemy.board.push(makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald' }));
+  const boss = fightBoss(fight);
+  if (boss) state.enemy.board.push(boss);
   return state;
 }
 
@@ -220,9 +226,9 @@ export function triggerBattlecry(state, side, unit) {
     case 'scout':
       emit(state, 'battlecry', { ...event, targetSide: foeSide, scouted: false, alreadyKnown: true }); break;
     case 'duelist': {
-      const neighbors = [index - 1, index + 1].filter(i => own.board[i] && !own.board[i].dead), n = neighbors.length;
-      emit(state, 'battlecry', { ...event, adjacent: n, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: n });
-      unit.baseAtk += n; unit.baseMaxHp += n; break;
+      const neighbors = [index - 1, index + 1].filter(i => own.board[i] && !own.board[i].dead), applied = neighbors.length === 0;
+      emit(state, 'battlecry', { ...event, targetUid: unit.uid, target: unit.name, adjacent: neighbors.length, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: applied ? 2 : 0, applied, fizzle: !applied });
+      if (applied) { unit.baseAtk += 2; unit.baseMaxHp += 2; } break;
     }
     case 'hexblade':
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined });

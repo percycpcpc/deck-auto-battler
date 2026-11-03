@@ -1,4 +1,4 @@
-import { CARD_POOL, createRun, draftOffers, effectiveStats, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
+import { CARD_POOL, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
@@ -34,7 +34,7 @@ const BATTLECRY_TEXT = Object.freeze({
   gate: 'On deploy: shove the opposing unit to the far right.',
   squire: 'On deploy: give adjacent allies +1/+1.',
   scout: 'On deploy: already scouted — enemy order is known.',
-  duelist: 'On deploy: gain +1/+1 for each adjacent ally.',
+  duelist: 'On deploy: gain +2/+2 if no adjacent ally.',
   hexblade: 'On deploy: set the opposing unit to 1/1.',
   gravedigger: 'On deploy: summon a 1/2 for every death this combat.',
   meddler: "On deploy: return the enemy's charging card to its deck.",
@@ -53,8 +53,7 @@ const DEATHRATTLE_TEXT = Object.freeze({
   oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
-const BOSS_TEXT = Object.freeze({ hive: 'After this attacks, summon a 1/2 token.', herald: 'Friendly units enter play with +1/+1.' });
-const bossText = card => BOSS_TEXT[card?.boss] || '';
+const bossText = card => card?.text || '';
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
@@ -347,7 +346,7 @@ function battlecryCaption(event) {
   if (event.kind === 'firebelch') return event.targetUids?.length ? 'Battlecry: 1 damage to all enemies' : 'Battlecry: no enemy units';
   if (event.kind === 'squire') return event.neighborIndices?.length ? 'Battlecry: adjacent allies gain +1/+1' : 'Battlecry: no adjacent allies';
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
-  if (event.kind === 'duelist') return event.adjacent ? `Battlecry: gain +${event.adjacent}/+${event.adjacent}` : 'Battlecry: no adjacent allies';
+  if (event.kind === 'duelist') return event.applied ? 'Battlecry: gain +2/+2' : 'Battlecry: adjacent ally prevents gain';
   if (event.kind === 'tax') return event.counterDelta ? 'Battlecry: enemy charge +1 turn' : 'Battlecry: no enemy charging';
   if (event.kind === 'chrono') return event.counterDelta ? `Battlecry: own charge -1 turn${event.deployed ? ' and deploy' : ''}` : 'Battlecry: no friendly charge';
   if (event.kind === 'scout') return 'Battlecry: already scouted — enemy order is known';
@@ -449,14 +448,15 @@ function updateEnemyQueuePanel() {
   if (!els?.queue) return;
   els.queue.items.forEach((item, index) => { const card = deckQueues.enemy[index]; item.hidden = !card; setText(item, card ? `${card.name} · ${card.cost} cost · ${card.atk}/${card.hp}` : ''); });
 }
-export function createEnemyPreview(fightNumber, queue, board = []) {
+export function createEnemyPreview(fightNumber, queue) {
   const panel = el('aside', 'enemy-preview');
-  const boss = board.find(unit => unit.boss), bossBlock = el('div', 'enemy-preview__boss');
-  if (boss) bossBlock.append(el('strong', '', `${boss.name} · ${boss.baseAtk ?? boss.atk}/${boss.baseMaxHp ?? boss.hp}`), el('p', '', BOSS_TEXT[boss.boss] || 'Boss unit.'));
-  else bossBlock.append(el('strong', '', 'NO BOSS'), el('p', '', 'The enemy line is entirely made of regular units.'));
+  const boss = fightBoss(fightNumber), bossBlock = boss && el('div', 'enemy-preview__boss');
+  if (boss) bossBlock.append(el('strong', '', `${boss.name} · ${boss.baseAtk}/${boss.baseMaxHp}`), el('p', '', boss.text));
   const list = el('ul', 'enemy-preview__units');
   queue.forEach((unit, index) => list.append(el('li', '', `${index + 1}. ${unit.name} · ${unit.cost} cost · ${unit.atk}/${unit.hp}`)));
-  panel.append(el('h2', 'enemy-preview__title', `FIGHT ${fightNumber} · ENEMY DRAW ORDER`), bossBlock, list); return panel;
+  panel.append(el('h2', 'enemy-preview__title', `FIGHT ${fightNumber} · ENEMY DRAW ORDER`));
+  if (bossBlock) panel.append(bossBlock);
+  panel.append(list); return panel;
 }
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }

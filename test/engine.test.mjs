@@ -169,6 +169,15 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.deepEqual(event.neighborIndices, [0]); assert.equal(event.targetUids.length, 1);
 
+  s = empty(); unit = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(unit.baseAtk, 5); assert.equal(unit.baseMaxHp, 7); assert.equal(effectiveStats(s, 'player', unit).hp, 7); assert.equal(event.targetUid, unit.uid); assert.equal(event.amount, 2); assert.equal(event.applied, true); assert.equal(event.fizzle, false);
+
+  s = empty(); summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(unit.baseAtk, 3); assert.equal(unit.baseMaxHp, 5); assert.equal(event.amount, 0); assert.equal(event.applied, false); assert.equal(event.fizzle, true); assert.deepEqual(event.neighborIndices, [0]);
+
+  s = empty(); const corpse = summon(s, 'player', getCard('sellsword')); corpse.dead = true; unit = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(unit.baseAtk, 5); assert.equal(unit.baseMaxHp, 7); assert.equal(event.applied, true); assert.deepEqual(event.neighborIndices, []);
+
   s = empty(); unit = summon(s, 'player', getCard('gate_crasher')); const moved = summon(s, 'enemy', getCard('sellsword')); summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.targetUid, moved.uid); assert.equal(event.fromIndex, 0); assert.equal(event.toIndex, 1);
 

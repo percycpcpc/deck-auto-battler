@@ -60,7 +60,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 13. Plague Bearer (cost 2) — 2/9, Deathrattle: deal 1 to all enemies
 14. Warlord (cost 2) — 2/9, Aura: adjacent +1/+0
 15. Bulwark (cost 2) — 1/9, Deathrattle: the unit opposite gets −2 ATK
-16. Duelist (cost 2) — 3/5, Battlecry: +1/+1 for each adjacent friendly unit
+16. Duelist (cost 2) — 3/5, On deploy: gain +2/+2 if no adjacent ally
 17. Gravedigger (cost 2) — 2/6, Battlecry: summon a 1/2 for each unit that died this combat
 18. Meddler (cost 2) — 2/6, Battlecry: put the enemy's charging card back on top of their deck
 19. Headsman (cost 2) — 3/8, after this kills a unit, gain +2/+2
