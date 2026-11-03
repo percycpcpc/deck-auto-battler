@@ -29,47 +29,52 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 ## Card pool (36)
 Stat scale tuned for 40 hero HP and small decks.
 
-**Cost 1 (13):**
-1. Dagger Imp — 2/2
-2. Sellsword — 2/3
-3. Twinfang — 1/2 Windfury
-4. Brood Wisp — 1/3, Deathrattle: summon 1/2
-5. Hex Hurler — 1/2, Battlecry: deal 2 to opposite unit
-6. Tax Collector — 1/3, Battlecry: enemy charging card +1 turn
-7. Chrono Imp — 1/2, Battlecry: your charging card ticks down 1 extra
-8. Gate Crasher — 2/2, Battlecry: push the unit opposite to the rightmost empty slot
-9. Leeching Tick — 1/3, when this kills a unit, gain +1/+1
-10. Squire — 1/2, Battlecry: adjacent units get +1/+1
-11. Spiteful Imp — 1/2, Deathrattle: deal 1 to the unit opposite
-12. Scout — 2/2, Battlecry: reveal the identity of the enemy's charging card
-13. Oathbound — 2/6
+### Rarity tiers
+Common cards follow the vanilla toughness curve (cost 1 = 3 HP, cost 2 = 6 HP, cost 3 = 9 HP) and have no ability. Rare cards target roughly 1.5x curve toughness plus a keyword or minor ability. Mythic cards target 2x curve toughness plus an impactful ability and may cost 1 less than a normal unit. Mythic HP is hard-capped at 10 because literal 2x cost-2/3 toughness (12/18 HP) is unkillable within the 40-HP-hero combat scale.
 
-**Cost 2 (14):**
-14. Road Ogre — 3/6
-15. Aegis Knight — 2/6 Divine Shield
-16. Venom Hound — 3/3 Poisonous
-17. Plague Bearer — 2/5, Deathrattle: deal 1 to all enemies
-18. Warlord — 2/5, Aura: adjacent +1/+0
-19. Bulwark — 1/8, Deathrattle: the unit opposite gets −2 ATK
-20. Duelist — 3/3, Battlecry: +1/+1 for each adjacent friendly unit
-21. Hexblade — 2/2, Battlecry: set the unit opposite to 1/1
-22. Gravedigger — 2/3, Battlecry: summon a 1/2 for each unit that died this combat
-23. Meddler — 2/3, Battlecry: put the enemy's charging card back on top of their deck
-24. Headsman — 3/5, after this kills a unit, gain +2/+2
-25. Firebelcher — 2/5, Battlecry: deal 1 damage to ALL enemy units
-26. Shield Saint — 3/2 Divine Shield
-27. Bristleback — 1/6, when this takes damage and survives, gain +3 Attack
+Keywords count toward the toughness budget: Divine Shield is worth roughly 2 HP, while Poisonous is priced as removal and therefore receives a deliberately below-budget body. Scaling abilities also receive slightly below-budget bodies. Positional/opposite-targeting and charger-hate abilities are valued down because random draw order and leftmost deployment make them whiff often; their printed body is the compensated whiff floor.
 
-**Cost 3 (9):**
-28. Colossus — 6/9
-29. Inquisitor — 4/8, Battlecry: deal 3 to highest-ATK enemy
-30. Brood Queen — 3/9, Deathrattle: summon two 2/3s
-31. Doomcaller — 4/6, Battlecry: destroy the enemy's charging card
-32. Copycat — 3/5, Battlecry: copy the ATK/HP of the unit opposite
-33. Overlord — 2/6, Aura: all your units +1/+1
-34. Cultist — 3/3, Battlecry: destroy your leftmost other unit, gain its ATK and HP
-35. Cataclysm — 1/2, Battlecry: deal 2 to ALL units (both sides)
-36. Quillback Elder — 3/9, when any other unit enters a battlefield, deal 1 damage to it
+**Common (5):**
+1. Dagger Imp (cost 1) — 2/2
+2. Sellsword (cost 1) — 2/3
+3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve)
+4. Road Ogre (cost 2) — 3/6
+5. Colossus (cost 3) — 6/9
+
+**Rare (23):**
+1. Twinfang (cost 1) — 1/4 Windfury
+2. Brood Wisp (cost 1) — 1/4, Deathrattle: summon 1/2
+3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to opposite unit
+4. Tax Collector (cost 1) — 1/4, Battlecry: enemy charging card +1 turn
+5. Chrono Imp (cost 1) — 1/4, Battlecry: your charging card ticks down 1 extra
+6. Gate Crasher (cost 1) — 2/4, Battlecry: push the unit opposite to the rightmost empty slot
+7. Leeching Tick (cost 1) — 1/5, when this kills a unit, gain +1/+1
+8. Squire (cost 1) — 1/4, Battlecry: adjacent units get +1/+1
+9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the unit opposite
+10. Scout (cost 1) — 2/4, Battlecry: reveal the identity of the enemy's charging card
+11. Aegis Knight (cost 2) — 2/7 Divine Shield
+12. Venom Hound (cost 2) — 3/5 Poisonous
+13. Plague Bearer (cost 2) — 2/9, Deathrattle: deal 1 to all enemies
+14. Warlord (cost 2) — 2/9, Aura: adjacent +1/+0
+15. Bulwark (cost 2) — 1/9, Deathrattle: the unit opposite gets −2 ATK
+16. Duelist (cost 2) — 3/5, Battlecry: +1/+1 for each adjacent friendly unit
+17. Gravedigger (cost 2) — 2/6, Battlecry: summon a 1/2 for each unit that died this combat
+18. Meddler (cost 2) — 2/6, Battlecry: put the enemy's charging card back on top of their deck
+19. Headsman (cost 2) — 3/8, after this kills a unit, gain +2/+2
+20. Firebelcher (cost 2) — 2/9, Battlecry: deal 1 damage to ALL enemy units
+21. Shield Saint (cost 2) — 3/6 Divine Shield
+22. Bristleback (cost 2) — 1/9, when this takes damage and survives, gain +3 Attack
+23. Quillback Elder (cost 3) — 3/13, when any other unit enters a battlefield, deal 1 damage to it
+
+**Mythic (8):**
+1. Hexblade (cost 2) — 2/6, Battlecry: set the unit opposite to 1/1
+2. Copycat (cost 2) — 3/6, Battlecry: copy the ATK/HP of the unit opposite
+3. Cataclysm (cost 3) — 2/6, Battlecry: deal 2 to ALL units (both sides)
+4. Cultist (cost 3) — 3/8, Battlecry: destroy your leftmost other unit, gain its ATK and HP
+5. Doomcaller (cost 3) — 4/10, Battlecry: destroy the enemy's charging card
+6. Inquisitor (cost 3) — 4/10, Battlecry: deal 3 to highest-ATK enemy
+7. Overlord (cost 3) — 2/10, Aura: all your units +1/+1
+8. Brood Queen (cost 3) — 3/10, Deathrattle: summon two 2/3s
 
 Owner tuning: counter package vs boss engines.
 

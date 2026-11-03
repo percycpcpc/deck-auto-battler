@@ -65,9 +65,9 @@ test('Headsman gains +2/+2 only after killing a unit', () => {
   const s = empty(), headsman = summon(s, 'player', getCard('headsman'));
   let target = summon(s, 'enemy', { id: 'survivor', name: 'Survivor', cost: 0, atk: 0, hp: 4 });
   exchange(s, 'player', headsman, target);
-  assert.equal(headsman.baseAtk, 3); assert.equal(headsman.baseMaxHp, 5);
+  assert.equal(headsman.baseAtk, 3); assert.equal(headsman.baseMaxHp, 8);
   target.damage = 3; exchange(s, 'player', headsman, target);
-  assert.equal(headsman.baseAtk, 5); assert.equal(headsman.baseMaxHp, 7);
+  assert.equal(headsman.baseAtk, 5); assert.equal(headsman.baseMaxHp, 10);
   const change = s.events.find(event => event.type === 'statChange' && event.reason === 'onKill');
   assert.equal(change.amount, 2); assert.ok(s.events.findIndex(event => event.type === 'damage' && event.uid === target.uid) < s.events.indexOf(change));
 });
@@ -93,7 +93,7 @@ test('Bristleback gains +3 Attack per surviving damage instance but not when kil
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 4);
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 7);
   assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onDamaged').length, 2);
-  s = empty(); bristle = summon(s, 'player', getCard('bristleback')); attacker = summon(s, 'enemy', getCard('colossus'));
+  s = empty(); bristle = summon(s, 'player', getCard('bristleback')); attacker = summon(s, 'enemy', { id: 'finisher', name: 'Finisher', cost: 0, atk: 9, hp: 9 });
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 1); assert.equal(bristle.dead, true);
 });
 
@@ -252,11 +252,13 @@ test('fight-3 entry buff applies to tokens, not the pre-boarded boss', () => {
   assert.equal(boss.baseAtk, 1); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 3);
 });
 
-test('global toughness pass applies half-up HP scaling without changing ATK or hero HP', () => {
-  const oathbound = getCard('oathbound'), dagger = getCard('dagger_imp'), boss = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }).enemy.board[0];
+test('card pool exposes the three rarity tiers and locked representative stats', () => {
+  const oathbound = getCard('oathbound'), dagger = getCard('dagger_imp'), hexblade = getCard('hexblade'), copycat = getCard('copycat');
   assert.deepEqual([oathbound.atk, oathbound.hp], [2, 6]);
   assert.deepEqual([dagger.atk, dagger.hp], [2, 2]);
-  assert.deepEqual([boss.baseAtk, boss.baseMaxHp], [1, 8]);
+  assert.deepEqual([hexblade.cost, hexblade.atk, hexblade.hp], [2, 2, 6]);
+  assert.deepEqual([copycat.cost, copycat.atk, copycat.hp], [2, 3, 6]);
+  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 5, rare: 23, mythic: 8 });
   assert.equal(HERO_HP, 40);
 });
 
@@ -276,7 +278,7 @@ test('a later attacker treats an opposite corpse as an empty lane and hits the h
 test('corpses provide no aura and are invalid opposite battlecry targets', () => {
   const s = empty(), ally = summon(s, 'player', getCard('sellsword')), overlord = summon(s, 'player', getCard('overlord'));
   assert.equal(effectiveStats(s, 'player', ally).atk, 3);
-  exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), overlord);
+  exchange(s, 'enemy', makeUnit({ id: 'finisher', name: 'Finisher', cost: 0, atk: 10, hp: 10 }, 'enemy'), overlord);
   assert.equal(overlord.dead, true); assert.equal(effectiveStats(s, 'player', ally).atk, 2);
   summon(s, 'enemy', getCard('sellsword')); const hurler = summon(s, 'enemy', getCard('hex_hurler')); s.events = []; triggerBattlecry(s, 'enemy', hurler);
   assert.equal(s.events[0].targetUid, undefined); assert.equal(s.events.some(event => event.type === 'damage'), false);
