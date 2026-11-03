@@ -60,5 +60,5 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 - Scout's Battlecry reveals the enemy charger's identity until it deploys (no persistent effect).
 
 ## Wording fixes to the spec
-- Fight-3 boss aura: "**friendly** units enter play with +1/+1" (one-time base-stat mod on entry, including tokens; the boss itself is not retroactively buffed).
+- Fight-2 boss aura: "**friendly** units enter play with +1/+1" (one-time base-stat mod on entry, including tokens; the boss itself is not retroactively buffed).
 - Fights 2–3 boss: occupies enemy column 1, acts in the first action phase.

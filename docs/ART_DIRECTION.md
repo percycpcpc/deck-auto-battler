@@ -28,7 +28,7 @@ When an exchange kills both units, DR order matters (Spiteful Imp's DR targeting
 Tax Collector (+1 turn), Chrono Imp (−1 turn), Doomcaller (destroy), Meddler (bounce to deck top) all target "the enemy/your charger" — undefined if nothing is charging. *Resolution:* all four fizzle with no charger present. Chrono Imp reducing a counter from 1 to 0 deploys the card **immediately** (same Deploy step). Meddler's bounced card goes on top of the enemy deck and will simply re-enter the charger next Reveal — intended, no infinite loop since Meddler is one-shot.
 
 **6. Token placement.**
-Brood Wisp, Brood Queen, Gravedigger, and the Fight-2 boss summon tokens with no stated destination. *Resolution:* all tokens enter the **leftmost empty slot**; if the board is full, the summon is lost. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
+Brood Wisp, Brood Queen, Gravedigger, and the Fight-3 boss summon tokens with no stated destination. *Resolution:* all tokens enter the **leftmost empty slot**; if the board is full, the summon is lost. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
 **7. Draft mechanics unspecified.**
 *Resolution:* each draft is two sequential 1-of-3 picks (pick → new set of 3). Each offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier, **with duplicates allowed**; starter cards are never removed. Deck grows 8 → 10 → 12.
@@ -39,16 +39,16 @@ Brood Wisp, Brood Queen, Gravedigger, and the Fight-2 boss summon tokens with no
 
 **9. Poisonous vs simultaneous damage.** In a mutual exchange, Poisonous applies to any unit that took damage from a Poisonous source — so a Poisonous unit and its target can kill each other in one exchange regardless of HP. Damage-to-hero is never Poisonous-relevant. Poisonous triggered by Battlecry/Deathrattle damage (Hex Hurler is not Poisonous, but if a Poisonous unit deals DR damage in future, it applies).
 
-**10. Aura + stat-setting Battlecries (Hexblade, Copycat).** Adopt a **base stat + dynamic aura** model: every unit stores base ATK/HP; auras (Warlord, Overlord, Fight-3 boss) are recalculated continuously on top of base stats whenever board state changes (deaths shift adjacency → auras re-evaluate). Hexblade sets the target's **base** stats to 1/1 (an adjacent Warlord then makes it effectively 2/1). Copycat copies the opposite unit's **current effective** stats as its own new base. Cultist gains the destroyed unit's current effective stats added to its base.
+**10. Aura + stat-setting Battlecries (Hexblade, Copycat).** Adopt a **base stat + dynamic aura** model: every unit stores base ATK/HP; auras (Warlord, Overlord, Fight-2 boss) are recalculated continuously on top of base stats whenever board state changes (deaths shift adjacency → auras re-evaluate). Hexblade sets the target's **base** stats to 1/1 (an adjacent Warlord then makes it effectively 2/1). Copycat copies the opposite unit's **current effective** stats as its own new base. Cultist gains the destroyed unit's current effective stats added to its base.
 
 **11. "Highest-ATK enemy" tie (Inquisitor).** Tiebreak: **leftmost** among tied units. (Effective ATK, post-aura.)
 
-**12. Gravedigger counting.** "Per death this combat" = **all unit deaths on both sides** since the fight began, including tokens and including units that died before Gravedigger entered, excluding Gravedigger itself. Yes, this counts the Fight-2 boss's tokens — that's a feature; note it in the draft tooltip so players can draft it as a counter.
+**12. Gravedigger counting.** "Per death this combat" = **all unit deaths on both sides** since the fight began, including tokens and including units that died before Gravedigger entered, excluding Gravedigger itself. Yes, this counts the Fight-3 boss's tokens — that's a feature; note it in the draft tooltip so players can draft it as a counter.
 
 ### C. Numeric sanity
 
 **13. Fight 1 will run ~18–25 rounds, not 10–14, and 40 HP is the main reason.**
-Rough model: the starter deck is 7× cost-1 + 1× cost-2, so from round 2 onward each side deploys ~1 unit/round and both decks are empty by ~round 9–10. With mutual-exchange combat, mirrored pairs annihilate fast (2/2 vs 2/2 both die in one action; 2/2 vs 3/4 leaves a wounded 3/4), so boards clear each other for most of the mid-game and face damage only starts flowing ~round 8–10, at roughly 2–4 HP/round from survivors in empty columns. 40 HP ÷ ~3/round ≈ 12+ rounds of face-bashing on top of the ramp — call it **18–25 rounds total**, and the random shuffle order creates huge variance. *Resolution:* cut hero HP to **30** for v0 (keeps the "HP is carried debt" feel, lands fights near the 10–14 target), and treat HP as the first tuning dial after playtest. Cheap to change; do not rebalance 30 cards around it.
+Rough model: the starter deck is 7× cost-1 + 1× cost-2, so from round 2 onward each side deploys ~1 unit/round and both decks are empty by ~round 9–10. With mutual-exchange combat, mirrored pairs annihilate fast (2/2 vs 2/2 both die in one action; 2/2 vs 3/4 leaves a wounded 3/4), so boards clear each other for most of the mid-game and face damage only starts flowing ~round 8–10, at roughly 2–4 HP/round from survivors in empty columns. 40 HP ÷ ~3/round ≈ 12+ rounds of face-bashing on top of the ramp — call it **18–25 rounds total**, and the random shuffle order creates huge variance. *Current rule:* hero HP is **40** and resets to full at the start of every fight; treat HP as the first tuning dial after playtest. Cheap to change; do not rebalance 30 cards around it.
 
 **14. Stalemate is possible and the spec has no clock.**
 Deck-out = "nothing happens," and with no fatigue, a fight where both boards and decks empty (very plausible in a symmetric fight 1) **never ends**. This is a hard prototype blocker — a soft-locked run is the worst possible demo outcome. *Resolution:* add an end condition: if both decks are empty and no cards are charging, and a full round passes with no change in total unit count on either side, the fight ends immediately — higher hero HP wins, tie goes to the player. One sentence of rules, one `if` in code, eliminates the soft-lock.
@@ -58,7 +58,7 @@ Deck-out = "nothing happens," and with no fatigue, a fight where both boards and
 
 ### D. Contradictions and wording traps
 
-**16. Fight-3 boss aura says "enemy units enter with +1/+1" — enemy from whose perspective?**
+**16. Fight-2 boss aura says "enemy units enter with +1/+1" — enemy from whose perspective?**
 Read literally, the boss buffs the *player's* units. Clearly intended to buff the boss's own side. *Resolution:* rewrite as "friendly units enter with +1/+1." Applies as a one-time base-stat modification on entry (including tokens); the boss itself does not get it (it entered before the aura existed).
 
 **17. "Owner sees own top card identity" vs. the charging model.**
@@ -168,12 +168,12 @@ All portraits: painterly flat gouache style, dark `#1E1830` background, strong r
 30. `portrait_cataclysm.png` — tiny hooded figure at the center of a swirling world-ending firestorm
 
 **Bosses & heroes (512×512)**
-31. `portrait_boss_hivematron.png` — Fight 2 boss: bloated insectoid matron, birthing sacs pulsing, crimson rim light
-32. `portrait_boss_warherald.png` — Fight 3 boss: hulking armored herald with a war-horn and banner that empowers troops, gold-crimson
+31. `portrait_boss_hivematron.png` — Fight 3 boss: bloated insectoid matron, birthing sacs pulsing, crimson rim light
+32. `portrait_boss_warherald.png` — Fight 2 boss: hulking armored herald with a war-horn and banner that empowers troops, gold-crimson
 33. `hero_player.png` — hooded wanderer with a glowing teal deck of cards fanned in hand
 34. `hero_enemy_raider.png` — Fight 1: scarred bandit warlord, crude iron armor, crimson rim light
-35. `hero_enemy_hivelord.png` — Fight 2: chitin-armored cult leader serving the Hivematron
-36. `hero_enemy_dreadlord.png` — Fight 3: black-and-gold armored tyrant, horned helm
+35. `hero_enemy_hivelord.png` — Fight 3: chitin-armored cult leader serving the Hivematron
+36. `hero_enemy_dreadlord.png` — Fight 2: black-and-gold armored tyrant, horned helm
 
 **Battlefield & UI**
 | File | Size | Prompt notes |

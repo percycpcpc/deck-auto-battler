@@ -76,9 +76,9 @@ export function effectiveStats(state, side, unit) {
 export const liveUnits = board => board.filter(unit => !unit.dead);
 
 export const fightBoss = fight => fight === 2
-  ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' })
+  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' })
   : fight === 3
-    ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' })
+    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' })
     : null;
 
 export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random } = {}) {
@@ -101,8 +101,8 @@ export function shuffle(items, rng = Math.random) {
 
 const ENEMY_SCRIPTS = Object.freeze({
   1: ['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt'],
-  2: ['grunt', 'grunt', 'brute', 'grunt'],
-  3: ['grunt', 'brute', 'grunt', 'brute'],
+  2: ['grunt', 'brute', 'grunt', 'brute'],
+  3: ['grunt', 'grunt', 'brute', 'grunt'],
 });
 const enemyCard = (kind, fight) => kind === 'brute'
   ? card('enemy_brute', 'Camp Brute', 2, 2, fight === 1 ? 6 : 5, { tier: 'common' })
@@ -124,7 +124,7 @@ const emit = (s, type, data = {}) => s.events.push({ round: s.round, phase: s.ph
 export function summon(state, side, def, extras = {}) {
   if (state[side].board.length >= BOARD_CAP) return null;
   const unit = makeUnit(def, side, extras);
-  if (side === 'enemy' && state.fight === 3 && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
+  if (side === 'enemy' && state.fight === 2 && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
     unit.baseAtk += 1; unit.baseMaxHp += 1;
   }
   state[side].board.push(unit); emit(state, 'summon', { side, unit: unit.name, uid: unit.uid });
@@ -350,7 +350,7 @@ export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, d
 export function startRunFight(run) {
   const enemyLine = run.enemyLine || enemyDeckFor(run.fight);
   run.enemyLine = null;
-  return createFight({ fight: run.fight, playerHp: run.hp, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyLine, rng: run.rng });
+  return createFight({ fight: run.fight, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyLine, rng: run.rng });
 }
 export function finishRunFight(run, fightState) {
   run.hp = Math.max(0, fightState.player.hp);

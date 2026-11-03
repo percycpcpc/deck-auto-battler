@@ -98,7 +98,7 @@ function createDeckStack(side) {
 
 function createHeroPanel(side) {
   const panel = el('div', 'hero-panel');
-  const enemyNames = ['raider', 'hivelord', 'dreadlord'];
+  const enemyNames = ['raider', 'dreadlord', 'hivelord'];
   const heroId = side === 'player' ? 'player' : `enemy_${enemyNames[Math.max(0, (fight?.fight || 1) - 1)]}`;
   const portraitEl = img('hero-portrait', `assets/hero_${heroId}.png`, `${side} hero`);
   const hpbar = el('div', 'hero-hpbar'), fill = el('div', 'hero-hpbar__fill'), hpText = el('span', 'hero-hp__text');

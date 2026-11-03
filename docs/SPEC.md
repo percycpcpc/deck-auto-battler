@@ -1,11 +1,11 @@
 # Deck Auto Battler — v0 SPEC (owner-approved)
 
-Web prototype. Auto-battler deckbuilder: 3 scripted fights, draft between fights, HP persists across the run.
+Web prototype. Auto-battler deckbuilder: 3 scripted fights, draft between fights, full HP at the start of every fight.
 
 ## Core loop
 Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-3 (twice) → fight 2 → draft (twice) → fight 3 → run ends (victory screen).
 - Lose = hero HP reaches 0 at any point → run over, restart.
-- HP persists across all 3 fights (Slay-the-Spire model: HP is carried debt).
+- Hero HP resets to full (40) at the start of each fight. The victory screen reports the HP remaining at the end of the last fight.
 - Each draft offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier; duplicates are allowed.
 - No map, no economy, no meta in v0.
 
@@ -88,12 +88,12 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Enemies (scripted, escalating)
 - **Fight 1 — Vanilla midrange**: deck of 2/3 Ash Grunts and 2/6 Camp Brutes. Both are Common-tier cards. Teaches reveal/charging; beatable by starter deck.
-- **Fight 2 — Token boss**: support deck uses legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Hivematron on board: 1/8, "create a 1/2 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
-- **Fight 3 — Aura boss**: support deck uses the same legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
+- **Fight 2 — Aura boss**: support deck uses legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.
+- **Fight 3 — Token boss**: support deck uses the same legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Hivematron on board: 1/8, "create a 1/2 token when it attacks" (token enters its leftmost empty slot after damage resolves; no token if board full). Occupies column 1, acts turn 1. Clean answer: Poisonous.
 - Enemy regular units use the same reveal, charge, and leftmost-deploy rules as the player. Bosses remain the pre-board exception in column 1. Enemy draw order is fixed and public; `enemyDeckFor(fight)` never shuffles it:
   - Fight 1: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
-  - Fight 2: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
-  - Fight 3: Ash Grunt, Camp Brute, Ash Grunt, Camp Brute.
+  - Fight 2: Ash Grunt, Camp Brute, Ash Grunt, Camp Brute.
+  - Fight 3: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
 - Scout remains in the pool. Its Battlecry is a narrated fizzle: **“Already scouted — enemy order is known.”**
 
 ## Balance flags (watch in playtests)

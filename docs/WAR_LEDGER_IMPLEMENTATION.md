@@ -44,10 +44,10 @@ ok 10 - Tax Collector fizzles against an empty charger
 ok 11 - Chrono Imp turns a 1 counter into immediate deployment
 ok 12 - Meddler bounce returns to top and re-enters charger next reveal
 ok 13 - deck-out does nothing and stalemate valve favors player on tie
-ok 14 - fight-2 boss token appears only after attack damage and only with room
-ok 15 - fight-3 entry buff applies to tokens, not the pre-boarded boss
+ok 14 - fight-3 boss token appears only after attack damage and only with room
+ok 15 - fight-2 entry buff applies to tokens, not the pre-boarded boss
 ok 16 - round events carry post-event view snapshots for deploys and deaths
-ok 17 - full three-fight run victory carries HP and grows deck 8 to 12
+ok 17 - each fight starts at full HP while the run records the last fight result and grows deck 8 to 12
 # 17 tests passed
 ```
 
