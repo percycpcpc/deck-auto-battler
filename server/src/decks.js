@@ -65,8 +65,13 @@ export async function listDecks(env, user) {
 }
 
 export async function getDeck(env, user, id) {
+  const deck = await getDeckById(env, id);
+  if (deck.ownerId !== user.id) throw new DeckError('forbidden', 403);
+  return deck;
+}
+
+export async function getDeckById(env, id) {
   const row = await env.DB.prepare('SELECT * FROM decks WHERE id = ?').bind(id).first();
   if (!row) throw new DeckError('deck not found', 404);
-  if (row.owner_id !== user.id) throw new DeckError('forbidden', 403);
   return parseDeck(row);
 }

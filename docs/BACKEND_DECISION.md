@@ -30,6 +30,7 @@ D1's SQLite data model fits deck snapshots and finite save slots naturally as ro
 | Deck API (B3) | `POST /api/decks` and owner-scoped `GET /api/decks[/:id]` are live with Bearer-session validation. |
 | Save slots (B4) | `GET /api/slots` and `POST /api/slots/:slot/deck` are live; limits are server-derived from the locked `premium` entitlement SKU (4 slots, otherwise 1). |
 | Entitlements (B5) | Account-bound `premium` grants and authenticated entitlement reads are live; server state survives session and cookie loss. |
+| PvP simulation (C1) | Authenticated `POST /api/sim` runs the shared seeded engine; public `GET /api/replays/:id` regenerates the full-information event log. |
 
 ## Rejected alternative
 
