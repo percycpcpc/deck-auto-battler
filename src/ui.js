@@ -897,7 +897,9 @@ function showStarterSelection() {
   back.style.setProperty('--starter-hover', `${dur(TIMING.hover)}ms`);
   const actions = el('div', 'starter-select__actions');
   actions.append(confirm, back);
-  const starterButtons = STARTERS.map(starter => {
+  const starterButtons = [];
+  const starterOptions = STARTERS.map((starter, index) => {
+    const option = el('div', 'starter-option');
     const choice = el('button', 'starter-choice');
     choice.type = 'button'; choice.setAttribute('aria-pressed', String(starter.id === selectedId));
     choice.style.setProperty('--starter-hover', `${dur(TIMING.hover)}ms`);
@@ -908,9 +910,33 @@ function showStarterSelection() {
       playSfx('uiClick'); selectedId = starter.id;
       for (const button of starterButtons) button.setAttribute('aria-pressed', String(button === choice));
     });
-    return choice;
+    starterButtons.push(choice);
+
+    const deckId = `starter-deck-${index}`;
+    const deck = el('div', 'starter-deck');
+    deck.id = deckId; deck.hidden = true;
+    deck.append(...starter.ids.map(id => {
+      const card = getCard(id), row = el('div', 'starter-deck__card');
+      row.append(
+        el('strong', 'starter-deck__name', card.name),
+        el('span', 'starter-deck__stats', `${card.cost} COST · ${card.atk} ATK · ${card.hp} HP`),
+        el('small', 'starter-deck__keyword', tooltip(card)),
+      );
+      return row;
+    }));
+    const toggle = el('button', 'starter-deck__toggle', 'View deck');
+    toggle.type = 'button'; toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', deckId);
+    toggle.style.setProperty('--starter-hover', `${dur(TIMING.hover)}ms`);
+    toggle.addEventListener('click', () => {
+      playSfx('uiClick');
+      const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+      toggle.setAttribute('aria-expanded', String(expanded)); deck.hidden = !expanded;
+      toggle.textContent = expanded ? 'Hide deck' : 'View deck';
+    });
+    option.append(choice, toggle, deck);
+    return option;
   });
-  choices.append(...starterButtons);
+  choices.append(...starterOptions);
   screen.append(el('h1', '', 'CHOOSE YOUR BANNER'), el('p', 'starter-select__intro', 'Select the warband that will march into Fight 1.'), choices, actions);
   app.replaceChildren(screen);
 }
