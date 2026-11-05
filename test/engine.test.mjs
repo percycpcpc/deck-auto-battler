@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
-  draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runEndSnapshot, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
+  draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, resolveDeaths, runEndSnapshot, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
 
@@ -290,9 +290,35 @@ test('Hexblade sets base stats and aura reapplies', () => {
   assert.equal(target.baseAtk, 1); assert.equal(effectiveStats(s, 'enemy', target).atk, 2);
 });
 
-test('Gravedigger counts token deaths on both sides', () => {
-  const s = empty(); s.deaths = 2; const g = summon(s, 'player', getCard('gravedigger')); triggerBattlecry(s, 'player', g);
-  assert.equal(s.player.board.filter(u => u.token).length, 2);
+test('Gravedigger summons at most three times for friendly non-token deaths without consuming the log', () => {
+  const s = empty();
+  assert.equal(getCard('gravedigger').text, 'Summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.');
+  for (let i = 0; i < 5; i++) { const unit = summon(s, 'player', getCard('sellsword')); unit.damage = 99; }
+  resolveDeaths(s);
+
+  const first = summon(s, 'player', getCard('gravedigger')); s.events = []; triggerBattlecry(s, 'player', first);
+  assert.equal(s.player.board.filter(unit => unit.token && !unit.dead).length, 3);
+  let summons = s.events.filter(event => event.type === 'summon');
+  assert.equal(summons.length, 3);
+  assert.ok(summons.every(event => event.side === 'player' && event.uid && event.unit === '1/2 Token'));
+
+  const second = summon(s, 'player', getCard('gravedigger')); s.events = []; triggerBattlecry(s, 'player', second);
+  assert.equal(s.player.board.filter(unit => unit.token && !unit.dead).length, 6);
+  assert.equal(s.events.find(event => event.type === 'battlecry').count, 3);
+  assert.equal(s.events.filter(event => event.type === 'summon').length, 3);
+});
+
+test('Gravedigger ignores friendly token deaths and all enemy deaths', () => {
+  const s = empty();
+  const friendlyToken = summon(s, 'player', tokenCard());
+  const enemyUnit = summon(s, 'enemy', getCard('sellsword'));
+  const enemyToken = summon(s, 'enemy', tokenCard());
+  friendlyToken.damage = enemyUnit.damage = enemyToken.damage = 99;
+  resolveDeaths(s);
+
+  const gravedigger = summon(s, 'player', getCard('gravedigger')); s.events = []; triggerBattlecry(s, 'player', gravedigger);
+  assert.equal(s.events.find(event => event.type === 'battlecry').count, 0);
+  assert.equal(s.events.filter(event => event.type === 'summon').length, 0);
 });
 
 test('battlecries emit ordered source, target, change, and fizzle details', () => {

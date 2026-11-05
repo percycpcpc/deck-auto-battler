@@ -63,7 +63,7 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = null, figh
   if (seeded) rng = makeRng(seed);
   const enemyLine = enemyDeck || enemyDeckFor(fight);
   const state = {
-    fight, round: 0, phase: 'ready', rng, deaths: 0, events: [], over: false, winner: null,
+    fight, round: 0, phase: 'ready', rng, deaths: 0, deathLog: [], events: [], over: false, winner: null,
     player: { hp: playerHp, deck: seeded ? shuffle(playerDeck, rng) : [...playerDeck], charger: null, board: [], scouted: false, onNextRevealChrono: false },
     enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false, onNextRevealChrono: false },
   };
@@ -192,6 +192,7 @@ export function resolveDeaths(state) {
   for (const side of ['player', 'enemy']) for (const unit of dead[side]) {
     unit.dead = true;
     state.deaths++;
+    state.deathLog.push({ side, token: unit.token });
     emit(state, 'death', { side, unit: unit.name, uid: unit.uid });
   }
   // Binding order: player DRs, then enemy DRs; corpses keep their lanes until cleanup.
@@ -267,9 +268,9 @@ export function triggerBattlecry(state, side, unit) {
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined });
       if (opposite) { opposite.baseAtk = 1; opposite.baseMaxHp = 1; opposite.damage = 0; } break;
     case 'gravedigger': {
-      const count = Math.min(state.deaths, BOARD_CAP - own.board.length);
+      const count = Math.min(3, state.deathLog.filter(death => death.side === side && !death.token).length, BOARD_CAP - own.board.length);
       emit(state, 'battlecry', { ...event, count });
-      for (let i = 0; i < state.deaths; i++) summon(state, side, tokenCard()); break;
+      for (let i = 0; i < count; i++) summon(state, side, tokenCard()); break;
     }
     case 'meddler':
       emit(state, 'battlecry', { ...event, targetSide: foeSide, charger: foe.charger?.card.name, returned: !!foe.charger });

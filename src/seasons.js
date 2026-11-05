@@ -22,7 +22,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('bulwark', 'Bulwark', 2, 1, 9, { tier: 'rare', deathrattle: 'oppositeAtkDown' }),
   card('duelist', 'Duelist', 2, 3, 5, { tier: 'rare', battlecry: 'duelist' }),
   card('hexblade', 'Hexblade', 2, 2, 6, { tier: 'mythic', battlecry: 'hexblade' }),
-  card('gravedigger', 'Gravedigger', 2, 2, 6, { tier: 'rare', battlecry: 'gravedigger' }),
+  card('gravedigger', 'Gravedigger', 2, 2, 6, { tier: 'rare', battlecry: 'gravedigger', text: 'Summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.' }),
   card('meddler', 'Meddler', 2, 2, 6, { tier: 'rare', battlecry: 'meddler' }),
   card('headsman', 'Headsman', 2, 3, 8, { tier: 'rare', onKill: 2, portraitId: 'doomcaller' }),
   card('firebelcher', 'Firebelcher', 2, 2, 9, { tier: 'rare', battlecry: 'firebelch', portraitId: 'plague_bearer' }),

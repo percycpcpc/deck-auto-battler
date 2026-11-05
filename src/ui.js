@@ -199,7 +199,7 @@ const BATTLECRY_TEXT = Object.freeze({
   scout: 'On deploy: already scouted — enemy order is known.',
   duelist: 'On deploy: gain +2/+2 if no adjacent ally.',
   hexblade: 'On deploy: set the opposing unit to 1/1.',
-  gravedigger: 'On deploy: summon a 1/2 for every death this combat.',
+  gravedigger: 'On deploy: summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.',
   meddler: "On deploy: return the enemy's charging card to its deck.",
   inquisitor: "On deploy: deal 3 damage to the enemy's strongest unit.",
   doom: "On deploy: destroy the enemy's charging card.",
