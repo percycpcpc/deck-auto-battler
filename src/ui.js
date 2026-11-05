@@ -1,4 +1,4 @@
-import { CARD_POOL, RUN_CONFIG, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, runRound, snapshotView, startRunFight } from './engine.js';
+import { CARD_POOL, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
@@ -457,11 +457,32 @@ export function createEnemyPreview(fightNumber, queue) {
   if (bossBlock) panel.append(bossBlock);
   panel.append(list); return panel;
 }
-function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
-function startRun() { run = createRun(); stopped = false; beginFight(); }
+function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', showStarterSelection)); app.replaceChildren(screen); }
+function showStarterSelection() {
+  let selectedId = STARTERS[0].id;
+  const screen = el('section', 'screen starter-select'), choices = el('div', 'starter-select__choices');
+  const confirm = button('March', () => startRun(selectedId));
+  const starterButtons = STARTERS.map(starter => {
+    const choice = el('button', 'starter-choice');
+    choice.type = 'button'; choice.setAttribute('aria-pressed', String(starter.id === selectedId));
+    choice.style.setProperty('--starter-hover', `${dur(TIMING.hover)}ms`);
+    const cards = el('span', 'starter-choice__cards');
+    cards.append(...starter.ids.map(id => draftCard(getCard(id), () => {}, { readOnly: true })));
+    choice.append(el('strong', 'starter-choice__name', starter.name), el('span', 'starter-choice__blurb', starter.blurb), cards);
+    choice.addEventListener('click', () => {
+      playSfx('uiClick'); selectedId = starter.id;
+      for (const button of starterButtons) button.setAttribute('aria-pressed', String(button === choice));
+    });
+    return choice;
+  });
+  choices.append(...starterButtons);
+  screen.append(el('h1', '', 'CHOOSE YOUR BANNER'), el('p', 'starter-select__intro', 'Select the warband that will march into Fight 1.'), choices, confirm);
+  app.replaceChildren(screen);
+}
+function startRun(starterId) { run = createRun(Math.random, starterId); stopped = false; beginFight(); }
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; const completedLevel = run.fight; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showGap(completedLevel); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
-export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); return node; }
+export function draftCard(def, choose = () => {}, { readOnly = false } = {}) { const node = el(readOnly ? 'span' : 'button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def))); if (!readOnly) { node.append(el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); } return node; }
 export function createDraftFlow({ deck, rng, advance, getOffers = draftOffers }) {
   let offers = getOffers(rng), redrawAvailable = true, complete = false;
   const finish = card => {

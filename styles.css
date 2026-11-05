@@ -482,9 +482,27 @@ button {
   width:min(100%,clamp(120px,28dvh,206px));
   aspect-ratio:2 / 3;
 }
+.starter-select { place-content:start center; gap:12px; overflow-y:auto; }
+.starter-select h1 { margin:0; font-size:clamp(2rem,5vw,3.5rem); }
+.starter-select__intro { margin:0; }
+.starter-select__choices { width:min(1200px,100%); display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.starter-choice { min-width:0; padding:16px; border:1px solid #5d4a70; border-radius:12px; background:#14101c; color:var(--bone); cursor:pointer; display:flex; flex-direction:column; gap:8px; align-items:stretch; transition:transform var(--starter-hover) ease,filter var(--starter-hover) ease,box-shadow var(--starter-hover) ease; }
+.starter-choice:hover,.starter-choice:focus-visible { transform:translateY(-3px); filter:brightness(1.12); }
+.starter-choice[aria-pressed=true] { border-color:var(--gold); background:var(--raised); box-shadow:0 0 0 3px var(--gold),0 0 28px #e8b84b66; }
+.starter-choice__name { font:800 24px/28px Georgia,serif; color:var(--gold); }
+.starter-choice__blurb { min-height:42px; color:var(--dim); font:500 14px/20px system-ui,sans-serif; }
+.starter-choice__cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+.starter-choice .draft-card { width:100%; min-width:0; padding:3px; border-radius:5px; cursor:inherit; pointer-events:none; }
+.starter-choice .draft-visual { width:100%; }
+.starter-choice .draft-card>strong { min-height:22px; font-size:9px; line-height:11px; }
+.starter-choice .draft-card>span:not(.draft-visual),.starter-choice .draft-card>b,.starter-choice .draft-card>small { display:none; }
+.starter-choice .cost-dot { left:-3px; top:-3px; width:22px; height:22px; font-size:10px; line-height:12px; }
+.starter-select>.primary { margin-top:4px; }
 .primary { max-width:100%; }
 @media(max-width:760px) {
   .draft { place-content:start center; overflow-y:auto; }
+  .starter-select__choices { grid-template-columns:1fr; }
+  .starter-choice__blurb { min-height:0; }
   .enemy-preview { grid-template-columns:1fr; gap:8px; padding:12px; }
   .enemy-preview__title { font-size:18px; line-height:22px; }
   .enemy-preview__boss { padding:8px 0 0; border-left:0; border-top:1px solid #c99b4a; }

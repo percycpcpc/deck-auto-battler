@@ -42,7 +42,12 @@ export const CARD_POOL = [
   card('quillback_elder', 'Quillback Elder', 3, 3, 13, { tier: 'rare', onSummonPing: 1, portraitId: 'warlord' }),
 ];
 
-export const STARTER_IDS = ['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre'];
+export const STARTER_IDS = Object.freeze(['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre']);
+export const STARTERS = Object.freeze([
+  Object.freeze({ id: 'oathbound_line', name: 'Oathbound Line', blurb: 'A steady line of proven fighters built to hold and answer.', ids: STARTER_IDS }),
+  Object.freeze({ id: 'rat_pack', name: 'Rat Pack', blurb: 'Fast, vicious bodies overwhelm the line before it can settle.', ids: Object.freeze(['dagger_imp', 'dagger_imp', 'twinfang', 'sellsword', 'hex_hurler', 'leeching_tick', 'road_ogre', 'duelist']) }),
+  Object.freeze({ id: 'iron_bastion', name: 'Iron Bastion', blurb: 'Durable defenders blunt the assault and win the long battle.', ids: Object.freeze(['oathbound', 'sellsword', 'twinfang', 'brood_wisp', 'aegis_knight', 'bulwark', 'plague_bearer', 'squire']) }),
+]);
 const byId = new Map(CARD_POOL.map(c => [c.id, c]));
 export const getCard = id => ({ ...byId.get(id), keywords: [...(byId.get(id)?.keywords || [])] });
 export const starterDeck = () => STARTER_IDS.map(getCard);
@@ -402,7 +407,10 @@ export function draftOffers(rng = Math.random) {
   return offered;
 }
 
-export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, deck: starterDeck(), rng, enemyLine: null, won: false, lost: false }; }
+export function createRun(rng = Math.random, starterId = STARTERS[0].id) {
+  const starter = STARTERS.find(candidate => candidate.id === starterId) || STARTERS[0];
+  return { fight: 1, hp: HERO_HP, deck: starter.ids.map(getCard), rng, enemyLine: null, won: false, lost: false };
+}
 export function startRunFight(run) {
   const enemyLine = run.enemyLine || enemyDeckFor(run.fight);
   run.enemyLine = null;

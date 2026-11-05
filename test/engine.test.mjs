@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  CARD_POOL, HERO_HP, RUN_CONFIG, createFight, createRun, effectiveStats, exchange, finishRunFight,
+  CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
   draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
@@ -11,6 +11,20 @@ function test(name, fn) {
   catch (error) { console.error(`not ok - ${name}`); throw error; }
 }
 const empty = () => createFight({ playerDeck: [], enemyDeck: [] });
+
+test('starter registry contains three valid eight-card decks and preserves the legacy default', () => {
+  assert.equal(STARTERS.length, 3);
+  assert.deepEqual(STARTERS[0].ids, STARTER_IDS);
+  for (const starter of STARTERS) {
+    assert.equal(starter.ids.length, 8, starter.id);
+    assert.ok(starter.ids.every(id => CARD_POOL.some(card => card.id === id)), starter.id);
+  }
+});
+
+test('createRun selects Rat Pack and falls back to the legacy starter for an unknown id', () => {
+  assert.deepEqual(createRun(() => 0, 'rat_pack').deck.map(card => card.id), STARTERS[1].ids);
+  assert.deepEqual(createRun(() => 0, 'missing_starter').deck.map(card => card.id), STARTER_IDS);
+});
 
 test('fight seeds reproduce event logs and vary the player reveal order', () => {
   const playerDeck = CARD_POOL.slice(0, 8), enemyDeck = enemyDeckFor(1);
