@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
-  CARD_POOL, HERO_HP, createFight, createRun, effectiveStats, exchange, finishRunFight,
-  draftOffers, enemyDeckFor, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
+  CARD_POOL, HERO_HP, RUN_CONFIG, createFight, createRun, effectiveStats, exchange, finishRunFight,
+  draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 
 let passed = 0;
@@ -229,8 +229,8 @@ test('regular enemies remain in the trickle deck and reveal one charger at a tim
 test('enemy order is identical across 100 runs of the same fight', () => {
   const expected = {
     1: ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt'],
-    2: ['enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute'],
-    3: ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt'],
+    2: ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute', 'enemy_grunt'],
+    3: ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute', 'enemy_grunt'],
   };
   for (const fight of [1, 2, 3]) {
     assert.equal(enemyDeckFor(fight).length, expected[fight].length);
@@ -246,9 +246,26 @@ test('every scripted enemy card is common tier with per-fight stats', () => {
   assert.deepEqual([brute.cost, brute.atk, brute.hp], [2, 2, 6]);
   for (const fight of [2, 3]) {
     const support = enemyDeckFor(fight);
-    assert.ok(support.filter(card => card.id === 'enemy_grunt').every(card => card.cost === 1 && card.atk === 2 && card.hp === 2 && card.tier === 'common'));
-    assert.ok(support.filter(card => card.id === 'enemy_brute').every(card => card.cost === 2 && card.atk === 2 && card.hp === 5 && card.tier === 'common'));
+    assert.ok(support.filter(card => card.id === 'enemy_grunt').every(card => card.cost === 1 && card.atk === 2 && card.hp === 3 && card.tier === 'common'));
+    assert.ok(support.filter(card => card.id === 'enemy_brute').every(card => card.cost === 2 && card.atk === 2 && card.hp === 6 && card.tier === 'common'));
   }
+});
+
+test('level-1 enemy script remains byte-identical to the pre-pass snapshot', () => {
+  assert.equal(JSON.stringify(enemyDeckFor(1)), '[{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_brute","name":"Camp Brute","cost":2,"atk":2,"hp":6,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_brute","name":"Camp Brute","cost":2,"atk":2,"hp":6,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"}]');
+});
+
+test('gap cadence drafts normally and alternates remove then transform events', () => {
+  assert.equal(gapKind(1), 'draft'); assert.equal(gapKind(3), 'remove');
+  assert.equal(gapKind(6), 'transform'); assert.equal(gapKind(20), 'draft');
+});
+
+test('level-20 Broodmother is pre-boarded and its all aura is effective', () => {
+  const s = createFight({ fight: 20, playerDeck: [], enemyDeck: [] });
+  const boss = s.enemy.board[0]; assert.equal(boss.name, 'Broodmother'); assert.equal(boss.boss, 'broodmother');
+  assert.deepEqual([boss.baseAtk, boss.baseMaxHp, boss.aura], [2, 12, 'all']);
+  const ally = summon(s, 'enemy', enemyDeckFor(20)[0]);
+  assert.deepEqual(effectiveStats(s, 'enemy', ally), { atk: 3, maxHp: 8, hp: 8 });
 });
 
 test('draft offers follow the seeded 50/35/15 tier weighting', () => {
@@ -287,15 +304,15 @@ test('next enemy script is previewed once and reused by the following fight', ()
   first.over = true; first.winner = 'player'; finishRunFight(run, first);
   const preview = run.enemyLine.map(card => card.id), second = startRunFight(run);
   assert.deepEqual(second.enemy.deck.map(card => card.id), preview);
-  assert.equal(run.enemyLine, null); assert.equal(enemyDeckFor(2, () => 0).length, 4);
+  assert.equal(run.enemyLine, null); assert.equal(enemyDeckFor(2, () => 0).length, 6);
 });
 
 test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
   const state = createFight({ fight: 2 });
   assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].name, 'Warherald'); assert.equal(state.enemy.board[0].boss, 'herald'); assert.equal(state.enemy.board[0].baseMaxHp, 8);
-  assert.deepEqual(state.enemy.deck.map(card => card.id), ['enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute']);
-  assert.equal(state.enemy.deck.length, 4); runRound(state);
-  assert.ok(state.enemy.board.some(unit => unit.boss === 'herald')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 3);
+  assert.deepEqual(state.enemy.deck.map(card => card.id), ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute', 'enemy_grunt']);
+  assert.equal(state.enemy.deck.length, 6); runRound(state);
+  assert.ok(state.enemy.board.some(unit => unit.boss === 'herald')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 5);
 });
 
 test('fight-3 boss token appears only after attack damage and only with room', () => {
@@ -393,13 +410,13 @@ test('round events carry post-event view snapshots for deploys and deaths', () =
   assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'charger', 'deck', 'hp']);
 });
 
-test('each fight starts at full HP while the run records the last fight result and grows deck 8 to 12', () => {
+test('each level starts at full HP and the run wins only after level 20', () => {
   const run = createRun(() => 0); assert.equal(run.deck.length, 8);
-  for (let fight = 1; fight <= 3; fight++) {
+  for (let fight = 1; fight <= RUN_CONFIG.LEVELS; fight++) {
     const combat = startRunFight(run); assert.equal(combat.player.hp, HERO_HP); combat.player.hp = HERO_HP - fight; combat.over = true; combat.winner = 'player'; finishRunFight(run, combat);
-    if (fight < 3) { run.deck.push(getCard('colossus'), getCard('colossus')); assert.equal(run.hp, HERO_HP - fight); }
+    if (fight < RUN_CONFIG.LEVELS) assert.equal(run.won, false);
   }
-  assert.equal(run.deck.length, 12); assert.equal(run.won, true); assert.equal(run.hp, HERO_HP - 3);
+  assert.equal(run.won, true); assert.equal(run.hp, HERO_HP - RUN_CONFIG.LEVELS);
 });
 
 assert.equal(CARD_POOL.length, 36);

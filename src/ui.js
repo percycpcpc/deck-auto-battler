@@ -1,4 +1,4 @@
-import { CARD_POOL, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, runRound, snapshotView, startRunFight } from './engine.js';
+import { CARD_POOL, RUN_CONFIG, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
@@ -449,7 +449,7 @@ function updateEnemyQueuePanel() {
 }
 export function createEnemyPreview(fightNumber, queue) {
   const panel = el('aside', 'enemy-preview');
-  const boss = fightBoss(fightNumber), bossBlock = boss && el('div', 'enemy-preview__boss');
+  const boss = fightBoss(fightNumber, Math.random, true), bossBlock = boss && el('div', 'enemy-preview__boss');
   if (boss) bossBlock.append(el('strong', '', `${boss.name} · ${boss.baseAtk}/${boss.baseMaxHp}`), el('p', '', boss.text));
   const list = el('ul', 'enemy-preview__units');
   queue.forEach((unit, index) => list.append(el('li', '', `${index + 1}. ${unit.name} · ${unit.cost} cost · ${unit.atk}/${unit.hp}`)));
@@ -459,9 +459,39 @@ export function createEnemyPreview(fightNumber, queue) {
 }
 function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', startRun)); app.replaceChildren(screen); }
 function startRun() { run = createRun(); stopped = false; beginFight(); }
-async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showDraft(0); }
+async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; const completedLevel = run.fight; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showGap(completedLevel); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
 export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); return node; }
-function showDraft(pick) { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick ${pick + 1} of 2 · Deck ${run.deck.length} cards`), createEnemyPreview(run.fight, run.enemyLine || [])); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); pick === 0 ? showDraft(1) : beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
+function showDraft() { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick 1 of ${RUN_CONFIG.PICKS_PER_DRAFT} · Deck ${run.deck.length} cards`), createEnemyPreview(run.fight, run.enemyLine || [])); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
+function showDeckEvent(kind) {
+  const screen = el('section', 'screen draft deck-event');
+  const title = kind === 'remove' ? 'REMOVE A CARD' : 'TRANSFORM A CARD';
+  const copy = kind === 'remove' ? 'Choose one card to remove from your deck.' : 'Choose one card to replace with a random card of the same tier.';
+  const choices = el('div', 'deck-event__choices');
+  const confirm = button(kind === 'remove' ? 'Confirm Remove' : 'Confirm Transform', () => {
+    const index = Number(confirm.dataset.index);
+    if (!Number.isInteger(index)) return;
+    const [removed] = run.deck.splice(index, 1);
+    if (kind === 'transform') {
+      const sameTier = CARD_POOL.filter(card => card.tier === removed.tier);
+      const replacement = sameTier[Math.min(sameTier.length - 1, Math.floor(run.rng() * sameTier.length))];
+      run.deck.push({ ...replacement, keywords: [...(replacement.keywords || [])] });
+    }
+    beginFight();
+  });
+  confirm.disabled = true;
+  run.deck.forEach((card, index) => {
+    const choice = el('button', 'deck-event__card', `${card.name} · ${card.cost} turn${card.cost === 1 ? '' : 's'} · ${card.atk}/${card.hp} · ${card.tier}`);
+    choice.setAttribute('aria-pressed', 'false');
+    choice.addEventListener('click', () => {
+      for (const node of choices.children) node.setAttribute('aria-pressed', 'false');
+      choice.setAttribute('aria-pressed', 'true'); confirm.dataset.index = String(index); confirm.disabled = false;
+    });
+    choices.append(choice);
+  });
+  screen.append(el('h1', '', title), el('p', '', copy), createEnemyPreview(run.fight, run.enemyLine || []), choices, confirm);
+  app.replaceChildren(screen);
+}
+function showGap(completedLevel) { const kind = gapKind(completedLevel); if (kind === 'draft') showDraft(); else showDeckEvent(kind); }
 function showEnd(won) { stopped = true; playSfx(won ? 'victory' : 'defeat'); const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

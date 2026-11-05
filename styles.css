@@ -438,6 +438,10 @@ button {
   color:var(--bone);
   font:700 14px/20px system-ui;
 }
+.deck-event__choices { width:min(920px,100%); max-height:38vh; overflow:auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; padding:4px; }
+.deck-event__card { min-height:48px; padding:10px 12px; border:1px solid #5d4a70; border-radius:6px; background:var(--panel); cursor:pointer; text-align:left; font:600 14px/20px system-ui; }
+.deck-event__card[aria-pressed=true] { border-color:var(--gold); background:var(--raised); box-shadow:0 0 0 2px var(--gold); }
+.deck-event .primary:disabled { filter:grayscale(1); opacity:.55; cursor:not-allowed; }
 .end {
   gap:12px
 }

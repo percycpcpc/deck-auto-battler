@@ -1,5 +1,6 @@
 export const HERO_HP = 40; // First tuning dial; K3 recommends 30.
 export const BOARD_CAP = 20;
+export const RUN_CONFIG = Object.freeze({ LEVELS: 20, PICKS_PER_DRAFT: 1, EVENT_EVERY: 3 });
 
 const card = (id, name, cost, atk, hp, extra = {}) => ({ id, name, cost, atk, hp, ...extra });
 
@@ -75,11 +76,13 @@ export function effectiveStats(state, side, unit) {
 
 export const liveUnits = board => board.filter(unit => !unit.dead);
 
-export const fightBoss = (fight, rng = Math.random) => fight === 2
+export const fightBoss = (fight, rng = Math.random, milestonesOnly = false) => ((!milestonesOnly && fight === 2) || [5, 15].includes(fight))
   ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' }, rng)
-  : fight === 3
+  : ((!milestonesOnly && fight === 3) || fight === 10)
     ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' }, rng)
-    : null;
+    : fight === 20
+      ? makeUnit(card('boss_broodmother', 'Broodmother', 0, 2, 12, { tier: 'mythic', aura: 'all' }), 'enemy', { boss: 'broodmother', text: 'Aura: all friendly units have +1/+1.' }, rng)
+      : null;
 
 export function makeRng(seed) {
   const rng = () => {
@@ -92,7 +95,7 @@ export function makeRng(seed) {
   return rng;
 }
 
-export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random, seed } = {}) {
+export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random, seed, milestonesOnly = false } = {}) {
   const seeded = seed !== undefined;
   if (seeded) rng = makeRng(seed);
   const enemyLine = enemyDeck || enemyDeckFor(fight);
@@ -102,7 +105,7 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = null, figh
     enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false },
   };
   if (seeded) state.uidRng = rng;
-  const boss = fightBoss(fight, state.uidRng || Math.random);
+  const boss = fightBoss(fight, state.uidRng || Math.random, milestonesOnly);
   if (boss) state.enemy.board.push(boss);
   return state;
 }
@@ -113,15 +116,37 @@ export function shuffle(items, rng = Math.random) {
   return a;
 }
 
-const ENEMY_SCRIPTS = Object.freeze({
-  1: ['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt'],
-  2: ['grunt', 'brute', 'grunt', 'brute'],
-  3: ['grunt', 'grunt', 'brute', 'grunt'],
-});
-const enemyCard = (kind, fight) => kind === 'brute'
-  ? card('enemy_brute', 'Camp Brute', 2, 2, fight === 1 ? 6 : 5, { tier: 'common' })
-  : card('enemy_grunt', 'Ash Grunt', 1, 2, fight === 1 ? 3 : 2, { tier: 'common' });
-export function enemyDeckFor(fight) { return (ENEMY_SCRIPTS[fight] || ENEMY_SCRIPTS[1]).map(kind => enemyCard(kind, fight)); }
+const LEVEL_ONE_SCRIPT = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt']);
+const SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'brute']);
+function levelDeckSize(level) {
+  if (level === 1) return 8;
+  if (level <= 4 || level === 20) return 6;
+  if (level <= 14) return 8;
+  return 10;
+}
+function enemyScriptFor(level) {
+  if (level === 1) return LEVEL_ONE_SCRIPT;
+  const size = levelDeckSize(level);
+  return Array.from({ length: size }, (_, index) => SCRIPT_PATTERN[index % SCRIPT_PATTERN.length]);
+}
+const enemyCard = (kind, level) => {
+  if (level === 1) return kind === 'brute'
+    ? card('enemy_brute', 'Camp Brute', 2, 2, 6, { tier: 'common' })
+    : card('enemy_grunt', 'Ash Grunt', 1, 2, 3, { tier: 'common' });
+  const band = Math.ceil(level / 4);
+  return kind === 'brute'
+    ? card('enemy_brute', 'Camp Brute', 2, 2 + Math.floor(band / 2), 5 + band, { tier: 'common' })
+    : card('enemy_grunt', 'Ash Grunt', 1, 2, 2 + band, { tier: 'common' });
+};
+export function enemyDeckFor(level) {
+  const safeLevel = Math.min(RUN_CONFIG.LEVELS, Math.max(1, Number(level) || 1));
+  return enemyScriptFor(safeLevel).map(kind => enemyCard(kind, safeLevel));
+}
+
+export function gapKind(level) {
+  if (level % RUN_CONFIG.EVENT_EVERY !== 0) return 'draft';
+  return level / RUN_CONFIG.EVENT_EVERY % 2 === 1 ? 'remove' : 'transform';
+}
 
 const other = side => side === 'player' ? 'enemy' : 'player';
 export function snapshotView(state) {
@@ -138,7 +163,7 @@ const emit = (s, type, data = {}) => s.events.push({ round: s.round, phase: s.ph
 export function summon(state, side, def, extras = {}) {
   if (state[side].board.length >= BOARD_CAP) return null;
   const unit = makeUnit(def, side, extras, state.uidRng || Math.random);
-  if (side === 'enemy' && state.fight === 2 && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
+  if (side === 'enemy' && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
     unit.baseAtk += 1; unit.baseMaxHp += 1;
   }
   state[side].board.push(unit); emit(state, 'summon', { side, unit: unit.name, uid: unit.uid });
@@ -378,12 +403,12 @@ export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, d
 export function startRunFight(run) {
   const enemyLine = run.enemyLine || enemyDeckFor(run.fight);
   run.enemyLine = null;
-  return createFight({ fight: run.fight, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyLine, rng: run.rng });
+  return createFight({ fight: run.fight, playerDeck: shuffle(run.deck, run.rng), enemyDeck: enemyLine, rng: run.rng, milestonesOnly: true });
 }
 export function finishRunFight(run, fightState) {
   run.hp = Math.max(0, fightState.player.hp);
   if (fightState.winner !== 'player') run.lost = true;
-  else if (run.fight === 3) run.won = true;
+  else if (run.fight === RUN_CONFIG.LEVELS) run.won = true;
   else { run.fight++; run.enemyLine = enemyDeckFor(run.fight); }
   return run;
 }
