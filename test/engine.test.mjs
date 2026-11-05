@@ -108,6 +108,47 @@ test('Headsman gains +2/+2 only after killing a unit', () => {
   assert.equal(change.amount, 2); assert.ok(s.events.findIndex(event => event.type === 'damage' && event.uid === target.uid) < s.events.indexOf(change));
 });
 
+test('kill growth cannot rescue an attacker from a lethal exchange', () => {
+  const s = empty(), tick = summon(s, 'player', getCard('leeching_tick'));
+  const target = summon(s, 'enemy', { id: 'lethal_target', name: 'Lethal Target', cost: 0, atk: 5, hp: 1 });
+  exchange(s, 'player', tick, target);
+  assert.equal(tick.dead, true);
+  assert.equal(tick.baseAtk, 1); assert.equal(tick.baseMaxHp, 5);
+  assert.equal(s.events.some(event => event.type === 'statChange' && event.reason === 'onKill'), false);
+});
+
+test('retaliation kills do not trigger defender kill growth', () => {
+  const s = empty();
+  const attacker = summon(s, 'player', { id: 'fragile_attacker', name: 'Fragile Attacker', cost: 0, atk: 1, hp: 1 });
+  const defender = summon(s, 'enemy', { id: 'retaliating_grower', name: 'Retaliating Grower', cost: 0, atk: 1, hp: 5, onKill: 2 });
+  exchange(s, 'player', attacker, defender);
+  assert.equal(attacker.dead, true); assert.equal(defender.dead, undefined);
+  assert.equal(defender.baseAtk, 1); assert.equal(defender.baseMaxHp, 5);
+  assert.equal(s.events.some(event => event.type === 'statChange' && event.reason === 'onKill'), false);
+});
+
+test('Bristleback growth triggers at most once per round per unit', () => {
+  const s = empty(), bristle = summon(s, 'player', getCard('bristleback'));
+  const attacker = summon(s, 'enemy', { id: 'round_pinger', name: 'Round Pinger', cost: 0, atk: 1, hp: 20 });
+  s.round = 1; exchange(s, 'enemy', attacker, bristle); exchange(s, 'enemy', attacker, bristle);
+  assert.equal(bristle.baseAtk, 4);
+  s.round = 2; exchange(s, 'enemy', attacker, bristle);
+  assert.equal(bristle.baseAtk, 7);
+  assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onDamaged').length, 2);
+});
+
+test('a surviving initiating attacker still receives kill growth', () => {
+  const s = empty(), tick = summon(s, 'player', getCard('leeching_tick'));
+  const target = summon(s, 'enemy', { id: 'small_target', name: 'Small Target', cost: 0, atk: 1, hp: 1 });
+  exchange(s, 'player', tick, target);
+  assert.equal(tick.dead, undefined);
+  assert.equal(tick.baseAtk, 2); assert.equal(tick.baseMaxHp, 6);
+  const deathIndex = s.events.findIndex(event => event.type === 'death' && event.uid === target.uid);
+  const growthIndex = s.events.findIndex(event => event.type === 'statChange' && event.reason === 'onKill');
+  assert.ok(deathIndex >= 0 && deathIndex < growthIndex);
+  assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onKill').length, 1);
+});
+
 test('Firebelcher damages every enemy including a boss and fizzles on an empty board', () => {
   let s = createFight({ fight: 2, playerDeck: [], enemyDeck: [] });
   const boss = s.enemy.board[0], grunt = summon(s, 'enemy', getCard('sellsword')), firebelcher = summon(s, 'player', getCard('firebelcher'));
@@ -123,10 +164,11 @@ test('Shield Saint Divine Shield pops before HP damage', () => {
   exchange(s, 'player', attacker, saint); assert.equal(saint.shield, false); assert.equal(saint.damage, 0);
 });
 
-test('Bristleback gains +3 Attack per surviving damage instance but not when killed', () => {
+test('Bristleback gains +3 Attack in later rounds but not when killed', () => {
   let s = empty(), bristle = summon(s, 'player', getCard('bristleback'));
   let attacker = summon(s, 'enemy', { id: 'pinger', name: 'Pinger', cost: 0, atk: 1, hp: 20 });
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 4);
+  s.round++;
   exchange(s, 'enemy', attacker, bristle); assert.equal(bristle.baseAtk, 7);
   assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onDamaged').length, 2);
   s = empty(); bristle = summon(s, 'player', getCard('bristleback')); attacker = summon(s, 'enemy', { id: 'finisher', name: 'Finisher', cost: 0, atk: 9, hp: 9 });

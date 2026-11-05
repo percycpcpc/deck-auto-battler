@@ -148,7 +148,9 @@ function dealDamage(state, source, target, amount) {
   target.damage += amount;
   if (source?.keywords?.includes('poisonous')) target.poisoned = true;
   emit(state, 'damage', { unit: target.name, uid: target.uid, amount });
-  if (target.onDamaged && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) {
+  // Bristleback identity retuning is deferred to the balance wave; this pass only caps its growth trigger per round.
+  if (target.onDamaged && target.lastOnDamagedGrowthRound !== state.round && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) {
+    target.lastOnDamagedGrowthRound = state.round;
     target.baseAtk += target.onDamaged;
     const stats = effectiveStats(state, target.side, target);
     emit(state, 'statChange', { side: target.side, uid: target.uid, unit: target.name, atk: stats.atk, hp: stats.hp, amount: target.onDamaged, reason: 'onDamaged' });
@@ -279,14 +281,14 @@ export function triggerBattlecry(state, side, unit) {
 export function exchange(state, side, attacker, defender) {
   const foe = other(side), aAtk = effectiveStats(state, side, attacker).atk, dAtk = effectiveStats(state, foe, defender).atk;
   dealDamage(state, attacker, defender, aAtk); dealDamage(state, defender, attacker, dAtk);
-  const defenderDied = isDead(state, foe, defender);
   const growth = attacker.onKill === 'grow' ? 1 : Number(attacker.onKill) || 0;
-  if (defenderDied && growth) {
+  resolveDeaths(state);
+  // Kill growth belongs only to the initiating attacker and resolves after deaths; it cannot rescue a dead attacker.
+  if (defender.dead && !attacker.dead && growth) {
     attacker.baseAtk += growth; attacker.baseMaxHp += growth;
     const stats = effectiveStats(state, side, attacker);
     emit(state, 'statChange', { side, uid: attacker.uid, unit: attacker.name, atk: stats.atk, hp: stats.hp, amount: growth, reason: 'onKill' });
   }
-  resolveDeaths(state);
 }
 
 function actionFor(state, side, index, acted) {
