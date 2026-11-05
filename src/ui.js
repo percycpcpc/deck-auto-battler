@@ -1,4 +1,4 @@
-import { CARD_POOL, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
+import { CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
@@ -25,6 +25,7 @@ let deckQueues = { player: [], enemy: [] };
 let deckKnown = { player: true, enemy: true };
 let authUser = null;
 let premiumEntitled = false;
+let playbackPaused = false, resumePlayback = null;
 
 const stored = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const store = (key, value) => { try { localStorage.setItem(key, value); } catch { /* offline/private storage remains playable */ } };
@@ -482,6 +483,7 @@ async function playEvent(event, deployUids) {
 export async function playEvents(eventStream) {
   const deployUids = new Set(eventStream.filter(event => event.type === 'deploy' && event.state[event.side].board.some(unit => unit.uid === event.uid)).map(event => event.uid)); let lastAttack = null;
   for (const event of eventStream) {
+    if (playbackPaused) await new Promise(resolve => { resumePlayback = resolve; });
     if (event.round > lastRenderedRound) { lastRenderedRound = event.round; await playTurnBanner(event.round); }
     if (event.type === 'attack') { if (lastAttack === event.uid && event.state[event.side].board.find(unit => unit.uid === event.uid)?.keywords.includes('windfury')) await wait(TIMING.windfuryGap); lastAttack = event.uid; }
     await playEvent(event, deployUids); if (!['attack', 'damage', 'shield', 'heroHit'].includes(event.type)) els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target')); if (event.phase !== 'action' || !els.battle.querySelector('.is-active-turn')) setText(els.phase, `${event.phase.toUpperCase()} · ROUND ${event.round}`); appendEventLog(event);
@@ -541,7 +543,8 @@ function showRankedResult(screen, result) {
   const panel = el('section', `ranked-result ranked-result--${result.winner === 'me' ? 'win' : 'loss'}`);
   const before = result.myRating - result.ratingDelta;
   const delta = `${result.ratingDelta >= 0 ? '+' : ''}${result.ratingDelta}`;
-  const watch = button('Watch replay', () => {}); watch.disabled = true; watch.title = 'Replay viewer arrives in C3';
+  const watch = button('Watch replay', () => { location.search = `?replay=${encodeURIComponent(result.replayId)}`; });
+  watch.disabled = !result.replayId;
   panel.append(
     el('h2', '', result.winner === 'me' ? 'VICTORY' : 'DEFEAT'),
     el('p', 'ranked-result__movement', `${before} → ${result.myRating} (${delta})`),
@@ -557,7 +560,7 @@ function resultFromLastMatch(lastMatch) {
   const delta = meIsA ? ranked.deltaA : ranked.deltaB;
   const before = meIsA ? ranked.ratingA : ranked.ratingB;
   const won = (lastMatch.winner === 'player') === meIsA;
-  return { winner: won ? 'me' : 'them', myRating: before + delta, ratingDelta: delta, opponentRating: meIsA ? ranked.ratingB : ranked.ratingA };
+  return { winner: won ? 'me' : 'them', myRating: before + delta, ratingDelta: delta, opponentRating: meIsA ? ranked.ratingB : ranked.ratingA, replayId: lastMatch.replayId };
 }
 
 export async function showRankedScreen() {
@@ -701,6 +704,68 @@ function startRun(starterId) { run = createRun(Math.random, starterId); stopped 
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; const completedLevel = run.fight; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showGap(completedLevel); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
 export function draftCard(def, choose = () => {}, { readOnly = false } = {}) { const node = el(readOnly ? 'span' : 'button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def))); if (!readOnly) { node.append(el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); } return node; }
+
+function replayDeck(label, cards) {
+  const column = el('section', 'replay-deck');
+  column.append(el('h2', '', `${label} · ${cards.length} cards`));
+  const list = el('div', 'replay-deck__cards');
+  list.append(...cards.map(card => draftCard(card, () => {}, { readOnly: true })));
+  column.append(list); return column;
+}
+
+function leaveReplay() { location.search = ''; }
+
+function replayMessage(title, message) {
+  const screen = el('section', 'screen replay-message');
+  screen.append(el('h1', '', title), el('p', '', message), button('Back', leaveReplay));
+  app.replaceChildren(screen);
+}
+
+export async function loadReplay(id) {
+  stopped = true; playbackPaused = false; resumePlayback = null;
+  let replay;
+  try {
+    const response = await apiFetch(`/api/replays/${encodeURIComponent(id)}`);
+    if (response.status === 404) return replayMessage('Replay not found', 'This replay may have expired or the link is invalid.');
+    if (!response.ok) throw new Error(`replay request failed (${response.status})`);
+    replay = await response.json();
+  } catch { return replayMessage('Replay unavailable', 'The replay could not be loaded. Try again later.'); }
+
+  const idsA = replay.deckA?.cardIds || replay.cardIdsA;
+  const idsB = replay.deckB?.cardIds || replay.cardIdsB;
+  if (!Array.isArray(idsA) || !Array.isArray(idsB)) return replayMessage('Replay unavailable', 'This replay has an invalid deck record.');
+  const cardsA = idsA.map(getCard), cardsB = idsB.map(getCard);
+  const buildFight = () => {
+    const replayRun = { fight: 1, hp: HERO_HP, deck: idsA.map(getCard), rng: makeRng(replay.seed), enemyLine: idsB.map(getCard), won: false, lost: false, starterId: null };
+    const built = startRunFight(replayRun); built.uidRng = replayRun.rng; return built;
+  };
+  const simulationFight = buildFight();
+  while (!simulationFight.over) runRound(simulationFight);
+  if (JSON.stringify(simulationFight.events) !== JSON.stringify(replay.events)) console.warn('Replay event mismatch; using locally reconstructed events.', { replayId: replay.replayId || replay.id });
+
+  const screen = el('main', 'replay-viewer'), header = el('header', 'replay-header'), decks = el('div', 'replay-decks'), stage = el('div', 'replay-stage');
+  const title = el('h1', '', `REPLAY · Deck A (${cardsA.length} cards) vs Deck B (${cardsB.length} cards) · seed ${replay.seed}`);
+  const controls = el('div', 'replay-controls'), start = button('Start replay', async () => {
+    start.disabled = true; start.textContent = 'Playing'; screen.classList.add('is-playing');
+    mountBattleScreen(buildFight(), stage);
+    const pause = button('Pause', () => {
+      playbackPaused = !playbackPaused;
+      pause.textContent = playbackPaused ? 'Resume' : 'Pause';
+      if (!playbackPaused && resumePlayback) { const resume = resumePlayback; resumePlayback = null; resume(); }
+    });
+    pause.classList.add('replay-pause'); header.append(pause);
+    await playEvents(simulationFight.events);
+    pause.remove();
+    const winner = replay.winner || replay.result?.winner || simulationFight.winner;
+    const end = el('section', 'replay-end');
+    const copy = button('Copy link', async () => { try { await navigator.clipboard.writeText(location.href); copy.textContent = 'Link copied'; } catch { /* clipboard can be unavailable */ } });
+    end.append(el('h2', '', `${winner === 'player' ? 'DECK A' : 'DECK B'} WINS`), copy, button('Back', leaveReplay));
+    stage.append(end);
+  });
+  controls.append(start, button('Back', leaveReplay)); header.append(title, controls);
+  decks.append(replayDeck('Deck A', cardsA), replayDeck('Deck B', cardsB));
+  screen.append(header, decks, stage); app.replaceChildren(screen);
+}
 export function createDraftFlow({ deck, rng, advance, getOffers = draftOffers }) {
   let offers = getOffers(rng), redrawAvailable = true, complete = false;
   const finish = card => {
@@ -880,4 +945,7 @@ async function showSavePanel(screen, deckId) {
   renderChoices();
   screen.insertBefore(panel, screen.lastElementChild);
 }
-if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) { showTitle(); void bootstrapAuth(); }
+if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) {
+  const replayId = new URLSearchParams(location.search).get('replay');
+  if (replayId) void loadReplay(replayId); else { showTitle(); void bootstrapAuth(); }
+}

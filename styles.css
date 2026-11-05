@@ -576,6 +576,23 @@ button {
 .ranked-result__movement { margin:0; font:800 clamp(24px,4vw,36px)/1.2 Georgia,serif; }
 .ranked-offline,.ranked-empty { padding:16px; color:var(--dim); text-align:center; }
 @media(max-width:560px) { .ranked-ratings { grid-template-columns:1fr; } .ranked-screen { width:100%; padding:24px 16px max(24px,env(safe-area-inset-bottom)); } }
+.replay-viewer { min-height:100vh; min-height:100dvh; background:radial-gradient(circle at top,#2a2140,#14101c 64%); }
+.replay-header { position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px max(20px,env(safe-area-inset-right)) 12px max(20px,env(safe-area-inset-left)); border-bottom:1px solid #9a8fa873; background:#14101cf2; }
+.replay-header h1 { margin:0; font:700 clamp(16px,2vw,24px)/1.25 Georgia,serif; color:var(--bone); }
+.replay-controls { display:flex; gap:10px; flex:none; }
+.replay-header .primary,.replay-end .primary,.replay-message .primary { width:auto; min-width:132px; height:48px; padding:0 24px; font-size:16px; background:var(--raised); border:1px solid var(--gold); border-radius:6px; }
+.replay-decks { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; padding:20px; }
+.replay-deck { min-width:0; padding:16px; border:1px solid #9a8fa873; border-radius:8px; background:#1e1830d9; }
+.replay-deck h2 { margin:0 0 12px; color:var(--gold); font-size:20px; }
+.replay-deck__cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:10px; }
+.replay-deck .draft-card { width:100%; min-width:0; }
+.replay-viewer.is-playing .replay-decks { max-height:230px; overflow:auto; border-bottom:1px solid #9a8fa873; }
+.replay-stage { position:relative; min-height:120px; }
+.replay-stage:empty::before { content:'Both decks are public in replay mode. Start when ready.'; display:block; padding:28px; color:var(--dim); font:16px/1.5 system-ui,sans-serif; text-align:center; }
+.replay-end { position:fixed; inset:50% auto auto 50%; z-index:45; translate:-50% -50%; display:grid; gap:16px; min-width:min(420px,calc(100% - 32px)); padding:32px; border:2px solid var(--gold); border-radius:10px; background:#1e1830f5; box-shadow:0 18px 70px #000c; text-align:center; }
+.replay-end h2 { margin:0; color:var(--gold); font-size:clamp(28px,6vw,48px); }
+.replay-message { gap:16px; }
+@media(max-width:760px) { .replay-header { position:relative; align-items:flex-start; flex-direction:column; } .replay-decks { grid-template-columns:1fr; padding:12px; } .replay-deck__cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 #battle-screen .battle-header__meta { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
 #battle-screen .speed-control { display:flex; border:1px solid #c99b4a; border-radius:4px; overflow:hidden; background:#14101c; }
 #battle-screen .speed-control__button { min-width:32px; height:28px; padding:0 5px; border:0; border-right:1px solid #c99b4a66; border-radius:0; background:#2a2140; color:#ede6d6; font:700 12px/1 system-ui; }
