@@ -3,7 +3,7 @@ import {
   CARD_POOL, HERO_HP, RUN_CONFIG, createFight, createRun, effectiveStats, exchange, finishRunFight,
   draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
-import { createDraftFlow } from '../src/ui.js';
+import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -259,6 +259,25 @@ test('level-1 enemy script remains byte-identical to the pre-pass snapshot', () 
 test('gap cadence drafts normally and alternates remove then transform events', () => {
   assert.equal(gapKind(1), 'draft'); assert.equal(gapKind(3), 'remove');
   assert.equal(gapKind(6), 'transform'); assert.equal(gapKind(20), 'draft');
+});
+
+test('remove event changes nothing before confirm and removes exactly the selected card in place', () => {
+  const deck = [getCard('sellsword'), getCard('oathbound'), getCard('colossus')];
+  const flow = createDeckEventFlow({ deck, rng: () => 0, kind: 'remove' });
+  assert.equal(flow.confirm(), null); assert.deepEqual(deck.map(card => card.id), ['sellsword', 'oathbound', 'colossus']);
+  assert.equal(flow.select(1), true); assert.equal(deck.length, 3);
+  const result = flow.confirm();
+  assert.equal(result.removed.id, 'oathbound'); assert.deepEqual(deck.map(card => card.id), ['sellsword', 'colossus']);
+  assert.equal(flow.confirm(), null);
+});
+
+test('transform event replaces the selected slot with a same-tier card and preserves deck size and order', () => {
+  const first = getCard('sellsword'), selected = getCard('twinfang'), last = getCard('colossus');
+  const deck = [first, selected, last]; const flow = createDeckEventFlow({ deck, rng: () => 0, kind: 'transform' });
+  assert.equal(flow.confirm(), null); assert.deepEqual(deck, [first, selected, last]);
+  assert.equal(flow.select(1), true); const result = flow.confirm();
+  assert.equal(deck.length, 3); assert.equal(deck[0], first); assert.equal(deck[2], last);
+  assert.equal(result.removed.id, 'twinfang'); assert.equal(result.replacement.tier, selected.tier); assert.equal(deck[1], result.replacement);
 });
 
 test('level-20 Broodmother is pre-boarded and its all aura is effective', () => {

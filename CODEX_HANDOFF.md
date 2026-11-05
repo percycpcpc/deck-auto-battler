@@ -6,11 +6,15 @@ Deliver issue #2: a deterministic 20-level PvE run with one-pick drafts, alterna
 
 ## Current Phase
 
-- Phase: maintenance / balance tuning
-- Status: A2-tuning implemented and verified; no commit made
+- Phase: production UI polish
+- Status: A4 special-event screens implemented and verified; no commit made
 
 ## Latest Completed Work
 
+- Replaced minimal remove/transform lists with the shared draft-card presentation, banner, deck count, next-enemy preview, scrollable grid, explicit selection, and confirm-only mutation.
+- Added `createDeckEventFlow` as a UI-owned, engine-preserving test seam. Remove deletes only the selected slot; transform replaces that slot with a cloned random same-tier card and preserves deck order.
+- Added `dur()`-driven departure/arrival feedback and reduced-motion handling; transform exposes the replacement card briefly before the next fight.
+- Added automated coverage for zero-selection refusal, confirm gating, exact removal, same-tier transform, unchanged deck size, and order preservation.
 - Tuned only deterministic enemy scripts/stat bands/deck sizes and milestone boss bodies to remove the level-5 wall and produce a smooth 20-level greedy-policy survival curve.
 - Final 200-seed curve: L1 72%, L5 54.5%, L8 34%, L10 20%, L14 8%, L15 5.5%, L19 2.5%, L20 2%.
 - Updated locked-number engine assertions for the tuned Warherald and Broodmother data.
@@ -27,8 +31,8 @@ Deliver issue #2: a deterministic 20-level PvE run with one-pick drafts, alterna
 
 ## Verification
 
-- `node test/engine.test.mjs`: 46/46 passed
-- `node tools/balance_sim.mjs 1 200`: 72% win on the reported verification run (required 65-78%; tool is unseeded)
+- `node test/engine.test.mjs`: 52/52 passed
+- `node tools/balance_sim.mjs 1 200`: 71% win on the reported verification run
 - `node tools/event_snapshot_check.mjs`: PASS
 - `node tools/level_sim.mjs 200`: 5/200 reached level 20 and 4/200 won it under the normal seeded greedy policy
 - `node --check src/ui.js`: PASS
@@ -37,10 +41,11 @@ Deliver issue #2: a deterministic 20-level PvE run with one-pick drafts, alterna
 
 ## Known Risks / Untested Areas
 
+- Orchestrator still needs the requested 1280px screenshot matrix; the replacement state lasts for the `dur(500)` arrival/hold window after confirmation.
 - Monte Carlo percentages are deterministic for the specified 200 seeds/policy but remain sample- and policy-dependent.
 - Real-browser smoke and 1280px interaction/layout verification remain assigned to Hermes.
 - Broodmother intentionally reuses the existing Warherald portrait path because the issue requests data-only boss work and no new raster asset.
 
 ## Next Safest Task
 
-Orchestrator review and ship of the verified A2-tuning diff; no further softening is recommended against the current acceptance targets.
+Orchestrator capture of the five A4 event states at 1280px, then review and ship the verified diff.

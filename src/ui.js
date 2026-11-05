@@ -479,6 +479,28 @@ export function createDraftFlow({ deck, rng, advance, getOffers = draftOffers })
     },
   };
 }
+export function createDeckEventFlow({ deck, rng, kind }) {
+  let selectedIndex = null, complete = false;
+  return {
+    state: () => ({ selectedIndex, complete }),
+    select: index => {
+      if (complete || !Number.isInteger(index) || index < 0 || index >= deck.length) return false;
+      selectedIndex = index; return true;
+    },
+    confirm: () => {
+      if (complete || selectedIndex === null) return null;
+      const removed = deck[selectedIndex]; let replacement = null;
+      if (kind === 'transform') {
+        const sameTier = CARD_POOL.filter(card => card.tier === removed.tier);
+        const picked = sameTier[Math.min(sameTier.length - 1, Math.floor(rng() * sameTier.length))];
+        replacement = { ...picked, keywords: [...(picked.keywords || [])] };
+        deck.splice(selectedIndex, 1, replacement);
+      } else deck.splice(selectedIndex, 1);
+      complete = true;
+      return { index: selectedIndex, removed, replacement };
+    },
+  };
+}
 function showDraft() {
   const screen = el('section', 'screen draft'), flow = createDraftFlow({ deck: run.deck, rng: run.rng, advance: beginFight });
   const charge = el('small', 'draft-charge'), offers = el('div'), actions = el('div', 'draft-actions');
@@ -498,30 +520,43 @@ function showDraft() {
 function showDeckEvent(kind) {
   const screen = el('section', 'screen draft deck-event');
   const title = kind === 'remove' ? 'REMOVE A CARD' : 'TRANSFORM A CARD';
-  const copy = kind === 'remove' ? 'Choose one card to remove from your deck.' : 'Choose one card to replace with a random card of the same tier.';
-  const choices = el('div', 'deck-event__choices');
-  const confirm = button(kind === 'remove' ? 'Confirm Remove' : 'Confirm Transform', () => {
-    const index = Number(confirm.dataset.index);
-    if (!Number.isInteger(index)) return;
-    const [removed] = run.deck.splice(index, 1);
-    if (kind === 'transform') {
-      const sameTier = CARD_POOL.filter(card => card.tier === removed.tier);
-      const replacement = sameTier[Math.min(sameTier.length - 1, Math.floor(run.rng() * sameTier.length))];
-      run.deck.push({ ...replacement, keywords: [...(replacement.keywords || [])] });
-    }
+  const copy = kind === 'remove' ? 'Choose carefully. The selected card will be permanently removed.' : 'Choose a card to replace with a random same-tier card.';
+  const count = el('p', 'deck-event__count'), choices = el('div', 'deck-event__choices');
+  const flow = createDeckEventFlow({ deck: run.deck, rng: run.rng, kind });
+  const confirm = button(kind === 'remove' ? 'Confirm Removal' : 'Confirm Transform', async () => {
+    const result = flow.confirm();
+    if (!result) return;
+    confirm.disabled = true; choices.classList.add('is-resolving');
+    const chosen = choices.children[result.index];
+    if (chosen) { chosen.style.setProperty('--event-leave', `${dur(TIMING.shift)}ms`); chosen.classList.add('is-departing'); }
+    await wait(TIMING.shift);
+    render(result); choices.classList.remove('is-resolving');
+    await wait(TIMING.bannerHold);
     beginFight();
   });
   confirm.disabled = true;
-  run.deck.forEach((card, index) => {
-    const choice = el('button', 'deck-event__card', `${card.name} · ${card.cost} turn${card.cost === 1 ? '' : 's'} · ${card.atk}/${card.hp} · ${card.tier}`);
-    choice.setAttribute('aria-pressed', 'false');
-    choice.addEventListener('click', () => {
-      for (const node of choices.children) node.setAttribute('aria-pressed', 'false');
-      choice.setAttribute('aria-pressed', 'true'); confirm.dataset.index = String(index); confirm.disabled = false;
-    });
-    choices.append(choice);
-  });
-  screen.append(el('h1', '', title), el('p', '', copy), createEnemyPreview(run.fight, run.enemyLine || []), choices, confirm);
+  const render = result => {
+    setText(count, `Deck ${run.deck.length} cards`);
+    choices.replaceChildren(...run.deck.map((card, index) => {
+      const choice = draftCard(card, () => {
+        if (!flow.select(index)) return;
+        for (const node of choices.children) node.setAttribute('aria-pressed', 'false');
+        choice.setAttribute('aria-pressed', 'true'); confirm.disabled = false;
+      });
+      choice.style.setProperty('--event-hover', `${dur(TIMING.hover)}ms`);
+      choice.classList.add('deck-event__card'); choice.setAttribute('aria-pressed', 'false');
+      const action = choice.querySelector('.draft-confirm');
+      if (action) setText(action, kind === 'remove' ? 'Select to remove' : 'Select to transform');
+      if (result?.replacement && index === result.index) {
+        choice.style.setProperty('--event-arrive', `${dur(TIMING.bannerHold)}ms`);
+        choice.classList.add('is-arriving'); choice.setAttribute('aria-label', `${card.name}, transformed replacement`);
+        if (action) setText(action, 'New same-tier card');
+      }
+      return choice;
+    }));
+  };
+  screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', title), el('p', 'deck-event__rule', copy), count, createEnemyPreview(run.fight, run.enemyLine || []), choices, confirm);
+  render();
   app.replaceChildren(screen);
 }
 function showGap(completedLevel) { const kind = gapKind(completedLevel); if (kind === 'draft') showDraft(); else showDeckEvent(kind); }

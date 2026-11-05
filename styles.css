@@ -443,10 +443,20 @@ button {
   color:var(--bone);
   font:700 14px/20px system-ui;
 }
-.deck-event__choices { width:min(920px,100%); max-height:38vh; overflow:auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; padding:4px; }
-.deck-event__card { min-height:48px; padding:10px 12px; border:1px solid #5d4a70; border-radius:6px; background:var(--panel); cursor:pointer; text-align:left; font:600 14px/20px system-ui; }
-.deck-event__card[aria-pressed=true] { border-color:var(--gold); background:var(--raised); box-shadow:0 0 0 2px var(--gold); }
+.deck-event { align-content:start; overflow:hidden; }
+.deck-event__rule { max-width:720px; color:var(--bone); text-align:center; font:600 16px/22px system-ui; }
+.deck-event__count { color:var(--gold); font:700 13px/18px system-ui; letter-spacing:.08em; text-transform:uppercase; }
+.deck-event__choices { width:min(1180px,100%); min-height:250px; max-height:48vh; overflow:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); align-items:start; gap:16px; padding:8px 12px 20px; scrollbar-color:var(--gold) var(--panel); }
+.deck-event__card { width:100%; min-width:0; transition:transform var(--event-hover) ease,filter var(--event-hover) ease,opacity var(--event-hover) ease,box-shadow var(--event-hover) ease; }
+.deck-event__card[aria-pressed=true] { border-color:var(--gold); background:var(--raised); box-shadow:0 0 0 3px var(--gold),0 0 28px #e8b84b66; transform:translateY(-6px); }
+.deck-event__card[aria-pressed=true] .draft-confirm { background:var(--gold); color:var(--bg); }
+.deck-event__choices.is-resolving { pointer-events:none; }
+.deck-event__card.is-departing { animation:event-card-leave var(--event-leave) ease-in forwards; }
+.deck-event__card.is-arriving { animation:event-card-arrive var(--event-arrive) ease-out both; box-shadow:0 0 0 2px var(--gold),0 0 32px #e8b84b88; }
 .deck-event .primary:disabled { filter:grayscale(1); opacity:.55; cursor:not-allowed; }
+@keyframes event-card-leave { to { opacity:0; transform:translateY(-18px) scale(.92); filter:brightness(1.6); } }
+@keyframes event-card-arrive { from { opacity:0; transform:translateY(18px) scale(.92); filter:brightness(1.8); } }
+@media (prefers-reduced-motion:reduce) { .deck-event__card.is-departing,.deck-event__card.is-arriving { animation-duration:1ms; } }
 .end {
   gap:12px
 }
