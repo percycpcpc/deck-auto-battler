@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
-  draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
+  draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runEndSnapshot, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
 
@@ -24,6 +24,13 @@ test('starter registry contains three valid eight-card decks and preserves the l
 test('createRun selects Rat Pack and falls back to the legacy starter for an unknown id', () => {
   assert.deepEqual(createRun(() => 0, 'rat_pack').deck.map(card => card.id), STARTERS[1].ids);
   assert.deepEqual(createRun(() => 0, 'missing_starter').deck.map(card => card.id), STARTER_IDS);
+});
+
+test('createRun and run-end snapshots preserve the resolved starter id', () => {
+  const run = createRun(() => 0, 'rat_pack');
+  assert.equal(run.starterId, 'rat_pack');
+  assert.equal(runEndSnapshot(run).starterId, 'rat_pack');
+  assert.equal(createRun(() => 0, 'nope').starterId, STARTERS[0].id);
 });
 
 test('fight seeds reproduce event logs and vary the player reveal order', () => {
@@ -479,6 +486,29 @@ test('each level starts at full HP and the run wins only after level 20', () => 
     if (fight < RUN_CONFIG.LEVELS) assert.equal(run.won, false);
   }
   assert.equal(run.won, true); assert.equal(run.hp, HERO_HP - RUN_CONFIG.LEVELS);
+});
+
+test('run-end snapshot preserves the fresh starter deck order', () => {
+  const snapshot = runEndSnapshot(createRun(() => 0));
+  assert.equal(snapshot.cardIds.length, 8);
+  assert.deepEqual(snapshot.cardIds, STARTERS[0].ids);
+  assert.equal(snapshot.starterId, STARTERS[0].id);
+  assert.ok(Object.isFrozen(snapshot)); assert.ok(Object.isFrozen(snapshot.cardIds));
+});
+
+test('run-end snapshot reflects draft-like mutations in current deck order', () => {
+  const run = createRun(() => 0); run.deck.splice(2, 1); run.deck.push(getCard('colossus'));
+  assert.deepEqual(runEndSnapshot(run).cardIds, [...STARTERS[0].ids.slice(0, 2), ...STARTERS[0].ids.slice(3), 'colossus']);
+});
+
+test('run-end snapshot records won and lost run flags', () => {
+  const won = createRun(() => 0); won.fight = RUN_CONFIG.LEVELS;
+  finishRunFight(won, { player: { hp: 7 }, winner: 'player' });
+  assert.deepEqual([runEndSnapshot(won).won, runEndSnapshot(won).lost], [true, false]);
+  const lost = createRun(() => 0);
+  finishRunFight(lost, { player: { hp: 0 }, winner: 'enemy' });
+  const snapshot = runEndSnapshot(lost);
+  assert.deepEqual([snapshot.won, snapshot.lost], [false, true]);
 });
 
 assert.equal(CARD_POOL.length, 36);

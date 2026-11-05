@@ -31,6 +31,7 @@ target architecture; every item below lands as its own scoped pass.
 ### Deck lifecycle
 - Deck snapshot taken at run end (win or lose). Paid players choose the
   slot; free players' snapshot is the only deck.
+- A6 emits the ordered client-side run-end snapshot for the latest guest deck.
 - Season 4-week cadence, soft rotation: new starter deck(s) + 6–10 new
   draft cards. Nothing removed until pool ≈60, then evaluate a
   Standard/Open split.

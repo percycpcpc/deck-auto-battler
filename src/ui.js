@@ -1,4 +1,4 @@
-import { CARD_POOL, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, runRound, snapshotView, startRunFight } from './engine.js';
+import { CARD_POOL, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
@@ -163,7 +163,7 @@ export function mountBattleScreen(initialState, root = app) {
   speedControl.setAttribute('role', 'group'); speedControl.setAttribute('aria-label', 'Playback speed');
   for (const value of SPEEDS) { const speedButton = el('button', 'speed-control__button', `${value}x`); speedButton.type = 'button'; speedButton.dataset.speed = String(value); speedButton.setAttribute('aria-pressed', String(value === playbackSpeed)); speedButton.addEventListener('click', () => setPlaybackSpeed(value)); speedControl.append(speedButton); }
   const muteButton = el('button', 'speed-control__button mute-toggle', isMuted() ? 'Sound off' : 'Sound on'); muteButton.type = 'button'; muteButton.setAttribute('aria-pressed', String(isMuted())); muteButton.addEventListener('click', () => { const muted = setMuted(!isMuted()); muteButton.textContent = muted ? 'Sound off' : 'Sound on'; muteButton.setAttribute('aria-pressed', String(muted)); }); speedControl.append(muteButton);
-  header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / 3`), phase);
+  header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / ${RUN_CONFIG.LEVELS}`), phase);
   const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
   const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'), queue = createEnemyQueuePanel(), embers = el('div', 'ember-layer'); banner.hidden = true;
   embers.setAttribute('aria-hidden', 'true'); for (let i = 0; i < 16; i++) { const ember = el('i', 'ember'); ember.style.setProperty('--ember-x', `${(i * 37) % 101}%`); ember.style.setProperty('--ember-drift', `${(i % 5 - 2) * 13}px`); ember.style.setProperty('--ember-delay', `${-dur(i * 510)}ms`); ember.style.setProperty('--ember-duration', `${dur(TIMING.emberMin + (i % 7) * TIMING.emberStep)}ms`); embers.append(ember); }
@@ -581,5 +581,16 @@ function showDeckEvent(kind) {
   app.replaceChildren(screen);
 }
 function showGap(completedLevel) { const kind = gapKind(completedLevel); if (kind === 'draft') showDraft(); else showDeckEvent(kind); }
-function showEnd(won) { stopped = true; playSfx(won ? 'victory' : 'defeat'); const screen = el('section', `screen end ${won ? 'won' : 'lost'}`); screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'), button('Restart', startRun)); app.replaceChildren(screen); }
+function showEnd(won) {
+  stopped = true; playSfx(won ? 'victory' : 'defeat');
+  const snapshot = runEndSnapshot(run); globalThis.__LAST_RUN_SNAPSHOT__ = snapshot;
+  localStorage.setItem('dab_last_snapshot', JSON.stringify(snapshot));
+  const screen = el('section', `screen end ${won ? 'won' : 'lost'}`);
+  screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'));
+  if (won) {
+    localStorage.setItem('dab_trophy', JSON.stringify({ season: 'season-1', at: new Date().toISOString() }));
+    screen.append(el('p', 'end-trophy', 'Seasonal trophy earned — banner and icon unlocked'));
+  }
+  screen.append(button('Restart', showStarterSelection)); app.replaceChildren(screen);
+}
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();

@@ -409,7 +409,7 @@ export function draftOffers(rng = Math.random) {
 
 export function createRun(rng = Math.random, starterId = STARTERS[0].id) {
   const starter = STARTERS.find(candidate => candidate.id === starterId) || STARTERS[0];
-  return { fight: 1, hp: HERO_HP, deck: starter.ids.map(getCard), rng, enemyLine: null, won: false, lost: false };
+  return { fight: 1, hp: HERO_HP, deck: starter.ids.map(getCard), rng, enemyLine: null, won: false, lost: false, starterId: starter.id };
 }
 export function startRunFight(run) {
   const enemyLine = run.enemyLine || enemyDeckFor(run.fight);
@@ -422,4 +422,16 @@ export function finishRunFight(run, fightState) {
   else if (run.fight === RUN_CONFIG.LEVELS) run.won = true;
   else { run.fight++; run.enemyLine = enemyDeckFor(run.fight); }
   return run;
+}
+
+export function runEndSnapshot(run) {
+  return Object.freeze({
+    starterId: run.starterId || STARTERS[0].id,
+    cardIds: Object.freeze(run.deck.map(card => card.id)),
+    won: run.won,
+    lost: run.lost,
+    levelReached: run.fight,
+    hpLeft: run.hp,
+    takenAt: new Date().toISOString(),
+  });
 }
