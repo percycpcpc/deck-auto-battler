@@ -632,6 +632,8 @@ button.cosmetic-tile { cursor:pointer; }
 #battle-screen .speed-control__button { min-width:32px; height:28px; padding:0 5px; border:0; border-right:1px solid #c99b4a66; border-radius:0; background:#2a2140; color:#ede6d6; font:700 12px/1 system-ui; }
 #battle-screen .speed-control__button:last-child { border-right:0; }
 #battle-screen .speed-control__button[aria-pressed=true] { background:#c99b4a; color:#2a2118; }
+#battle-screen .speed-control__button.is-locked { min-width:48px; background:#211a2c; color:#c9bfd4; cursor:pointer; }
+#battle-screen .speed-control__button.is-locked:hover,#battle-screen .speed-control__button.is-locked:focus-visible { background:#392b49; color:var(--gold); }
 #battle-screen .mute-toggle { min-width:72px; }
 #battle-screen .mute-toggle[aria-pressed=true] { background:#462c38; color:var(--bone); }
 #battle-screen .side { position:relative; container-type:normal; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:108px auto; gap:8px; direction:ltr; }

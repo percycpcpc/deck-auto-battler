@@ -23,7 +23,7 @@ target architecture; every item below lands as its own scoped pass.
 - 4 save slots (finite; expandable later à la carte). Saved decks are
   permanent, reusable, and **grandfathered forever** — season rotation
   never kills a paid deck.
-- x3–x10 battle speed (gated on the `dur()` speed helper).
+- x3 and x10 battle speed are Premium, server-entitlement gated; x1 and x2 remain free and all timings use `dur()`.
 - Ranked ladder access — only decks in save slots can queue ranked.
 - Login changes durability, not entitlement: linked free players still
   have 1 slot, just cloud-synced and multi-device.

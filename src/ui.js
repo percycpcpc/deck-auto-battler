@@ -1,13 +1,13 @@
 import { CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
+import { SPEEDS, durationAtSpeed, isSpeedAvailable } from './speeds.js';
 
 // CONSTANTS
 export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, impactDelay: 140, hitStop: 75, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
-export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
 export const API_BASE = (() => { try { return localStorage.getItem('dab_api_base') || 'https://deck-auto-battler-api.workers.dev'; } catch { return 'https://deck-auto-battler-api.workers.dev'; } })();
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
-let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
-export const dur = ms => Math.round(ms * 2 / playbackSpeed);
+let playbackSpeed = 2;
+export const dur = ms => durationAtSpeed(ms, playbackSpeed);
 const SIDES = ['enemy', 'player'];
 const HERO_MAX = 40;
 const app = typeof document === 'undefined' ? null : document.querySelector('#app');
@@ -82,6 +82,22 @@ async function refreshEntitlement() {
     const response = await apiFetch('/api/entitlement');
     if (response.ok) premiumEntitled = Boolean((await response.json()).premium);
   } catch { /* entitlement display is optional when offline */ }
+  syncPlaybackSpeedForEntitlement();
+}
+async function openPremiumUpgrade(trigger) {
+  if (authUser?.provider !== 'mock') { showTitle(); return; }
+  const originalText = trigger.textContent;
+  trigger.disabled = true;
+  if (trigger.classList.contains('upgrade-button')) setText(trigger, 'Opening checkout...');
+  try {
+    const response = await apiFetch('/api/checkout', { method: 'POST' });
+    if (!response.ok) throw new Error('checkout unavailable');
+    const { url } = await response.json();
+    location.assign(url);
+  } catch {
+    setText(trigger, trigger.classList.contains('upgrade-button') ? 'Upgrade unavailable — try again' : originalText);
+    trigger.disabled = false;
+  }
 }
 async function completeMockPurchase() {
   const params = new URLSearchParams(location.search);
@@ -308,7 +324,11 @@ export function mountBattleScreen(initialState, root = app) {
   const battle = el('section', 'battle'); battle.id = 'battle-screen'; battle.setAttribute('aria-live', 'off');
   const header = el('header', 'battle-header'), phase = el('span', 'battle-phase', `READY · ROUND ${initialState.round || 0}`), speedControl = el('div', 'speed-control'), speedLabel = el('span', 'sr-only', 'Playback speed');
   speedControl.setAttribute('role', 'group'); speedControl.setAttribute('aria-label', 'Playback speed');
-  for (const value of SPEEDS) { const speedButton = el('button', 'speed-control__button', `${value}x`); speedButton.type = 'button'; speedButton.dataset.speed = String(value); speedButton.setAttribute('aria-pressed', String(value === playbackSpeed)); speedButton.addEventListener('click', () => setPlaybackSpeed(value)); speedControl.append(speedButton); }
+  for (const value of SPEEDS) {
+    const speedButton = el('button', 'speed-control__button'); speedButton.type = 'button'; speedButton.dataset.speed = String(value);
+    speedButton.addEventListener('click', () => { if (isSpeedAvailable(value, premiumEntitled)) setPlaybackSpeed(value); else void openPremiumUpgrade(speedButton); });
+    speedControl.append(speedButton);
+  }
   const muteButton = el('button', 'speed-control__button mute-toggle', isMuted() ? 'Sound off' : 'Sound on'); muteButton.type = 'button'; muteButton.setAttribute('aria-pressed', String(isMuted())); muteButton.addEventListener('click', () => { const muted = setMuted(!isMuted()); muteButton.textContent = muted ? 'Sound off' : 'Sound on'; muteButton.setAttribute('aria-pressed', String(muted)); }); speedControl.append(muteButton);
   header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / ${RUN_CONFIG.LEVELS}`), phase);
   const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
@@ -323,7 +343,7 @@ export function mountBattleScreen(initialState, root = app) {
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
   battle.addEventListener('click', event => { if (event.target.closest('button')) playSfx('uiClick'); });
-  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player }; bindSynchronizedBattleLanes();
+  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player }; renderSpeedAvailability(); bindSynchronizedBattleLanes();
   const toggleQueue = open => { queue.panel.hidden = open === undefined ? !queue.panel.hidden : !open; enemy.deck.stack.setAttribute('aria-expanded', String(!queue.panel.hidden)); };
   enemy.deck.stack.tabIndex = 0; enemy.deck.stack.setAttribute('role', 'button'); enemy.deck.stack.setAttribute('aria-controls', queue.panel.id); enemy.deck.stack.setAttribute('aria-expanded', 'false');
   enemy.deck.stack.addEventListener('pointerdown', () => { enemy.deck.stack._queueWasOpen = !queue.panel.hidden; });
@@ -360,9 +380,26 @@ export function getUnitEl(uid) { return unitEls.get(uid)?.el || null; }
 export function removeUnitEl(uid) { const entry = unitEls.get(uid); if (entry) { if (els.detail.owner === entry.el) { els.detail.hidden = true; els.detail.textContent = ''; els.detail.owner = null; } entry.el.remove(); unitEls.delete(uid); } }
 
 export function setPlaybackSpeed(value) {
-  if (!SPEEDS.includes(Number(value))) return; playbackSpeed = Number(value);
+  if (!isSpeedAvailable(value, premiumEntitled)) return; playbackSpeed = Number(value);
   try { localStorage.setItem('dab_speed', String(playbackSpeed)); } catch { /* storage may be unavailable */ }
-  els?.speedControl?.querySelectorAll('.speed-control__button').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.speed) === playbackSpeed)));
+  renderSpeedAvailability();
+}
+
+function renderSpeedAvailability() {
+  els?.speedControl?.querySelectorAll('.speed-control__button[data-speed]').forEach(button => {
+    const speed = Number(button.dataset.speed), available = isSpeedAvailable(speed, premiumEntitled);
+    button.classList.toggle('is-locked', !available);
+    button.textContent = `${speed}x${available ? '' : ' 🔒'}`;
+    button.setAttribute('aria-label', available ? `${speed}x playback speed` : `${speed}x playback speed, Premium locked`);
+    button.setAttribute('aria-disabled', String(!available));
+    button.setAttribute('aria-pressed', String(available && speed === playbackSpeed));
+  });
+}
+
+function syncPlaybackSpeedForEntitlement() {
+  const preferred = typeof window === 'undefined' ? 2 : readSpeed();
+  playbackSpeed = isSpeedAvailable(preferred, premiumEntitled) ? preferred : 2;
+  renderSpeedAvailability();
 }
 
 function createEnemyQueuePanel() {
@@ -655,7 +692,7 @@ export async function showRankedScreen() {
       const status = await response.json();
       if (!screen.isConnected) return;
       ratings.replaceChildren(rankedRatingCard('Seasonal', status.ratings.seasonal), rankedRatingCard('Eternal', status.ratings.eternal));
-      if (status.queued) rankedPollTimer = setTimeout(refreshStatus, 3000);
+      if (status.queued) rankedPollTimer = setTimeout(refreshStatus, dur(3000));
       else {
         const result = resultFromLastMatch(status.lastMatch);
         if (result && state.querySelector('.ranked-queued')) showRankedResult(screen, result);
@@ -821,19 +858,7 @@ function showTitle() {
     if (premiumEntitled) actions.append(button('Ranked', () => void showRankedScreen()));
     actions.append(button('Friendly', () => void showFriendlyScreen()));
     if (!premiumEntitled) {
-      const upgrade = button('Upgrade to Premium — $4.99', async () => {
-        upgrade.disabled = true;
-        setText(upgrade, 'Opening checkout...');
-        try {
-          const response = await apiFetch('/api/checkout', { method: 'POST' });
-          if (!response.ok) throw new Error('checkout unavailable');
-          const { url } = await response.json();
-          location.assign(url);
-        } catch {
-          setText(upgrade, 'Upgrade unavailable — try again');
-          upgrade.disabled = false;
-        }
-      });
+      const upgrade = button('Upgrade to Premium — $4.99', () => void openPremiumUpgrade(upgrade));
       upgrade.classList.add('secondary', 'upgrade-button');
       actions.append(upgrade);
     }
