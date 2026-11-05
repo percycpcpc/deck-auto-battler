@@ -63,7 +63,6 @@ test('health reports a failed D1 probe without failing the endpoint', async () =
 });
 
 for (const path of [
-  '/api/entitlement',
   '/api/sim',
   '/api/replays',
 ]) {
@@ -78,6 +77,16 @@ for (const path of [
     assert.deepEqual(await response.json(), { error: 'not implemented — lands in B2–C3' });
   });
 }
+
+test('checkout stub rejects requests without a bearer session', async () => {
+  const response = await worker.fetch(
+    new Request('https://example.test/api/checkout', { method: 'POST' }),
+    fakeEnv(),
+    {},
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: 'unauthorized' });
+});
 
 test('deck routes require a bearer session', async () => {
   const response = await worker.fetch(new Request('https://example.test/api/decks'), fakeEnv(), {});

@@ -2,6 +2,7 @@ import { createRouter, json, readJson } from './router.js';
 import { getProvider } from './auth/providers.js';
 import { createGuestLogin, createLogin, readSession } from './auth/service.js';
 import { DeckError, createDeck, getDeck, listDecks } from './decks.js';
+import { getEntitlements, grantPremium, isPremium } from './entitlements.js';
 import { SlotError, listSlots, saveDeckToSlot } from './slots.js';
 
 export const router = createRouter();
@@ -24,7 +25,6 @@ const notImplemented = () => json(
 );
 
 for (const path of [
-  '/api/entitlement',
   '/api/sim',
   '/api/replays',
 ]) {
@@ -60,6 +60,31 @@ const slotRoute = handler => async context => {
   }
 };
 
+const sessionRoute = handler => async context => {
+  const user = await sessionUser(context.request, context.env);
+  if (!user) return json({ error: 'unauthorized' }, { status: 401 });
+  return handler({ ...context, user });
+};
+
+router.route('GET', '/api/entitlement', sessionRoute(async ({ env, user }) => {
+  const entitlements = await getEntitlements(env, user.id);
+  return json({ premium: isPremium(entitlements), entitlements });
+}));
+
+// Test-only hook; B6 payment webhook replaces it; never set
+// DEV_GRANT_TOKEN in production.
+router.route('POST', '/api/entitlement/dev-grant', sessionRoute(async ({ request, env, user }) => {
+  if (!env.DEV_GRANT_TOKEN || request.headers.get('x-dev-grant-token') !== env.DEV_GRANT_TOKEN) {
+    return json({ error: 'forbidden' }, { status: 403 });
+  }
+  const entitlement = await grantPremium(env, user.id, 'dev-grant');
+  return json({ premium: true, entitlement });
+}));
+
+// B6 replaces this stub. The session wrapper is the login-gated checkout
+// contract: no purchase handler may run without a resolved Bearer session.
+router.route('POST', '/api/checkout', sessionRoute(() => notImplemented()));
+
 router.route('POST', '/api/decks', deckRoute(async ({ request, env, user }) => {
   const payload = await readJson(request);
   return createDeck(env, { user, ...payload });
@@ -90,7 +115,7 @@ router.route('GET', '/api/auth/session', async ({ request, env }) => {
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'content-type, authorization, x-guest-token',
+  'access-control-allow-headers': 'content-type, authorization, x-guest-token, x-dev-grant-token',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
 };
 

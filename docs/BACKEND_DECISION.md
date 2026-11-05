@@ -29,6 +29,7 @@ D1's SQLite data model fits deck snapshots and finite save slots naturally as ro
 | Replay store | Inputs and serialized results live in `replays`, keyed by a shareable replay ID. |
 | Deck API (B3) | `POST /api/decks` and owner-scoped `GET /api/decks[/:id]` are live with Bearer-session validation. |
 | Save slots (B4) | `GET /api/slots` and `POST /api/slots/:slot/deck` are live; limits are server-derived from the locked `premium` entitlement SKU (4 slots, otherwise 1). |
+| Entitlements (B5) | Account-bound `premium` grants and authenticated entitlement reads are live; server state survives session and cookie loss. |
 
 ## Rejected alternative
 
@@ -54,3 +55,11 @@ Sessions use opaque Web Crypto UUIDs as bearer tokens. Only the token is returne
 Guests generate a UUID in local storage and exchange it at `POST /api/auth/guest`. The users row initially has `provider = 'guest'`, `provider_id = guest token`, and the same `guest_token`. On first mock login, the `X-Guest-Token` header identifies that row; the transaction converts it to the provider identity while preserving its user ID and guest token, so later deck/save data keyed to the user survives the link. A guest token already owned by another row is never copied. Login changes identity durability only: entitlement remains a separate account-bound decision.
 
 User and session writes are submitted in one D1 batch so a request cannot leave a user without its session. The client treats every auth request as fail-soft: local PvE remains playable when the API is unavailable.
+
+## Entitlement model (B5)
+
+A user is Premium exactly when `entitlements` contains a row for that `user_id` with `sku = 'premium'`. `grantPremium(env, userId, source)` is the sole entitlement write path: grants are idempotent, preserve the first `purchased_at`, and B6's payment webhook must call it rather than writing the table directly. `GET /api/entitlement` exposes the signed-in user's server-owned entitlement state.
+
+`POST /api/entitlement/dev-grant` is a test-only stand-in guarded by both a Bearer session and `DEV_GRANT_TOKEN`. It fails closed when that variable is unset. **Never set `DEV_GRANT_TOKEN` in production; B6's payment webhook replaces this hook.**
+
+Every checkout route must require a Google-linked Bearer session before doing purchase work, and entitlement binds to that session's `user_id` at checkout. Stripe is the recommended provider for B6, subject to owner veto; B5 adds no Stripe or payment-provider code. Entitlements are durable server-side account state, independent of a particular session or browser cookie, and survive session/cookie loss when the same guest identity is linked back to the same user row.

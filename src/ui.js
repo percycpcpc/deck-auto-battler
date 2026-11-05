@@ -24,6 +24,7 @@ let run, fight, stopped = false, els = null, slotWidth = 128, slotGap = 12, slot
 let deckQueues = { player: [], enemy: [] };
 let deckKnown = { player: true, enemy: true };
 let authUser = null;
+let premiumEntitled = false;
 
 const stored = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const store = (key, value) => { try { localStorage.setItem(key, value); } catch { /* offline/private storage remains playable */ } };
@@ -59,6 +60,13 @@ async function syncGuest() {
   } catch { /* storage-disabled browsers may retry on a later mount */ }
   await requestAuth('/api/auth/guest', { guestToken: ensureGuestToken() });
 }
+async function refreshEntitlement() {
+  premiumEntitled = false;
+  try {
+    const response = await apiFetch('/api/entitlement');
+    if (response.ok) premiumEntitled = Boolean((await response.json()).premium);
+  } catch { /* entitlement display is optional when offline */ }
+}
 async function bootstrapAuth() {
   ensureGuestToken();
   const session = stored('dab_session');
@@ -66,11 +74,12 @@ async function bootstrapAuth() {
     try {
       const response = await apiFetch('/api/auth/session');
       if (response.ok) {
-        const result = await response.json(); authUser = result.user; store('dab_user', JSON.stringify(result.user)); showTitle(); return;
+        const result = await response.json(); authUser = result.user; store('dab_user', JSON.stringify(result.user));
+        await refreshEntitlement(); showTitle(); return;
       }
     } catch { return; }
   }
-  try { await syncGuest(); } catch { /* auth durability never blocks local PvE */ }
+  try { await syncGuest(); await refreshEntitlement(); showTitle(); } catch { /* auth durability never blocks local PvE */ }
 }
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -513,7 +522,9 @@ function showTitle() {
   const actions = el('div', 'title-actions');
   actions.append(button('Start Run', showStarterSelection));
   if (authUser?.provider === 'mock') {
-    actions.append(el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`));
+    const status = el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`);
+    if (premiumEntitled) status.append(el('span', 'premium-badge', 'PREMIUM'));
+    actions.append(status);
   } else {
     const signIn = button('Sign in with Google', async () => {
       signIn.disabled = true;
@@ -522,6 +533,7 @@ function showTitle() {
         const savedUser = JSON.parse(stored('dab_user') || 'null');
         const providerId = savedUser?.provider === 'mock' ? savedUser.providerId : undefined;
         await requestAuth('/api/auth/google', { providerId }, { 'x-guest-token': ensureGuestToken() });
+        await refreshEntitlement();
         showTitle();
       } catch {
         setText(signIn, 'Sign in with Google'); signIn.disabled = false;
