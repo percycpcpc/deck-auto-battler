@@ -2,6 +2,7 @@ import { createRouter, json, readJson } from './router.js';
 import { getProvider } from './auth/providers.js';
 import { createGuestLogin, createLogin, readSession } from './auth/service.js';
 import { DeckError, createDeck, getDeck, listDecks } from './decks.js';
+import { SlotError, listSlots, saveDeckToSlot } from './slots.js';
 
 export const router = createRouter();
 
@@ -46,12 +47,30 @@ const deckRoute = handler => async context => {
   }
 };
 
+const slotRoute = handler => async context => {
+  const user = await sessionUser(context.request, context.env);
+  if (!user) return json({ error: 'unauthorized' }, { status: 401 });
+  try {
+    return json(await handler({ ...context, user }));
+  } catch (caught) {
+    if (caught instanceof DeckError || caught instanceof SlotError) {
+      return json({ error: caught.message }, { status: caught.status });
+    }
+    throw caught;
+  }
+};
+
 router.route('POST', '/api/decks', deckRoute(async ({ request, env, user }) => {
   const payload = await readJson(request);
   return createDeck(env, { user, ...payload });
 }));
 router.route('GET', '/api/decks', deckRoute(({ env, user }) => listDecks(env, user)));
 router.route('GET', '/api/decks/:id', deckRoute(({ env, user, params }) => getDeck(env, user, params.id)));
+router.route('GET', '/api/slots', slotRoute(({ env, user }) => listSlots(env, user)));
+router.route('POST', '/api/slots/:slot/deck', slotRoute(async ({ request, env, user, params }) => {
+  const { deckId } = await readJson(request);
+  return saveDeckToSlot(env, user, Number(params.slot), deckId);
+}));
 
 router.route('POST', '/api/auth/google', async ({ request, env }) => {
   const payload = await readJson(request);

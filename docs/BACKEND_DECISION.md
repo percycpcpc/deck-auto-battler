@@ -28,6 +28,7 @@ D1's SQLite data model fits deck snapshots and finite save slots naturally as ro
 | Matchmaking/sim endpoint | A stateless Worker handler resolves deck IDs, validates ownership/eligibility, and invokes the shared `simulate(deckA, deckB, seed)` engine semantics. |
 | Replay store | Inputs and serialized results live in `replays`, keyed by a shareable replay ID. |
 | Deck API (B3) | `POST /api/decks` and owner-scoped `GET /api/decks[/:id]` are live with Bearer-session validation. |
+| Save slots (B4) | `GET /api/slots` and `POST /api/slots/:slot/deck` are live; limits are server-derived from the locked `premium` entitlement SKU (4 slots, otherwise 1). |
 
 ## Rejected alternative
 

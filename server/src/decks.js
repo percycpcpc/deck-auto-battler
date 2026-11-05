@@ -12,7 +12,7 @@ export class DeckError extends Error {
   }
 }
 
-const parseDeck = row => ({
+export const parseDeck = row => ({
   id: row.id,
   ownerId: row.owner_id,
   cardIds: JSON.parse(row.card_ids),

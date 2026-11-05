@@ -668,7 +668,10 @@ function showEnd(won) {
   }).then(response => {
     if (!response.ok) throw new Error(`deck sync failed (${response.status})`);
     return response.json();
-  }).then(deck => store('dab_deck_id', deck.id)).catch(() => { /* PvE remains playable offline */ });
+  }).then(deck => {
+    store('dab_deck_id', deck.id);
+    if (authUser?.provider && authUser.provider !== 'guest' && screen.isConnected) void showSavePanel(screen, deck.id);
+  }).catch(() => { /* PvE remains playable offline */ });
   const screen = el('section', `screen end ${won ? 'won' : 'lost'}`);
   screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'));
   if (won) {
@@ -676,5 +679,63 @@ function showEnd(won) {
     screen.append(el('p', 'end-trophy', 'Seasonal trophy earned — banner and icon unlocked'));
   }
   screen.append(button('Restart', showStarterSelection)); app.replaceChildren(screen);
+}
+
+async function showSavePanel(screen, deckId) {
+  let state;
+  try {
+    const response = await apiFetch('/api/slots');
+    if (!response.ok) return;
+    state = await response.json();
+  } catch { return; }
+  if (!screen.isConnected || !deckId) return;
+
+  const panel = el('section', 'save-panel');
+  panel.setAttribute('aria-label', 'Save finished deck');
+  const title = el('h2', '', state.limit === 1 ? 'Save your deck' : 'Choose a save slot');
+  const choices = el('div', 'save-panel__choices');
+  panel.append(title, choices);
+
+  const save = async slot => {
+    try {
+      const response = await apiFetch(`/api/slots/${slot}/deck`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deckId }),
+      });
+      if (!response.ok) throw new Error('save failed');
+      panel.replaceChildren(el('p', 'save-panel__success', `Deck saved to Slot ${slot + 1}`));
+    } catch { panel.replaceChildren(el('p', 'save-panel__error', 'Could not save this deck. Try again later.')); }
+  };
+
+  const confirm = (slot, label) => {
+    choices.replaceChildren();
+    const prompt = el('div', 'save-panel__confirm');
+    prompt.append(
+      el('p', '', 'Replace your saved deck with this one?'),
+      button('Confirm overwrite', () => void save(slot)),
+      button('Cancel', () => renderChoices()),
+    );
+    choices.append(prompt);
+    title.textContent = label;
+  };
+
+  const renderChoices = () => {
+    choices.replaceChildren();
+    title.textContent = state.limit === 1 ? 'Save your deck' : 'Choose a save slot';
+    state.slots.forEach((entry, slot) => {
+      const occupied = Boolean(entry);
+      const label = state.limit === 1 ? (occupied ? 'Overwrite saved deck' : 'Save deck') : `Slot ${slot + 1}`;
+      const choice = button(label, () => occupied ? confirm(slot, label) : void save(slot));
+      choice.classList.add('save-panel__slot');
+      if (state.limit > 1) {
+        const summary = occupied
+          ? `${entry.deck.cardIds.length} cards · ${entry.deck.won ? 'Won' : 'Lost'} · Level ${entry.deck.levelReached}`
+          : 'Empty';
+        choice.append(el('span', 'save-panel__summary', summary));
+      }
+      choices.append(choice);
+    });
+  };
+  renderChoices();
+  screen.insertBefore(panel, screen.lastElementChild);
 }
 if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) { showTitle(); void bootstrapAuth(); }
