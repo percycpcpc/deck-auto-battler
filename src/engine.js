@@ -47,9 +47,9 @@ export const getCard = id => ({ ...byId.get(id), keywords: [...(byId.get(id)?.ke
 export const starterDeck = () => STARTER_IDS.map(getCard);
 export const tokenCard = (atk = 1, hp = 2) => card(`token_${atk}_${hp}`, `${atk}/${hp} Token`, 0, atk, hp, { token: true });
 
-export function makeUnit(def, side = 'player', extras = {}) {
+export function makeUnit(def, side = 'player', extras = {}, rng = Math.random) {
   return {
-    uid: extras.uid || `${side}-${def.id}-${Math.random().toString(36).slice(2)}`,
+    uid: extras.uid || `${side}-${def.id}-${rng().toString(36).slice(2)}`,
     cardId: def.id, name: def.name, side, baseAtk: def.atk, baseMaxHp: def.hp,
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
     keywords: [...(def.keywords || [])], battlecry: def.battlecry, deathrattle: def.deathrattle,
@@ -75,20 +75,34 @@ export function effectiveStats(state, side, unit) {
 
 export const liveUnits = board => board.filter(unit => !unit.dead);
 
-export const fightBoss = fight => fight === 2
-  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' })
+export const fightBoss = (fight, rng = Math.random) => fight === 2
+  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' }, rng)
   : fight === 3
-    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' })
+    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' }, rng)
     : null;
 
-export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random } = {}) {
+export function makeRng(seed) {
+  const rng = () => {
+    let value = rng.state = (rng.state + 0x6D2B79F5) >>> 0;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+  rng.state = seed >>> 0;
+  return rng;
+}
+
+export function createFight({ playerDeck = starterDeck(), enemyDeck = null, fight = 1, playerHp = HERO_HP, rng = Math.random, seed } = {}) {
+  const seeded = seed !== undefined;
+  if (seeded) rng = makeRng(seed);
   const enemyLine = enemyDeck || enemyDeckFor(fight);
   const state = {
     fight, round: 0, phase: 'ready', rng, deaths: 0, events: [], over: false, winner: null,
-    player: { hp: playerHp, deck: [...playerDeck], charger: null, board: [], scouted: false },
+    player: { hp: playerHp, deck: seeded ? shuffle(playerDeck, rng) : [...playerDeck], charger: null, board: [], scouted: false },
     enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false },
   };
-  const boss = fightBoss(fight);
+  if (seeded) state.uidRng = rng;
+  const boss = fightBoss(fight, state.uidRng || Math.random);
   if (boss) state.enemy.board.push(boss);
   return state;
 }
@@ -123,7 +137,7 @@ const emit = (s, type, data = {}) => s.events.push({ round: s.round, phase: s.ph
 
 export function summon(state, side, def, extras = {}) {
   if (state[side].board.length >= BOARD_CAP) return null;
-  const unit = makeUnit(def, side, extras);
+  const unit = makeUnit(def, side, extras, state.uidRng || Math.random);
   if (side === 'enemy' && state.fight === 2 && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
     unit.baseAtk += 1; unit.baseMaxHp += 1;
   }

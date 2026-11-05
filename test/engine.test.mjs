@@ -11,6 +11,20 @@ function test(name, fn) {
 }
 const empty = () => createFight({ playerDeck: [], enemyDeck: [] });
 
+test('fight seeds reproduce event logs and vary the player reveal order', () => {
+  const playerDeck = CARD_POOL.slice(0, 8), enemyDeck = enemyDeckFor(1);
+  const play = seed => {
+    const fight = createFight({ playerDeck, enemyDeck, seed });
+    const events = [];
+    while (!fight.over) { runRound(fight); events.push(...fight.events); }
+    return events;
+  };
+  const first = play(1), replay = play(1), different = play(2);
+  assert.deepEqual(replay, first);
+  const firstReveal = events => events.find(event => event.type === 'reveal' && event.side === 'player').state.player.charger.card.id;
+  assert.notEqual(firstReveal(different), firstReveal(first));
+});
+
 test('round ordering and cost-1 deploys on the following round', () => {
   const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [] });
   runRound(s); assert.equal(s.player.board.length, 0); assert.equal(s.player.charger.counter, 1);
