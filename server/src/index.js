@@ -6,6 +6,7 @@ import { getEntitlements, grantPremium, isPremium } from './entitlements.js';
 import { SlotError, listSlots, saveDeckToSlot } from './slots.js';
 import { getPaymentProvider } from './payments/provider.js';
 import { simulateDeckBattle } from './sim.js';
+import { RankedError, queueRanked, rankedStatus, unqueueRanked } from './ranked.js';
 
 export const router = createRouter();
 
@@ -62,6 +63,14 @@ const sessionRoute = handler => async context => {
   if (!user) return json({ error: 'unauthorized' }, { status: 401 });
   return handler({ ...context, user });
 };
+
+const rankedRoute = handler => sessionRoute(async context => {
+  try { return json(await handler(context)); }
+  catch (caught) {
+    if (caught instanceof DeckError || caught instanceof RankedError) return json({ error: caught.message }, { status: caught.status });
+    throw caught;
+  }
+});
 
 router.route('GET', '/api/entitlement', sessionRoute(async ({ env, user }) => {
   const entitlements = await getEntitlements(env, user.id);
@@ -172,6 +181,12 @@ router.route('POST', '/api/slots/:slot/deck', slotRoute(async ({ request, env, u
   const { deckId } = await readJson(request);
   return saveDeckToSlot(env, user, Number(params.slot), deckId);
 }));
+router.route('POST', '/api/ranked/queue', rankedRoute(async ({ request, env, user }) => {
+  const { deckId } = await readJson(request);
+  return queueRanked(env, user, deckId);
+}));
+router.route('POST', '/api/ranked/unqueue', rankedRoute(({ env, user }) => unqueueRanked(env, user)));
+router.route('GET', '/api/ranked/status', rankedRoute(({ env, user }) => rankedStatus(env, user)));
 
 router.route('POST', '/api/auth/google', async ({ request, env }) => {
   const payload = await readJson(request);

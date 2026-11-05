@@ -527,7 +527,105 @@ export function createEnemyPreview(fightNumber, queue) {
   if (bossBlock) panel.append(bossBlock);
   panel.append(list); return panel;
 }
+let rankedPollTimer = null;
+const stopRankedPolling = () => { if (rankedPollTimer) clearTimeout(rankedPollTimer); rankedPollTimer = null; };
+
+function rankedRatingCard(label, value = {}) {
+  const card = el('div', 'ranked-rating');
+  card.append(el('span', 'ranked-rating__label', label), el('strong', 'ranked-rating__value', String(value.rating ?? 1500)), el('small', '', `${value.games ?? 0} games · ${value.wins ?? 0} wins`));
+  return card;
+}
+
+function showRankedResult(screen, result) {
+  stopRankedPolling();
+  const panel = el('section', `ranked-result ranked-result--${result.winner === 'me' ? 'win' : 'loss'}`);
+  const before = result.myRating - result.ratingDelta;
+  const delta = `${result.ratingDelta >= 0 ? '+' : ''}${result.ratingDelta}`;
+  const watch = button('Watch replay', () => {}); watch.disabled = true; watch.title = 'Replay viewer arrives in C3';
+  panel.append(
+    el('h2', '', result.winner === 'me' ? 'VICTORY' : 'DEFEAT'),
+    el('p', 'ranked-result__movement', `${before} → ${result.myRating} (${delta})`),
+    el('p', '', `Opponent rating: ${result.opponentRating}`), watch,
+  );
+  screen.querySelector('.ranked-state')?.replaceChildren(panel);
+}
+
+function resultFromLastMatch(lastMatch) {
+  const ranked = lastMatch?.ranked;
+  if (!ranked || !authUser) return null;
+  const meIsA = ranked.userA === authUser.id;
+  const delta = meIsA ? ranked.deltaA : ranked.deltaB;
+  const before = meIsA ? ranked.ratingA : ranked.ratingB;
+  const won = (lastMatch.winner === 'player') === meIsA;
+  return { winner: won ? 'me' : 'them', myRating: before + delta, ratingDelta: delta, opponentRating: meIsA ? ranked.ratingB : ranked.ratingA };
+}
+
+export async function showRankedScreen() {
+  stopRankedPolling();
+  const screen = el('section', 'screen ranked-screen');
+  const ratings = el('div', 'ranked-ratings');
+  const state = el('div', 'ranked-state');
+  const back = button('Back', () => { stopRankedPolling(); showTitle(); }); back.classList.add('secondary');
+  screen.append(el('h1', '', 'RANKED'), el('p', 'ranked-intro', 'Choose a saved deck. Matchmaking measures deckbuilding quality.'), ratings, state, back);
+  app.replaceChildren(screen);
+
+  const refreshStatus = async () => {
+    try {
+      const response = await apiFetch('/api/ranked/status');
+      if (!response.ok) throw new Error('status unavailable');
+      const status = await response.json();
+      if (!screen.isConnected) return;
+      ratings.replaceChildren(rankedRatingCard('Seasonal', status.ratings.seasonal), rankedRatingCard('Eternal', status.ratings.eternal));
+      if (status.queued) rankedPollTimer = setTimeout(refreshStatus, 3000);
+      else {
+        const result = resultFromLastMatch(status.lastMatch);
+        if (result && state.querySelector('.ranked-queued')) showRankedResult(screen, result);
+      }
+    } catch {
+      if (screen.isConnected) ratings.replaceChildren(el('p', 'ranked-offline', 'Ranked ratings are unavailable offline.'));
+    }
+  };
+
+  try {
+    const response = await apiFetch('/api/slots');
+    if (!response.ok) throw new Error('slots unavailable');
+    const data = await response.json();
+    const filled = data.slots.filter(Boolean);
+    if (!filled.length) {
+      state.append(el('p', 'ranked-empty', 'Save a finished deck before entering ranked.'));
+    } else {
+      const picker = el('div', 'ranked-picker');
+      const select = el('select', 'ranked-picker__select'); select.setAttribute('aria-label', 'Saved deck');
+      filled.forEach(entry => {
+        const option = el('option', '', `Slot ${entry.slot + 1} · ${entry.deck.cardIds.length} cards · Level ${entry.deck.levelReached}`);
+        option.value = entry.deck.id; select.append(option);
+      });
+      const find = button('Find Match', async () => {
+        find.disabled = true;
+        try {
+          const matchResponse = await apiFetch('/api/ranked/queue', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deckId: select.value }) });
+          if (!matchResponse.ok) throw new Error('queue unavailable');
+          const result = await matchResponse.json();
+          if (result.status === 'matched') return showRankedResult(screen, result);
+          const queued = el('div', 'ranked-queued');
+          const cancel = button('Cancel Search', async () => {
+            cancel.disabled = true;
+            try { await apiFetch('/api/ranked/unqueue', { method: 'POST' }); } catch { /* fail-soft */ }
+            stopRankedPolling(); showRankedScreen();
+          });
+          cancel.classList.add('secondary');
+          queued.append(el('h2', '', 'SEARCHING FOR OPPONENT'), el('p', '', 'Matching within ±200 rating…'), cancel);
+          state.replaceChildren(queued); void refreshStatus();
+        } catch { state.append(el('p', 'ranked-offline', 'Ranked matchmaking is unavailable. Try again later.')); find.disabled = false; }
+      });
+      picker.append(select, find); state.append(picker);
+    }
+  } catch { state.append(el('p', 'ranked-offline', 'Saved decks are unavailable offline.')); }
+  await refreshStatus();
+}
+
 function showTitle() {
+  stopRankedPolling();
   stopped = true;
   const screen = el('section', 'screen title');
   const actions = el('div', 'title-actions');
@@ -536,6 +634,7 @@ function showTitle() {
     const status = el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`);
     if (premiumEntitled) status.append(el('span', 'premium-badge', 'PREMIUM'));
     actions.append(status);
+    if (premiumEntitled) actions.append(button('Ranked', () => void showRankedScreen()));
     if (!premiumEntitled) {
       const upgrade = button('Upgrade to Premium — $4.99', async () => {
         upgrade.disabled = true;

@@ -54,6 +54,7 @@ target architecture; every item below lands as its own scoped pass.
 
 - No real-time anywhere. A battle is `simulate(deckA, deckB, seed)`.
 - C1: deterministic sim endpoint live (server runs client engine).
+- C2: ranked queue + ELO K32 live.
 - **Ranked (Premium):** submit deck ID → server finds opponent by
   rating → seeded deterministic sim → result + rating update. Rating =
   deckbuilding quality (no piloting — accepted, TFT-style). Seasonal

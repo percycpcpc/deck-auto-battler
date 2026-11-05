@@ -561,6 +561,21 @@ button {
 #battle-screen .battle-fight { font:700 18px/24px Georgia,serif; letter-spacing:.06em; }
 #battle-screen .battle-phase { text-align:center; font:600 16px/24px system-ui; letter-spacing:.02em; }
 #battle-screen .header-count { text-align:right; }
+.ranked-screen { width:min(760px,calc(100% - 32px)); margin:auto; padding:clamp(24px,5vw,56px); gap:22px; }
+.ranked-intro { max-width:52ch; margin:0 auto; color:var(--dim); text-align:center; }
+.ranked-ratings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; width:100%; }
+.ranked-rating { display:grid; gap:4px; padding:18px; border:1px solid #c99b4a66; border-radius:8px; background:var(--panel); text-align:left; }
+.ranked-rating__label { color:var(--gold); font:700 14px/20px system-ui; letter-spacing:.1em; text-transform:uppercase; }
+.ranked-rating__value { font:800 clamp(28px,5vw,42px)/1 Georgia,serif; }
+.ranked-rating small { color:var(--dim); font-size:14px; }
+.ranked-state { width:100%; min-height:154px; display:grid; place-items:center; }
+.ranked-picker,.ranked-queued,.ranked-result { width:100%; display:grid; gap:16px; padding:22px; border:1px solid #9a8fa873; border-radius:8px; background:var(--raised); text-align:center; }
+.ranked-picker__select { width:100%; min-height:48px; padding:10px 12px; border:1px solid var(--gold); border-radius:6px; background:var(--panel); color:var(--bone); font:600 16px/24px system-ui; }
+.ranked-result--win h2 { color:#7be382; }
+.ranked-result--loss h2 { color:var(--damage); }
+.ranked-result__movement { margin:0; font:800 clamp(24px,4vw,36px)/1.2 Georgia,serif; }
+.ranked-offline,.ranked-empty { padding:16px; color:var(--dim); text-align:center; }
+@media(max-width:560px) { .ranked-ratings { grid-template-columns:1fr; } .ranked-screen { width:100%; padding:24px 16px max(24px,env(safe-area-inset-bottom)); } }
 #battle-screen .battle-header__meta { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
 #battle-screen .speed-control { display:flex; border:1px solid #c99b4a; border-radius:4px; overflow:hidden; background:#14101c; }
 #battle-screen .speed-control__button { min-width:32px; height:28px; padding:0 5px; border:0; border-right:1px solid #c99b4a66; border-radius:0; background:#2a2140; color:#ede6d6; font:700 12px/1 system-ui; }
