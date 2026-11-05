@@ -42,3 +42,13 @@ An always-on API service on Railway is valid and would offer a conventional long
 6. Deploy the API with `npm run deploy`, then configure the Railway-hosted static site with the deployed API base URL and the Worker with the site's allowed origin when CORS is implemented.
 
 The B1 health endpoint executes `SELECT 1` through the `DB` binding and reports `db: "up"` or `db: "down"`, providing a deploy-time binding smoke test. A reported `down` keeps the endpoint responsive while making the database wiring failure visible.
+
+## Auth & session model (B2, mock provider — real Google OAuth deferred by owner 2026-11-05)
+
+B2 deliberately implements the account contract without contacting Google. `POST /api/auth/google` currently selects the mock provider, which resolves a login payload to the normalized `{ provider, providerId, email, name }` identity used by the rest of the backend. A future Google provider must verify a Google ID token server-side and return that same shape; routes, users, sessions, and entitlement consumers must not depend on provider-specific fields. No OAuth redirect, Google client ID, or Google endpoint is part of B2.
+
+Sessions use opaque Web Crypto UUIDs as bearer tokens. Only the token is returned to the client; the server stores its `user_id`, creation time, and an expiry 30 days after issuance. `GET /api/auth/session` joins the token to its user and rejects missing, unknown, malformed, or expired tokens with 401. Tokens are sent as `Authorization: Bearer <token>`.
+
+Guests generate a UUID in local storage and exchange it at `POST /api/auth/guest`. The users row initially has `provider = 'guest'`, `provider_id = guest token`, and the same `guest_token`. On first mock login, the `X-Guest-Token` header identifies that row; the transaction converts it to the provider identity while preserving its user ID and guest token, so later deck/save data keyed to the user survives the link. A guest token already owned by another row is never copied. Login changes identity durability only: entitlement remains a separate account-bound decision.
+
+User and session writes are submitted in one D1 batch so a request cannot leave a user without its session. The client treats every auth request as fail-soft: local PvE remains playable when the API is unavailable.

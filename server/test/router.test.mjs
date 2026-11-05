@@ -64,7 +64,6 @@ test('health reports a failed D1 probe without failing the endpoint', async () =
 
 for (const path of [
   '/api/decks',
-  '/api/auth/google',
   '/api/entitlement',
   '/api/sim',
   '/api/replays',
@@ -80,3 +79,10 @@ for (const path of [
     assert.deepEqual(await response.json(), { error: 'not implemented — lands in B2–C3' });
   });
 }
+
+test('API preflight returns CORS headers', async () => {
+  const response = await worker.fetch(new Request('https://example.test/api/auth/google', { method: 'OPTIONS' }), fakeEnv(), {});
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get('access-control-allow-origin'), '*');
+  assert.match(response.headers.get('access-control-allow-headers'), /x-guest-token/);
+});

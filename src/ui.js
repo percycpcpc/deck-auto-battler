@@ -4,6 +4,7 @@ import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 // CONSTANTS
 export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, impactDelay: 140, hitStop: 75, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
 export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
+export const API_BASE = (() => { try { return localStorage.getItem('dab_api_base') || 'https://deck-auto-battler-api.workers.dev'; } catch { return 'https://deck-auto-battler-api.workers.dev'; } })();
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
 export const dur = ms => Math.round(ms * 2 / playbackSpeed);
@@ -22,6 +23,55 @@ const img = (className, src, alt = '') => { const node = el('img', className); n
 let run, fight, stopped = false, els = null, slotWidth = 128, slotGap = 12, slotPitch = 140, cardHeight = 192, lastSnapshot = null, lastRenderedRound = 0;
 let deckQueues = { player: [], enemy: [] };
 let deckKnown = { player: true, enemy: true };
+let authUser = null;
+
+const stored = key => { try { return localStorage.getItem(key); } catch { return null; } };
+const store = (key, value) => { try { localStorage.setItem(key, value); } catch { /* offline/private storage remains playable */ } };
+try { authUser = JSON.parse(stored('dab_user') || 'null'); } catch { authUser = null; }
+function ensureGuestToken() {
+  let token = stored('dab_guest_token');
+  if (!token) { token = crypto.randomUUID(); store('dab_guest_token', token); }
+  return token;
+}
+export function apiFetch(path, init = {}) {
+  const headers = new Headers(init.headers);
+  const token = stored('dab_session');
+  if (token) headers.set('authorization', `Bearer ${token}`);
+  return fetch(`${API_BASE}${path}`, { ...init, headers });
+}
+async function requestAuth(path, body, headers = {}) {
+  const response = await apiFetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`auth request failed (${response.status})`);
+  const result = await response.json();
+  store('dab_session', result.token);
+  store('dab_user', JSON.stringify(result.user));
+  authUser = result.user;
+  return result;
+}
+async function syncGuest() {
+  try {
+    if (sessionStorage.getItem('dab_guest_synced')) return;
+    sessionStorage.setItem('dab_guest_synced', '1');
+  } catch { /* storage-disabled browsers may retry on a later mount */ }
+  await requestAuth('/api/auth/guest', { guestToken: ensureGuestToken() });
+}
+async function bootstrapAuth() {
+  ensureGuestToken();
+  const session = stored('dab_session');
+  if (session) {
+    try {
+      const response = await apiFetch('/api/auth/session');
+      if (response.ok) {
+        const result = await response.json(); authUser = result.user; store('dab_user', JSON.stringify(result.user)); showTitle(); return;
+      }
+    } catch { return; }
+  }
+  try { await syncGuest(); } catch { /* auth durability never blocks local PvE */ }
+}
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const toggleClass = (node, key, on) => { if (node.classList.contains(key) !== on) node.classList.toggle(key, on); };
@@ -457,7 +507,33 @@ export function createEnemyPreview(fightNumber, queue) {
   if (bossBlock) panel.append(bossBlock);
   panel.append(list); return panel;
 }
-function showTitle() { stopped = true; const screen = el('section', 'screen title'); screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), button('Start Run', showStarterSelection)); app.replaceChildren(screen); }
+function showTitle() {
+  stopped = true;
+  const screen = el('section', 'screen title');
+  const actions = el('div', 'title-actions');
+  actions.append(button('Start Run', showStarterSelection));
+  if (authUser?.provider === 'mock') {
+    actions.append(el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`));
+  } else {
+    const signIn = button('Sign in with Google', async () => {
+      signIn.disabled = true;
+      setText(signIn, 'Signing in...');
+      try {
+        const savedUser = JSON.parse(stored('dab_user') || 'null');
+        const providerId = savedUser?.provider === 'mock' ? savedUser.providerId : undefined;
+        await requestAuth('/api/auth/google', { providerId }, { 'x-guest-token': ensureGuestToken() });
+        showTitle();
+      } catch {
+        setText(signIn, 'Sign in with Google'); signIn.disabled = false;
+      }
+    });
+    signIn.classList.add('secondary', 'auth-button');
+    signIn.style.setProperty('--auth-hover', `${dur(TIMING.hover)}ms`);
+    actions.append(signIn);
+  }
+  screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), actions);
+  app.replaceChildren(screen);
+}
 function showStarterSelection() {
   let selectedId = STARTERS[0].id;
   const screen = el('section', 'screen starter-select'), choices = el('div', 'starter-select__choices');
@@ -593,4 +669,4 @@ function showEnd(won) {
   }
   screen.append(button('Restart', showStarterSelection)); app.replaceChildren(screen);
 }
-if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) showTitle();
+if (app && !globalThis.__DECK_BATTLER_NO_BOOT__) { showTitle(); void bootstrapAuth(); }

@@ -78,6 +78,7 @@ target architecture; every item below lands as its own scoped pass.
   predictable enough that players can mentally simulate their own deck.
 - Backend needed: deck storage, auth (Google OAuth), entitlement,
   matchmaking/sim endpoint, replay store. Static-site-only era is over.
+- B2: mock auth layer live, real Google provider deferred.
 - Payment provider: TBD (issue # below).
 
 ## 5. Issue board
