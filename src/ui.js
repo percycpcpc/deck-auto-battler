@@ -462,7 +462,39 @@ function startRun() { run = createRun(); stopped = false; beginFight(); }
 async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; const completedLevel = run.fight; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showGap(completedLevel); }
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
 export function draftCard(def, choose = () => {}) { const node = el('button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def)), el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); return node; }
-function showDraft() { const screen = el('section', 'screen draft'); screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick 1 of ${RUN_CONFIG.PICKS_PER_DRAFT} · Deck ${run.deck.length} cards`), createEnemyPreview(run.fight, run.enemyLine || [])); const offers = el('div'); offers.id = 'offers'; for (const def of draftOffers(run.rng)) offers.append(draftCard(def, chosen => { run.deck.push(chosen); beginFight(); })); screen.append(offers); app.replaceChildren(screen); }
+export function createDraftFlow({ deck, rng, advance, getOffers = draftOffers }) {
+  let offers = getOffers(rng), redrawAvailable = true, complete = false;
+  const finish = card => {
+    if (complete) return false;
+    if (card) deck.push(card);
+    complete = true; advance(); return true;
+  };
+  return {
+    state: () => ({ offers, redrawAvailable, complete }),
+    pick: card => finish(card),
+    skip: () => finish(),
+    redraw: () => {
+      if (complete || !redrawAvailable) return false;
+      offers = getOffers(rng); redrawAvailable = false; return true;
+    },
+  };
+}
+function showDraft() {
+  const screen = el('section', 'screen draft'), flow = createDraftFlow({ deck: run.deck, rng: run.rng, advance: beginFight });
+  const charge = el('small', 'draft-charge'), offers = el('div'), actions = el('div', 'draft-actions');
+  const redraw = button('Redraw', () => { if (flow.redraw()) render(); });
+  const skip = button('Skip', () => flow.skip());
+  offers.id = 'offers'; redraw.classList.add('secondary'); skip.classList.add('secondary');
+  const render = () => {
+    const state = flow.state();
+    setText(charge, state.redrawAvailable ? 'REDRAW ×1' : 'REDRAW SPENT');
+    redraw.disabled = !state.redrawAvailable;
+    offers.replaceChildren(...state.offers.map(def => draftCard(def, chosen => flow.pick(chosen))));
+  };
+  actions.append(redraw, skip);
+  screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', 'CHOOSE ONE'), el('p', '', `Pick 1 of ${RUN_CONFIG.PICKS_PER_DRAFT} · Deck ${run.deck.length} cards`), charge, createEnemyPreview(run.fight, run.enemyLine || []), offers, actions);
+  render(); app.replaceChildren(screen);
+}
 function showDeckEvent(kind) {
   const screen = el('section', 'screen draft deck-event');
   const title = kind === 'remove' ? 'REMOVE A CARD' : 'TRANSFORM A CARD';

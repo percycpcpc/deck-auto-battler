@@ -3,6 +3,7 @@ import {
   CARD_POOL, HERO_HP, RUN_CONFIG, createFight, createRun, effectiveStats, exchange, finishRunFight,
   draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
+import { createDraftFlow } from '../src/ui.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -287,6 +288,34 @@ test('draft offers always contain exactly three distinct cards', () => {
   const fallbackOffers = draftOffers(() => 0);
   assert.equal(fallbackOffers.length, 3, 'bounded fallback length');
   assert.equal(new Set(fallbackOffers.map(card => card.id)).size, 3, 'bounded fallback uniqueness');
+});
+
+test('draft flow skips without changing the deck and advances', () => {
+  const deck = [getCard('sellsword')]; let advances = 0;
+  const flow = createDraftFlow({ deck, rng: () => 0, advance: () => advances++ });
+  assert.equal(flow.skip(), true); assert.equal(deck.length, 1); assert.equal(advances, 1);
+});
+
+test('draft flow redraw replaces all offers, consumes its charge, and cannot redraw twice', () => {
+  const sets = [CARD_POOL.slice(0, 3), CARD_POOL.slice(3, 6)]; let calls = 0;
+  const flow = createDraftFlow({ deck: [], rng: () => 0, advance: () => {}, getOffers: () => sets[calls++] });
+  const first = flow.state().offers;
+  assert.equal(flow.redraw(), true); assert.deepEqual(flow.state().offers, sets[1]); assert.notDeepEqual(flow.state().offers, first);
+  assert.equal(flow.state().redrawAvailable, false); assert.equal(flow.redraw(), false); assert.equal(calls, 2);
+});
+
+test('each new draft flow restores one redraw charge', () => {
+  const options = { deck: [], rng: () => 0, advance: () => {}, getOffers: () => CARD_POOL.slice(0, 3) };
+  const first = createDraftFlow(options); first.redraw();
+  assert.equal(first.state().redrawAvailable, false);
+  assert.equal(createDraftFlow(options).state().redrawAvailable, true);
+});
+
+test('draft flow keeps the existing single-action pick and advance behavior', () => {
+  const deck = []; let advances = 0; const card = getCard('sellsword');
+  const flow = createDraftFlow({ deck, rng: () => 0, advance: () => advances++ });
+  assert.equal(flow.pick(card), true); assert.deepEqual(deck, [card]); assert.equal(advances, 1);
+  assert.equal(flow.pick(getCard('colossus')), false); assert.equal(deck.length, 1); assert.equal(advances, 1);
 });
 
 test('player order still varies while enemy NEXT stays deterministic', () => {

@@ -322,6 +322,11 @@ button {
 .draft>p,.end>p {
   margin:0;
 }
+.draft-charge { color:var(--gold); font:700 12px/16px system-ui; letter-spacing:.08em; }
+.draft-actions { display:flex; justify-content:center; gap:12px; margin-top:4px; }
+.draft-actions .secondary { min-width:112px; min-height:44px; padding:9px 16px; border:1px solid #5d4a70; border-radius:6px; background:var(--panel); color:var(--bone); cursor:pointer; font:700 14px/20px system-ui; }
+.draft-actions .secondary:hover,.draft-actions .secondary:focus-visible { border-color:var(--gold); background:var(--raised); }
+.draft-actions .secondary:disabled { opacity:.5; filter:grayscale(1); cursor:not-allowed; }
 #offers {
   display:flex;
   justify-content:center;
