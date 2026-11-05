@@ -661,6 +661,14 @@ function showEnd(won) {
   stopped = true; playSfx(won ? 'victory' : 'defeat');
   const snapshot = runEndSnapshot(run); globalThis.__LAST_RUN_SNAPSHOT__ = snapshot;
   localStorage.setItem('dab_last_snapshot', JSON.stringify(snapshot));
+  void apiFetch('/api/decks', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ cardIds: snapshot.cardIds, starterId: snapshot.starterId, won: snapshot.won, levelReached: snapshot.levelReached, hpLeft: snapshot.hpLeft }),
+  }).then(response => {
+    if (!response.ok) throw new Error(`deck sync failed (${response.status})`);
+    return response.json();
+  }).then(deck => store('dab_deck_id', deck.id)).catch(() => { /* PvE remains playable offline */ });
   const screen = el('section', `screen end ${won ? 'won' : 'lost'}`);
   screen.append(img('banner', 'assets/banner_victory.png', ''), el('h1', '', won ? 'RUN VICTORY' : 'RUN DEFEAT'), el('p', '', won ? `The war-camp falls. ${run.hp} HP remains.` : 'The line broke. Build again.'));
   if (won) {

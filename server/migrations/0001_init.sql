@@ -3,6 +3,9 @@ CREATE TABLE IF NOT EXISTS decks (
   owner_id TEXT,
   card_ids TEXT,
   starter_id TEXT,
+  won INTEGER,
+  level_reached INTEGER,
+  hp_left INTEGER,
   created_at TEXT
 );
 

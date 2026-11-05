@@ -67,7 +67,7 @@ target architecture; every item below lands as its own scoped pass.
 
 ## 4. Tech notes
 
-- Server-authoritative deck snapshots: POST snapshot at run end → deck
+- ✅ B3 landed — Server-authoritative deck snapshots: POST snapshot at run end → deck
   ID; queueing sends ID; server validates ownership. PvE runs stay
   client-side (trust-on-first-use is acceptable — cheaters only forge
   decks that PvP then filters by skill).
