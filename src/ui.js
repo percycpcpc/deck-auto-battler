@@ -218,10 +218,10 @@ const DEATHRATTLE_TEXT = Object.freeze({
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
 const bossText = card => card?.text || '';
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
-const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura' });
-const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
+const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura', heal: 'Heal' });
+const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry', 'heal'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
 export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
-const descriptorText = card => [bossText(card), battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
+const descriptorText = card => bossText(card) || [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
 const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${descriptorText(unit) ? `. ${descriptorText(unit)}` : ''}`;
 function inspect(node, describe) {
   node.tabIndex = 0; node.setAttribute('role', 'group');
@@ -585,6 +585,7 @@ async function playEvent(event, deployUids) {
   if (event.type === 'tick') { reconcile(event.state); playSfx('charge'); pulse(els[event.side].charger.querySelector('.cost-dot__count'), 'fx-tick', TIMING.tick); await wait(TIMING.tick); return; }
   if (event.type === 'attack') return playAttack(event);
   if (event.type === 'damage') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); pulse(target, 'fx-hit', TIMING.damage); damageFloater(target, event.amount, rect); await wait(TIMING.damage); return; }
+  if (event.type === 'heal') { const target = getUnitEl(event.uid); reconcile(event.state); pulse(target, 'fx-deploy-pop', TIMING.damage); await wait(TIMING.damage); return; }
   if (event.type === 'statChange') { reconcile(event.state); pulse(getUnitEl(event.uid), 'fx-deploy-pop', TIMING.statChange); await wait(TIMING.statChange); return; }
   if (event.type === 'death') { playSfx('death'); scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
   if (event.type === 'heroHit') { reconcile(event.state); playSfx('heroDamage'); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
@@ -611,6 +612,7 @@ function appendEventLog(event) {
   if (event.type === 'deploy') appendLog(`${who} ${event.unit || 'unit'} enters`);
   if (event.type === 'death') appendLog(`${who} ${event.unit || 'unit'} falls`);
   if (event.type === 'shield') appendLog(`${who} shield blocks damage`);
+  if (event.type === 'heal') appendLog(`${who} ${event.unit} heals ${event.amount} HP`);
   if (event.type === 'chargerDestroyed') appendLog(`${who} charger is destroyed`);
   if (event.type === 'battlecry') appendLog(`${event.unit} — ${battlecryCaption(event)}.`);
   if (event.type === 'summonPing') appendLog(`${event.unit} pings ${event.target} for ${event.amount}.`);

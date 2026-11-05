@@ -137,6 +137,43 @@ test('Bristleback growth triggers at most once per round per unit', () => {
   assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onDamaged').length, 2);
 });
 
+test('healing is capped at original printed HP and heals both sides', () => {
+  const s = empty(), healer = summon(s, 'player', getCard('scout'));
+  const ally = summon(s, 'player', getCard('sellsword'));
+  const enemy = summon(s, 'enemy', getCard('sellsword'));
+  ally.baseMaxHp += 3; ally.damage = 4; enemy.damage = 2; healer.damage = 1; s.events = [];
+  triggerBattlecry(s, 'player', healer);
+  assert.equal(effectiveStats(s, 'player', ally).hp, ally.originalMaxHp);
+  assert.equal(effectiveStats(s, 'enemy', enemy).hp, enemy.originalMaxHp);
+  assert.deepEqual(s.events.filter(event => event.type === 'heal').map(event => event.uid), [healer.uid, ally.uid, enemy.uid]);
+});
+
+test('on-action healing resolves after the acting unit attacks', () => {
+  const s = empty(), healer = summon(s, 'player', getCard('ember_scout'));
+  const ally = summon(s, 'player', getCard('sellsword')); ally.damage = 1;
+  summon(s, 'enemy', { id: 'dummy', name: 'Dummy', cost: 0, atk: 0, hp: 20 });
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  const attackAt = s.events.findIndex(event => event.type === 'attack' && event.uid === healer.uid);
+  const healAt = s.events.findIndex(event => event.type === 'heal' && event.sourceUid === healer.uid);
+  assert.ok(attackAt >= 0 && healAt > attackAt); assert.equal(ally.damage, 0);
+});
+
+test('on-damaged healing fires only when the healer survives', () => {
+  let s = empty(), healer = summon(s, 'player', getCard('coalheart'));
+  const ally = summon(s, 'player', getCard('road_ogre')); ally.damage = 2;
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'ping', name: 'Ping', cost: 0, atk: 1, hp: 20 }), healer);
+  assert.equal(ally.damage, 1); assert.ok(s.events.some(event => event.type === 'heal' && event.sourceUid === healer.uid));
+  s = empty(); healer = summon(s, 'player', getCard('coalheart'));
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'lethal', name: 'Lethal', cost: 0, atk: 8, hp: 20 }), healer);
+  assert.equal(s.events.some(event => event.type === 'heal' && event.sourceUid === healer.uid), false);
+});
+
+test('battlecry healing is a no-op with no heal event at full HP', () => {
+  const s = empty(), healer = summon(s, 'player', getCard('scout'));
+  summon(s, 'enemy', getCard('sellsword')); s.events = []; triggerBattlecry(s, 'player', healer);
+  assert.equal(s.events.some(event => event.type === 'heal'), false);
+});
+
 test('a surviving initiating attacker still receives kill growth', () => {
   const s = empty(), tick = summon(s, 'player', getCard('leeching_tick'));
   const target = summon(s, 'enemy', { id: 'small_target', name: 'Small Target', cost: 0, atk: 1, hp: 1 });

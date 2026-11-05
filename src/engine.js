@@ -13,11 +13,12 @@ export const tokenCard = (atk = 1, hp = 2) => card(`token_${atk}_${hp}`, `${atk}
 export function makeUnit(def, side = 'player', extras = {}, rng = Math.random) {
   return {
     uid: extras.uid || `${side}-${def.id}-${rng().toString(36).slice(2)}`,
-    cardId: def.id, name: def.name, side, baseAtk: def.atk, baseMaxHp: def.hp,
+    cardId: def.id, name: def.name, side, baseAtk: def.atk, baseMaxHp: def.hp, originalMaxHp: def.hp,
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
     keywords: [...(def.keywords || [])], battlecry: def.battlecry, deathrattle: def.deathrattle,
     portraitId: def.portraitId,
     aura: def.aura, onKill: def.onKill, onDamaged: def.onDamaged, onSummonPing: def.onSummonPing,
+    heal: def.heal, healOn: def.healOn, text: def.text,
     token: !!def.token, boss: extras.boss || null,
     summonedThisAction: false, ...extras,
   };
@@ -134,6 +135,20 @@ export function snapshotView(state) {
 
 const emit = (s, type, data = {}) => s.events.push({ round: s.round, phase: s.phase, type, ...data, state: snapshotView(s) });
 
+function healAll(state, source) {
+  if (!source?.heal || source.dead) return;
+  for (const target of [...liveUnits(state.player.board), ...liveUnits(state.enemy.board)]) {
+    const currentHp = effectiveStats(state, target.side, target).hp;
+    const amount = Math.min(source.heal, target.damage, Math.max(0, target.originalMaxHp - currentHp));
+    if (amount <= 0) continue;
+    target.damage -= amount;
+    emit(state, 'heal', {
+      side: target.side, uid: target.uid, unit: target.name, amount,
+      sourceSide: source.side, sourceUid: source.uid, source: source.name,
+    });
+  }
+}
+
 export function summon(state, side, def, extras = {}) {
   if (state[side].board.length >= BOARD_CAP) return null;
   const unit = makeUnit(def, side, extras, state.uidRng || Math.random);
@@ -163,6 +178,7 @@ function dealDamage(state, source, target, amount) {
     const stats = effectiveStats(state, target.side, target);
     emit(state, 'statChange', { side: target.side, uid: target.uid, unit: target.name, atk: stats.atk, hp: stats.hp, amount: target.onDamaged, reason: 'onDamaged' });
   }
+  if (target.healOn === 'damaged' && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) healAll(state, target);
   return true;
 }
 
@@ -284,6 +300,7 @@ export function triggerBattlecry(state, side, unit) {
       for (const target of targets) dealDamage(state, unit, target, 1); break;
     }
   }
+  if (unit.healOn === 'battlecry' && !unit.dead) healAll(state, unit);
 }
 
 export function exchange(state, side, attacker, defender) {
@@ -313,6 +330,7 @@ function actionFor(state, side, index, acted) {
     if (unit.boss === 'hive') summon(state, side, tokenCard(), { summonedThisAction: true });
     checkHeroEnd(state); if (state.over) break;
   }
+  if (unit.healOn === 'action' && !unit.dead) healAll(state, unit);
 }
 
 export function runRound(state) {

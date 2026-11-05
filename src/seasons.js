@@ -12,7 +12,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('leeching_tick', 'Leeching Tick', 1, 1, 5, { tier: 'rare', onKill: 'grow' }),
   card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),
   card('spiteful_imp', 'Spiteful Imp', 1, 1, 4, { tier: 'rare', deathrattle: 'spite' }),
-  card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'scout' }),
+  card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'scout', heal: 2, healOn: 'battlecry', text: 'Battlecry: heal all units for 2.' }),
   card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight' }),
   card('road_ogre', 'Road Ogre', 2, 3, 6, { tier: 'common' }),
   card('aegis_knight', 'Aegis Knight', 2, 2, 7, { tier: 'rare', keywords: ['shield'] }),
@@ -47,12 +47,12 @@ export const BASE_STARTERS = Object.freeze([
 ]);
 
 const seasonTwoCards = Object.freeze({
-  ember_scout: card('ember_scout', 'Ember Scout', 1, 2, 2, { tier: 'common', portraitId: 'scout' }),
+  ember_scout: card('ember_scout', 'Ember Scout', 1, 2, 2, { tier: 'common', heal: 1, healOn: 'action', text: 'After this acts, heal all units for 1.', portraitId: 'scout' }),
   ashguard: card('ashguard', 'Ashguard', 1, 1, 5, { tier: 'rare', keywords: ['shield'], portraitId: 'shield_saint' }),
   cinder_duelist: card('cinder_duelist', 'Cinder Duelist', 1, 2, 4, { tier: 'rare', battlecry: 'duelist', portraitId: 'duelist' }),
   furnace_hound: card('furnace_hound', 'Furnace Hound', 2, 3, 6, { tier: 'rare', keywords: ['poisonous'], portraitId: 'venom_hound' }),
   pyre_keeper: card('pyre_keeper', 'Pyre Keeper', 2, 2, 8, { tier: 'rare', aura: 'adjacentAtk', portraitId: 'warlord' }),
-  coalheart: card('coalheart', 'Coalheart', 2, 2, 8, { tier: 'rare', onDamaged: 3, portraitId: 'bristleback' }),
+  coalheart: card('coalheart', 'Coalheart', 2, 2, 8, { tier: 'rare', onDamaged: 3, heal: 1, healOn: 'damaged', text: 'After this takes damage and survives, heal all units for 1.', portraitId: 'bristleback' }),
   phoenix_matron: card('phoenix_matron', 'Phoenix Matron', 3, 4, 10, { tier: 'mythic', deathrattle: 'summon2x2', portraitId: 'brood_queen' }),
 });
 
