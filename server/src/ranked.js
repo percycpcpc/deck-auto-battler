@@ -1,5 +1,7 @@
 import { getDeckById } from './decks.js';
 import { simulateDeckBattle } from './sim.js';
+import { currentSeason } from '../../src/seasons.js';
+import { checkMatchBadges } from './cosmetics.js';
 
 const START_RATING = 1500;
 const K_FACTOR = 32;
@@ -13,7 +15,7 @@ export function eloDelta(ratingA, ratingB, scoreA) {
 }
 
 export function getCurrentSeason() {
-  return 'season-1'; // D1 replaces this constant when season rotation lands.
+  return currentSeason().id;
 }
 
 const ratingRow = async (env, userId, deckId, season) => {
@@ -102,6 +104,11 @@ export async function queueRanked(env, user, deckId) {
   await updateRating(env, { userId: user.id, deckId: deck.id, season: 'eternal', before: myEternal.rating, delta: myEternalDelta, won: meWon });
   await updateRating(env, { userId: opponent.user_id, deckId: opponentDeck.id, season, before: opponentSeasonal.rating, delta: opponentDelta, won: !meWon });
   await updateRating(env, { userId: opponent.user_id, deckId: opponentDeck.id, season: 'eternal', before: opponentEternal.rating, delta: opponentEternalDelta, won: !meWon });
+
+  try { await checkMatchBadges(env, user.id, mySeasonal.rating + myDelta, season); }
+  catch { /* Cosmetic grants never fail ranked resolution. */ }
+  try { await checkMatchBadges(env, opponent.user_id, opponentSeasonal.rating + opponentDelta, season); }
+  catch { /* Cosmetic grants never fail ranked resolution. */ }
 
   return { status: 'matched', replayId, winner: meWon ? 'me' : 'them', myRating: mySeasonal.rating + myDelta, ratingDelta: myDelta, opponentRating: opponentSeasonal.rating };
 }

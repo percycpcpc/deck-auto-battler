@@ -69,6 +69,7 @@ target architecture; every item below lands as its own scoped pass.
 - Rewards: rating, seasonal leaderboard, profile icons/banners.
   Cosmetic shop with Bazar-style rotations; seasonal skins later.
   No power rewards; no currency faucet at launch.
+- D2 live: browse-only Bazar and local profile selections, with idempotent season trophy and ranked-sigil grants; purchases and currency remain post-launch.
 
 ## 4. Tech notes
 

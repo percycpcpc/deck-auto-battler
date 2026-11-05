@@ -8,6 +8,8 @@ import { getPaymentProvider } from './payments/provider.js';
 import { simulateDeckBattle } from './sim.js';
 import { RankedError, queueRanked, rankedStatus, unqueueRanked } from './ranked.js';
 import { FriendlyError, createFriendly } from './friendly.js';
+import { catalog, checkRunTrophy, ownedCosmetics } from './cosmetics.js';
+import { currentSeason } from '../../src/seasons.js';
 
 export const router = createRouter();
 
@@ -127,7 +129,10 @@ router.route('POST', '/api/payments/webhook', async ({ request, env }) => {
 
 router.route('POST', '/api/decks', deckRoute(async ({ request, env, user }) => {
   const payload = await readJson(request);
-  return createDeck(env, { user, ...payload });
+  const deck = await createDeck(env, { user, ...payload });
+  try { await checkRunTrophy(env, user.id, deck.won, deck.levelReached, currentSeason().id); }
+  catch { /* Cosmetic grants never fail the authoritative deck save. */ }
+  return deck;
 }));
 router.route('GET', '/api/decks', deckRoute(({ env, user }) => listDecks(env, user)));
 router.route('GET', '/api/decks/:id', deckRoute(({ env, user, params }) => getDeck(env, user, params.id)));
@@ -200,6 +205,10 @@ router.route('POST', '/api/friendly', friendlyRoute(async ({ request, env, user 
   const payload = await readJson(request);
   return createFriendly(env, user, payload);
 }));
+router.route('GET', '/api/cosmetics', sessionRoute(async ({ env, user }) => json({
+  catalog: await catalog(env),
+  owned: await ownedCosmetics(env, user.id),
+})));
 
 router.route('POST', '/api/auth/google', async ({ request, env }) => {
   const payload = await readJson(request);

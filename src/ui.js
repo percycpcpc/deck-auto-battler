@@ -27,6 +27,21 @@ let authUser = null;
 let premiumEntitled = false;
 let playbackPaused = false, resumePlayback = null;
 
+const COSMETIC_FALLBACK = Object.freeze([
+  { id: 'oathbound_icon', kind: 'icon', name: 'Oathbound', art: 'assets/portrait_aegis_knight.png', seasonId: null, earn: 'Founders profile icon' },
+  { id: 'imp_icon', kind: 'icon', name: 'Dagger Imp', art: 'assets/portrait_dagger_imp.png', seasonId: null, earn: 'Founders profile icon' },
+  { id: 'brood_icon', kind: 'icon', name: 'Brood Wisp', art: 'assets/portrait_brood_wisp.png', seasonId: null, earn: 'Founders profile icon' },
+  { id: 'ember_icon', kind: 'icon', name: 'Ember Scout', art: 'assets/portrait_scout.png', seasonId: 'season_2', earn: 'Play during Emberwake' },
+  { id: 'founders_banner', kind: 'banner', name: 'Founders March', art: 'assets/banner_victory.png', seasonId: 'season_1', earn: 'Play during Founders March' },
+  { id: 'emberwake_banner', kind: 'banner', name: 'Emberwake', art: 'assets/banner_draft.png', seasonId: 'season_2', earn: 'Play during Emberwake' },
+  { id: 'warband_banner', kind: 'banner', name: 'Warband', art: 'assets/bg_battlefield.png', seasonId: null, earn: 'Complete a run' },
+  { id: 'bronze_sigil', kind: 'badge', name: 'Bronze Sigil', art: 'assets/frame_common.png', seasonId: null, earn: 'Reach 1400 ranked rating' },
+  { id: 'silver_sigil', kind: 'badge', name: 'Silver Sigil', art: 'assets/frame_rare.png', seasonId: null, earn: 'Reach 1600 ranked rating' },
+  { id: 'gold_sigil', kind: 'badge', name: 'Gold Sigil', art: 'assets/frame_mythic.png', seasonId: null, earn: 'Reach 1800 ranked rating' },
+  { id: 'season_1_trophy', kind: 'trophy', name: 'Founders Trophy', art: 'assets/portrait_boss_warherald.png', seasonId: 'season_1', earn: 'Win level 20 in Founders March' },
+  { id: 'season_2_trophy', kind: 'trophy', name: 'Emberwake Trophy', art: 'assets/portrait_boss_hivematron.png', seasonId: 'season_2', earn: 'Win level 20 in Emberwake' },
+]);
+
 const stored = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const store = (key, value) => { try { localStorage.setItem(key, value); } catch { /* offline/private storage remains playable */ } };
 try { authUser = JSON.parse(stored('dab_user') || 'null'); } catch { authUser = null; }
@@ -97,6 +112,67 @@ async function bootstrapAuth() {
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const toggleClass = (node, key, on) => { if (node.classList.contains(key) !== on) node.classList.toggle(key, on); };
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+
+async function loadCosmetics() {
+  let cached = { catalog: COSMETIC_FALLBACK, owned: [] };
+  try { cached = JSON.parse(stored('dab_cosmetics') || 'null') || cached; } catch { /* use bundled browse catalog */ }
+  try {
+    const response = await apiFetch('/api/cosmetics');
+    if (!response.ok) throw new Error('cosmetics unavailable');
+    const result = await response.json();
+    store('dab_cosmetics', JSON.stringify(result));
+    return { ...result, offline: false };
+  } catch { return { ...cached, catalog: cached.catalog?.length ? cached.catalog : COSMETIC_FALLBACK, offline: true }; }
+}
+
+function cosmeticTile(item, { selected = false, action = null } = {}) {
+  const tile = el(action ? 'button' : 'article', `cosmetic-tile cosmetic-tile--${item.kind}${selected ? ' is-selected' : ''}`);
+  if (action) { tile.type = 'button'; tile.setAttribute('aria-pressed', String(selected)); tile.addEventListener('click', action); }
+  tile.append(img('cosmetic-tile__art', item.art, ''), el('strong', 'cosmetic-tile__name', item.name), el('span', 'cosmetic-tile__earn', item.earn));
+  return tile;
+}
+
+async function showBazar() {
+  const screen = el('section', 'screen cosmetics-screen bazar-screen');
+  screen.append(el('h1', '', 'BAZAR'), el('p', 'cosmetics-intro', 'Browse profile cosmetics. Every item is visual only.'));
+  const state = el('div', 'cosmetics-state'); screen.append(state, el('p', 'bazar-note', 'Currency and purchasing arrive post-launch.'), button('Back', showTitle));
+  app.replaceChildren(screen);
+  const data = await loadCosmetics();
+  const grid = el('div', 'cosmetics-grid'); grid.append(...data.catalog.map(item => cosmeticTile(item)));
+  if (data.offline) state.append(el('p', 'cosmetics-offline', 'Offline catalog — ownership may be out of date.'));
+  state.append(grid);
+}
+
+async function showProfile() {
+  const screen = el('section', 'screen cosmetics-screen profile-screen');
+  screen.append(el('h1', '', 'PROFILE'), el('p', 'cosmetics-intro', 'Choose how your warband appears. Selections are stored on this device.'));
+  const state = el('div', 'cosmetics-state'); screen.append(state, button('Back', showTitle)); app.replaceChildren(screen);
+  const data = await loadCosmetics();
+  const localTrophy = stored('dab_trophy');
+  const owned = [...data.owned];
+  if (localTrophy && !owned.some(item => item.kind === 'trophy')) owned.push(COSMETIC_FALLBACK.find(item => item.id === 'season_1_trophy'));
+  const ownedIds = new Set(owned.map(item => item.id));
+  const renderPicker = (kind, label, key) => {
+    const section = el('section', 'profile-group'), selectedId = stored(key);
+    section.append(el('h2', '', label));
+    const grid = el('div', 'cosmetics-grid cosmetics-grid--compact');
+    const items = data.catalog.filter(item => item.kind === kind && ownedIds.has(item.id));
+    if (!items.length) grid.append(el('p', 'cosmetics-empty', `No ${kind}s earned yet.`));
+    else grid.append(...items.map(item => cosmeticTile(item, { selected: selectedId === item.id, action: () => { store(key, item.id); void showProfile(); } })));
+    section.append(grid); return section;
+  };
+  state.append(renderPicker('icon', 'Profile icon', 'dab_profile_icon'), renderPicker('banner', 'Profile banner', 'dab_profile_banner'));
+  const trophyShelf = el('section', 'profile-group'); trophyShelf.append(el('h2', '', 'Trophy shelf'));
+  const trophies = el('div', 'cosmetics-grid cosmetics-grid--compact');
+  trophies.append(...(owned.filter(item => item?.kind === 'trophy').map(item => cosmeticTile(item)).concat(owned.some(item => item?.kind === 'trophy') ? [] : [el('p', 'cosmetics-empty', 'Win level 20 to earn a seasonal trophy.')]))) ;
+  trophyShelf.append(trophies);
+  const badgeRow = el('section', 'profile-group'); badgeRow.append(el('h2', '', 'Ranked badges'));
+  const badges = el('div', 'profile-badges');
+  const earnedBadges = owned.filter(item => item?.kind === 'badge');
+  badges.append(...(earnedBadges.length ? earnedBadges.map(item => cosmeticTile(item)) : [el('p', 'cosmetics-empty', 'Reach 1400 rating to earn your first sigil.') ]));
+  badgeRow.append(badges); state.append(trophyShelf, badgeRow);
+  if (data.offline) state.prepend(el('p', 'cosmetics-offline', 'Offline profile — showing last synced ownership.'));
+}
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
   hex_hurler: 'On deploy: deal 2 damage to the opposing unit.',
@@ -736,10 +812,12 @@ function showTitle() {
   const screen = el('section', 'screen title');
   const actions = el('div', 'title-actions');
   actions.append(button('Start Run', showStarterSelection));
+  actions.append(button('Bazar', () => void showBazar()));
   if (authUser?.provider === 'mock') {
     const status = el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`);
     if (premiumEntitled) status.append(el('span', 'premium-badge', 'PREMIUM'));
     actions.append(status);
+    actions.append(button('Profile', () => void showProfile()));
     if (premiumEntitled) actions.append(button('Ranked', () => void showRankedScreen()));
     actions.append(button('Friendly', () => void showFriendlyScreen()));
     if (!premiumEntitled) {

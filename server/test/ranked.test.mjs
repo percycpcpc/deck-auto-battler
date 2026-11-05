@@ -64,7 +64,7 @@ test('ELO uses locked K32 formula and half-away-from-zero rounding', () => {
   const diff = 400 * Math.log10((1 / 0.515625) - 1);
   assert.equal(eloDelta(1500, 1500 + diff, 1), 16);
   assert.equal(eloDelta(1500, 1500 + diff, 0), -17);
-  assert.equal(getCurrentSeason(), 'season-1');
+  assert.equal(getCurrentSeason(), 'season_1');
 });
 
 test('queues then matches, records replay, and updates seasonal and eternal ratings', async () => {
@@ -72,9 +72,9 @@ test('queues then matches, records replay, and updates seasonal and eternal rati
   assert.deepEqual(await (await queue(db, a)).json(), { status: 'queued' });
   const matched = await (await queue(db, b)).json();
   assert.equal(matched.status, 'matched'); assert.ok(db.replays.has(matched.replayId)); assert.equal(db.queue.size, 0);
-  for (const player of [a, b]) for (const season of ['season-1', 'eternal']) { const row = db.ratings.get(db.key(player.id, player.deckId, season)); assert.equal(row.games, 1); }
+  for (const player of [a, b]) for (const season of ['season_1', 'eternal']) { const row = db.ratings.get(db.key(player.id, player.deckId, season)); assert.equal(row.games, 1); }
   const winner = matched.winner === 'me' ? b : a;
-  assert.equal(db.ratings.get(db.key(winner.id, winner.deckId, 'season-1')).wins, 1);
+  assert.equal(db.ratings.get(db.key(winner.id, winner.deckId, 'season_1')).wins, 1);
   const aStatus = await (await request(db, '/api/ranked/status', { token: a.token })).json();
   assert.equal(aStatus.queued, false); assert.ok(aStatus.lastMatch); assert.equal(aStatus.ratings.seasonal.games, 1);
   const replay = await (await request(db, `/api/replays/${matched.replayId}`)).json();
@@ -90,8 +90,8 @@ test('enforces session, premium, known deck, and save-slot gates', async () => {
 
 test('honors rating window, oldest-first matching, unqueue, and status shape', async () => {
   const db = new FakeD1(), a = addUser(db, 'a'), far = addUser(db, 'far'), near = addUser(db, 'near');
-  db.ratings.set(db.key(far.id, far.deckId, 'season-1'), { rating: 1900, games: 0, wins: 0 });
-  db.ratings.set(db.key(near.id, near.deckId, 'season-1'), { rating: 1550, games: 0, wins: 0 });
+  db.ratings.set(db.key(far.id, far.deckId, 'season_1'), { rating: 1900, games: 0, wins: 0 });
+  db.ratings.set(db.key(near.id, near.deckId, 'season_1'), { rating: 1550, games: 0, wins: 0 });
   await queue(db, a); assert.equal((await (await queue(db, far)).json()).status, 'queued');
   assert.equal((await (await queue(db, near)).json()).status, 'matched'); assert.ok(db.queue.has('far'));
   const status = await (await request(db, '/api/ranked/status', { token: far.token })).json();

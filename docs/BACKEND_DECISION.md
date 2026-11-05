@@ -35,6 +35,7 @@ D1's SQLite data model fits deck snapshots and finite save slots naturally as ro
 | Replay viewer (C3) | Replay links and the public full-information viewer are live. |
 | Friendly PvP (C4) | Any authenticated guest or account can `POST /api/friendly`; it creates an unrated, reward-free replay available publicly at `GET /api/replays/:id`. |
 | PvE seasons (D1) | `src/seasons.js` owns four-week windows, active starters, cumulative draft additions, and the regular-enemy keyword. The engine consumes it while `CARD_POOL` remains the all-season union used by saved-deck validation. |
+| Cosmetics (D2) | Authenticated `GET /api/cosmetics` returns the visual-only catalog and account-owned grants. Trophy and ranked-badge grants are idempotent and season-stamped; there are no cosmetic write, purchase, or currency routes at launch. |
 
 ## PvE season configuration and flip procedure
 
