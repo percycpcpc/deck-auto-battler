@@ -81,8 +81,11 @@ export function shuffle(items, rng = Math.random) {
 const LEVEL_ONE_SCRIPT = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt']);
 const EARLY_SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'brute']);
 const SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'grunt']);
+const RARE_SCRIPT_PATTERN = Object.freeze(['grunt', 'rare', 'brute', 'grunt', 'brute']);
+const MYTHIC_SCRIPT_PATTERN = Object.freeze(['grunt', 'rare', 'brute', 'mythic', 'grunt']);
 function levelDeckSize(level) {
   if (level === 1) return 8;
+  if (level >= 16) return 10;
   if (level <= 6 || level === 20) return 6;
   if ((level >= 10 && level <= 12) || (level >= 15 && level <= 19)) return 7;
   if (level === 7 || (level >= 13 && level <= 14)) return 8;
@@ -91,7 +94,10 @@ function levelDeckSize(level) {
 function enemyScriptFor(level) {
   if (level === 1) return LEVEL_ONE_SCRIPT;
   const size = levelDeckSize(level);
-  const SCRIPT = level <= 4 ? EARLY_SCRIPT_PATTERN : SCRIPT_PATTERN;
+  const SCRIPT = level <= 4 ? EARLY_SCRIPT_PATTERN
+    : level <= 5 ? SCRIPT_PATTERN
+      : level <= 10 ? RARE_SCRIPT_PATTERN
+        : MYTHIC_SCRIPT_PATTERN;
   return Array.from({ length: size }, (_, index) => SCRIPT[index % SCRIPT.length]);
 }
 const enemyCard = (kind, level) => {
@@ -99,6 +105,8 @@ const enemyCard = (kind, level) => {
     ? card('enemy_brute', 'Camp Brute', 2, 2, 6, { tier: 'common' })
     : card('enemy_grunt', 'Ash Grunt', 1, 2, 3, { tier: 'common' });
   const band = level <= 6 ? 1 : level <= 12 ? 2 : level <= 19 ? 3 : 4;
+  if (kind === 'rare') return card('enemy_raider', 'Ash Raider', 2, 2 + Math.ceil(band / 2), 4 + band, { tier: 'rare' });
+  if (kind === 'mythic') return card('enemy_colossus', 'Ash Colossus', 3, 3 + Math.ceil(band / 2), 5 + band, { tier: 'mythic' });
   return kind === 'brute'
     ? card('enemy_brute', 'Camp Brute', 2, 2 + Math.floor(band / 2), 5 + band, { tier: 'common' })
     : card('enemy_grunt', 'Ash Grunt', 1, 2, 2 + band, { tier: 'common' });

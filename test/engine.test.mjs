@@ -317,6 +317,18 @@ test('every scripted enemy card is common tier with per-fight stats', () => {
 
 test('level-1 enemy script remains byte-identical to the pre-pass snapshot', () => {
   assert.equal(JSON.stringify(enemyDeckFor(1)), '[{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_brute","name":"Camp Brute","cost":2,"atk":2,"hp":6,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_brute","name":"Camp Brute","cost":2,"atk":2,"hp":6,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"}]');
+  for (let level = 1; level <= 5; level++) assert.ok(enemyDeckFor(level).every(card => card.tier === 'common'));
+  for (let level = 6; level <= 10; level++) {
+    const tiers = enemyDeckFor(level).map(card => card.tier);
+    assert.ok(tiers.includes('common')); assert.ok(tiers.includes('rare')); assert.ok(!tiers.includes('mythic'));
+  }
+  for (let level = 11; level <= 15; level++) {
+    const tiers = enemyDeckFor(level).map(card => card.tier);
+    assert.ok(tiers.includes('common')); assert.ok(tiers.includes('rare')); assert.ok(tiers.includes('mythic'));
+  }
+  for (let level = 16; level <= RUN_CONFIG.LEVELS; level++) {
+    assert.ok(enemyDeckFor(level).length > STARTERS[0].ids.length, `level ${level} deck should be thicker than the default player deck`);
+  }
 });
 
 test('gap cadence drafts normally and alternates remove then transform events', () => {
