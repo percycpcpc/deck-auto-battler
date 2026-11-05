@@ -627,6 +627,109 @@ export async function showRankedScreen() {
   await refreshStatus();
 }
 
+function friendlyDeckOption(entry, label) {
+  const option = el('option', '', `${label} · ${entry.cardIds.length} cards · Level ${entry.levelReached}`);
+  option.value = entry.id;
+  return option;
+}
+
+function showFriendlyResult(state, result) {
+  const panel = el('section', `friendly-result friendly-result--${result.winner === 'player' ? 'win' : 'loss'}`);
+  const replayUrl = new URL(result.url || `/?replay=${encodeURIComponent(result.replayId)}`, location.href).href;
+  const watch = button('Watch replay', () => { location.href = replayUrl; });
+  const copy = button('Copy replay link', async () => {
+    try { await navigator.clipboard.writeText(replayUrl); copy.textContent = 'Replay link copied'; }
+    catch { copy.textContent = 'Copy unavailable'; }
+  });
+  copy.classList.add('secondary');
+  panel.append(
+    el('h2', '', result.winner === 'player' ? 'YOUR DECK WINS' : 'OPPONENT DECK WINS'),
+    el('p', 'friendly-result__rounds', `${result.rounds} round${result.rounds === 1 ? '' : 's'}`),
+    watch,
+    copy,
+  );
+  state.replaceChildren(panel);
+}
+
+export async function showFriendlyScreen() {
+  stopRankedPolling();
+  const screen = el('section', 'screen friendly-screen');
+  const state = el('div', 'friendly-state');
+  const back = button('Back', showTitle); back.classList.add('secondary');
+  screen.append(
+    el('h1', '', 'FRIENDLY'),
+    el('p', 'friendly-intro', 'Choose your deck, paste a friend\'s deck ID, and create a public replay. No rating or rewards.'),
+    state,
+    back,
+  );
+  app.replaceChildren(screen);
+
+  try {
+    let decks = [];
+    try {
+      const slotsResponse = await apiFetch('/api/slots');
+      if (slotsResponse.ok) {
+        const slotData = await slotsResponse.json();
+        decks = slotData.slots.filter(Boolean).map(entry => ({ deck: entry.deck, label: `Slot ${entry.slot + 1}` }));
+      }
+    } catch { /* latest synced deck remains a valid fallback */ }
+
+    if (!decks.length) {
+      const latestId = stored('dab_deck_id');
+      if (latestId) {
+        const deckResponse = await apiFetch(`/api/decks/${encodeURIComponent(latestId)}`);
+        if (deckResponse.ok) decks = [{ deck: await deckResponse.json(), label: 'Latest deck' }];
+        else if (deckResponse.status !== 404 && deckResponse.status !== 403) throw new Error('deck unavailable');
+      }
+    }
+
+    if (!decks.length) {
+      state.append(el('p', 'friendly-empty', 'Finish a run first to create a friendly battle.'));
+      return;
+    }
+
+    const form = el('form', 'friendly-picker');
+    const myLabel = el('label', 'friendly-field');
+    const mySelect = el('select', 'friendly-picker__select');
+    mySelect.setAttribute('aria-label', 'My deck');
+    decks.forEach(({ deck, label }) => mySelect.append(friendlyDeckOption(deck, label)));
+    myLabel.append(el('span', '', 'My deck'), mySelect);
+
+    const opponentLabel = el('label', 'friendly-field');
+    const opponentInput = el('input', 'friendly-picker__input');
+    opponentInput.type = 'text'; opponentInput.required = true;
+    opponentInput.placeholder = 'Paste opponent deck UUID';
+    opponentInput.setAttribute('aria-label', "Opponent's deck ID");
+    opponentInput.autocomplete = 'off'; opponentInput.spellcheck = false;
+    opponentLabel.append(el('span', '', "Opponent's deck ID"), opponentInput);
+
+    const battle = button('Battle!', () => {});
+    battle.type = 'submit';
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      battle.disabled = true;
+      form.querySelector('.friendly-error')?.remove();
+      try {
+        const response = await apiFetch('/api/friendly', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ myDeckId: mySelect.value, theirDeckId: opponentInput.value.trim() }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Friendly battle unavailable');
+        showFriendlyResult(state, result);
+      } catch (caught) {
+        form.append(el('p', 'friendly-error', caught.message || 'Friendly battle is unavailable. Try again later.'));
+        battle.disabled = false;
+      }
+    });
+    form.append(myLabel, opponentLabel, battle);
+    state.append(form);
+  } catch {
+    state.append(el('p', 'friendly-offline', 'Friendly battles are unavailable offline. Your local run is still playable.'));
+  }
+}
+
 function showTitle() {
   stopRankedPolling();
   stopped = true;
@@ -638,6 +741,7 @@ function showTitle() {
     if (premiumEntitled) status.append(el('span', 'premium-badge', 'PREMIUM'));
     actions.append(status);
     if (premiumEntitled) actions.append(button('Ranked', () => void showRankedScreen()));
+    actions.append(button('Friendly', () => void showFriendlyScreen()));
     if (!premiumEntitled) {
       const upgrade = button('Upgrade to Premium — $4.99', async () => {
         upgrade.disabled = true;
@@ -659,6 +763,7 @@ function showTitle() {
     if (purchase === 'success' && premiumEntitled) actions.append(el('p', 'purchase-note', 'Welcome to Premium. Your purchase is active.'));
     if (purchase === 'cancel') actions.append(el('p', 'purchase-note', 'Purchase cancelled. Nothing was charged.'));
   } else {
+    if (authUser) actions.append(button('Friendly', () => void showFriendlyScreen()));
     const signIn = button('Sign in with Google', async () => {
       signIn.disabled = true;
       setText(signIn, 'Signing in...');

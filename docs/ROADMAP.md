@@ -56,6 +56,7 @@ target architecture; every item below lands as its own scoped pass.
 - C1: deterministic sim endpoint live (server runs client engine).
 - C2: ranked queue + ELO K32 live.
 - C3: shareable replay links + full-information viewer live.
+- C4: friendly links live (free).
 - **Ranked (Premium):** submit deck ID → server finds opponent by
   rating → seeded deterministic sim → result + rating update. Rating =
   deckbuilding quality (no piloting — accepted, TFT-style). Seasonal
