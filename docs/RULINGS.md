@@ -32,6 +32,10 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
+- Soft seasons only add cards to the active draft pool; draft cadence and 50/35/15 tier weighting do not change as the pool grows.
+
+## Seasonal card removal and legacy legality
+- No card is removed from play before the union pool reaches approximately 60 cards. Config may mark cards deprecated, but deprecation does not remove them from the legal union or invalidate a saved deck. Legacy saved decks remain legal forever under the current soft-season model; any later Standard/Open split requires a separate ruling and migration plan.
 
 ## Fixed starter deck (8)
 Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogre.

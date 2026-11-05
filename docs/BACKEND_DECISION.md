@@ -34,6 +34,13 @@ D1's SQLite data model fits deck snapshots and finite save slots naturally as ro
 | Ranked PvP (C2) | Premium-only `POST /api/ranked/queue`, `POST /api/ranked/unqueue`, and `GET /api/ranked/status` use saved-slot decks, a ±200 oldest-first match window, and server-owned seasonal plus eternal ratings. ELO starts at 1500 and uses K=32 with `1/(1+10^((rb-ra)/400))`, rounded half-away-from-zero after each update. |
 | Replay viewer (C3) | Replay links and the public full-information viewer are live. |
 | Friendly PvP (C4) | Any authenticated guest or account can `POST /api/friendly`; it creates an unrated, reward-free replay available publicly at `GET /api/replays/:id`. |
+| PvE seasons (D1) | `src/seasons.js` owns four-week windows, active starters, cumulative draft additions, and the regular-enemy keyword. The engine consumes it while `CARD_POOL` remains the all-season union used by saved-deck validation. |
+
+## PvE season configuration and flip procedure
+
+Each ordered `SEASONS` entry contains `id`, `name`, ISO `startsAt`/`endsAt`, one or more eight-card `starters`, seasonal `cardDefs`, `poolExtras`, and `enemyKeyword`. A season flip is a config-only change: append the entry and full card definitions to `src/seasons.js`; do not alter combat code, draft cadence, or backend tables. Windows are start-inclusive and end-exclusive. Before the first window the resolver uses Season 1; outside a window it uses the latest season that has started as an offline-safe schedule fallback.
+
+`activeStarters()` rotates the selection screen. `activePool()` contains the base pool plus every extra introduced through the selected season. `unionPool()` contains every configured card and is exported as the engine's `CARD_POOL`, preserving legacy saved-deck legality. `__setNowOverride(iso)` is the deterministic test/screenshot seam; production never calls it, and `null` restores the real clock.
 
 ## Rejected alternative
 

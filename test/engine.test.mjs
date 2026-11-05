@@ -403,7 +403,7 @@ test('card pool exposes the three rarity tiers and locked representative stats',
   assert.deepEqual([dagger.atk, dagger.hp], [2, 2]);
   assert.deepEqual([hexblade.cost, hexblade.atk, hexblade.hp], [2, 2, 6]);
   assert.deepEqual([copycat.cost, copycat.atk, copycat.hp], [2, 3, 6]);
-  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 5, rare: 23, mythic: 8 });
+  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 6, rare: 28, mythic: 9 });
   assert.equal(HERO_HP, 40);
 });
 
@@ -511,5 +511,5 @@ test('run-end snapshot records won and lost run flags', () => {
   assert.deepEqual([snapshot.won, snapshot.lost], [false, true]);
 });
 
-assert.equal(CARD_POOL.length, 36);
+assert.equal(CARD_POOL.length, 43);
 console.log(`# ${passed} tests passed`);

@@ -2,14 +2,19 @@
 
 ## Project Goal
 
-Deliver issue #2: a deterministic 20-level PvE run with one-pick drafts, alternating remove/transform events every third gap, milestone bosses, full-HP level starts, and a seeded full-run balance simulator.
+Deliver D1 / issue #17: config-driven four-week PvE seasons that rotate starters, cumulative draft additions, and the enemy keyword while preserving legacy deck legality.
 
 ## Current Phase
 
-- Phase: production UI polish
-- Status: A4 special-event screens implemented and verified; no commit made
+- Phase: live ops production
+- Status: D1 implemented and locally verified; no commit made
 
 ## Latest Completed Work
+
+- Added `src/seasons.js` with two scheduled seasons, immutable base content, seven Season 2 cards, one Season 2 starter, cumulative pools, union legality, and a screenshot/test clock override.
+- Wired engine starters, draft pool, and regular-enemy keyword to season config while preserving deterministic RNG and the all-season `CARD_POOL` contract.
+- Confirmed the starter UI follows the engine's live starter binding without additional UI code.
+- Added six season tests and tuned Ember Vanguard to the required fight-1 band using config stats only.
 
 - Replaced minimal remove/transform lists with the shared draft-card presentation, banner, deck count, next-enemy preview, scrollable grid, explicit selection, and confirm-only mutation.
 - Added `createDeckEventFlow` as a UI-owned, engine-preserving test seam. Remove deletes only the selected slot; transform replaces that slot with a cloned random same-tier card and preserves deck order.
@@ -25,21 +30,28 @@ Deliver issue #2: a deterministic 20-level PvE run with one-pick drafts, alterna
 
 ## Important Modified Files
 
+- D1: `src/seasons.js`, `src/engine.js`, `test/seasons.test.mjs`, `test/engine.test.mjs`, `tools/balance_sim.mjs`, and season docs.
+
 - `src/engine.js`, `src/ui.js`, `styles.css`
 - `test/engine.test.mjs`
 - `tools/level_sim.mjs`
 
 ## Verification
 
-- `node test/engine.test.mjs`: 52/52 passed
-- `node tools/balance_sim.mjs 1 200`: 71% win on the reported verification run
+- `node test/engine.test.mjs`: 58/58 passed
+- `node test/seasons.test.mjs`: 6/6 passed
+- `node tools/balance_sim.mjs 1 2000 oathbound_line`: 71% Season 1 win rate
+- forced Season 2 `node tools/balance_sim.mjs 1 2000 ember_vanguard`: 65% win rate
+- `node --test server/test/*.test.mjs`: 44/44 passed
 - `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/level_sim.mjs 200`: 5/200 reached level 20 and 4/200 won it under the normal seeded greedy policy
-- `node --check src/ui.js`: PASS
-- `node tools/ui_invariants_check.mjs`: PASS (static wiring; browser checklist not executed per owner scope)
+- `node tools/ui_invariants_check.mjs`: PASS (static wiring; browser checklist remains orchestrator-owned)
+- `node --check` for touched JavaScript: PASS
 - `git diff --check`: PASS (line-ending warnings only)
 
 ## Known Risks / Untested Areas
+
+- D1 orchestrator screenshot remains: forced Season 2 starter-select at 1280px under `refs/ui-audit/seasons/`.
+- Season scheduling is bundled config, not remote config; rollback is a config edit and deployment.
 
 - Orchestrator still needs the requested 1280px screenshot matrix; the replacement state lasts for the `dur(500)` arrival/hold window after confirmation.
 - Monte Carlo percentages are deterministic for the specified 200 seeds/policy but remain sample- and policy-dependent.
@@ -48,4 +60,4 @@ Deliver issue #2: a deterministic 20-level PvE run with one-pick drafts, alterna
 
 ## Next Safest Task
 
-Orchestrator capture of the five A4 event states at 1280px, then review and ship the verified diff.
+Orchestrator capture of the Season 2 starter-select using `__setNowOverride('2026-12-01T00:00:00Z')`, then review and ship the uncommitted diff.

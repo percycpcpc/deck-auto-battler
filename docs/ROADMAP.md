@@ -46,6 +46,7 @@ target architecture; every item below lands as its own scoped pass.
   (remove one card, add a random card of the **same tier**).
 - Starter deck selectable per season (swap `STARTER_IDS`; pipeline
   already supports it). No persistent card collection day one.
+- D1 live: four-week PvE config rotates starters, cumulative draft additions, and the enemy keyword without engine code changes per flip.
 - Level 20 = boss fight using existing pre-boarded boss mechanics.
 - Post-alpha deferred: deck ordering at save-time (async-safe, saved
   with the deck), player-choice event screen, hard rotation.

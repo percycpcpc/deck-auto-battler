@@ -1,53 +1,10 @@
 export const HERO_HP = 40; // First tuning dial; K3 recommends 30.
 export const BOARD_CAP = 20;
 export const RUN_CONFIG = Object.freeze({ LEVELS: 20, PICKS_PER_DRAFT: 1, EVENT_EVERY: 3 });
-
+import { ACTIVE_STARTERS as STARTERS, STARTER_IDS, activePool, currentSeason, unionPool } from './seasons.js';
+export { ACTIVE_STARTERS as STARTERS, STARTER_IDS, unionPool } from './seasons.js';
 const card = (id, name, cost, atk, hp, extra = {}) => ({ id, name, cost, atk, hp, ...extra });
-
-export const CARD_POOL = [
-  card('dagger_imp', 'Dagger Imp', 1, 2, 2, { tier: 'common' }), card('sellsword', 'Sellsword', 1, 2, 3, { tier: 'common' }),
-  card('twinfang', 'Twinfang', 1, 1, 4, { tier: 'rare', keywords: ['windfury'] }),
-  card('brood_wisp', 'Brood Wisp', 1, 1, 4, { tier: 'rare', deathrattle: 'summon1' }),
-  card('hex_hurler', 'Hex Hurler', 1, 1, 5, { tier: 'rare', battlecry: 'hex_hurler' }),
-  card('tax_collector', 'Tax Collector', 1, 1, 4, { tier: 'rare', battlecry: 'tax' }),
-  card('chrono_imp', 'Chrono Imp', 1, 1, 4, { tier: 'rare', battlecry: 'chrono' }),
-  card('gate_crasher', 'Gate Crasher', 1, 2, 4, { tier: 'rare', battlecry: 'gate' }),
-  card('leeching_tick', 'Leeching Tick', 1, 1, 5, { tier: 'rare', onKill: 'grow' }),
-  card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),
-  card('spiteful_imp', 'Spiteful Imp', 1, 1, 4, { tier: 'rare', deathrattle: 'spite' }),
-  card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'scout' }),
-  card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight' }),
-  card('road_ogre', 'Road Ogre', 2, 3, 6, { tier: 'common' }),
-  card('aegis_knight', 'Aegis Knight', 2, 2, 7, { tier: 'rare', keywords: ['shield'] }),
-  card('venom_hound', 'Venom Hound', 2, 3, 5, { tier: 'rare', keywords: ['poisonous'] }),
-  card('plague_bearer', 'Plague Bearer', 2, 2, 9, { tier: 'rare', deathrattle: 'plague' }),
-  card('warlord', 'Warlord', 2, 2, 9, { tier: 'rare', aura: 'adjacentAtk' }),
-  card('bulwark', 'Bulwark', 2, 1, 9, { tier: 'rare', deathrattle: 'oppositeAtkDown' }),
-  card('duelist', 'Duelist', 2, 3, 5, { tier: 'rare', battlecry: 'duelist' }),
-  card('hexblade', 'Hexblade', 2, 2, 6, { tier: 'mythic', battlecry: 'hexblade' }),
-  card('gravedigger', 'Gravedigger', 2, 2, 6, { tier: 'rare', battlecry: 'gravedigger' }),
-  card('meddler', 'Meddler', 2, 2, 6, { tier: 'rare', battlecry: 'meddler' }),
-  card('headsman', 'Headsman', 2, 3, 8, { tier: 'rare', onKill: 2, portraitId: 'doomcaller' }),
-  card('firebelcher', 'Firebelcher', 2, 2, 9, { tier: 'rare', battlecry: 'firebelch', portraitId: 'plague_bearer' }),
-  card('shield_saint', 'Shield Saint', 2, 3, 6, { tier: 'rare', keywords: ['shield'], portraitId: 'aegis_knight' }),
-  card('bristleback', 'Bristleback', 2, 1, 9, { tier: 'rare', onDamaged: 3, portraitId: 'venom_hound' }),
-  card('colossus', 'Colossus', 3, 6, 9, { tier: 'common' }),
-  card('inquisitor', 'Inquisitor', 3, 4, 10, { tier: 'mythic', battlecry: 'inquisitor' }),
-  card('brood_queen', 'Brood Queen', 3, 3, 10, { tier: 'mythic', deathrattle: 'summon2x2' }),
-  card('doomcaller', 'Doomcaller', 3, 4, 10, { tier: 'mythic', battlecry: 'doom' }),
-  card('copycat', 'Copycat', 2, 3, 6, { tier: 'mythic', battlecry: 'copycat' }),
-  card('overlord', 'Overlord', 3, 2, 10, { tier: 'mythic', aura: 'all' }),
-  card('cultist', 'Cultist', 3, 3, 8, { tier: 'mythic', battlecry: 'cultist' }),
-  card('cataclysm', 'Cataclysm', 3, 2, 6, { tier: 'mythic', battlecry: 'cataclysm' }),
-  card('quillback_elder', 'Quillback Elder', 3, 3, 13, { tier: 'rare', onSummonPing: 1, portraitId: 'warlord' }),
-];
-
-export const STARTER_IDS = Object.freeze(['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre']);
-export const STARTERS = Object.freeze([
-  Object.freeze({ id: 'oathbound_line', name: 'Oathbound Line', blurb: 'A steady line of proven fighters built to hold and answer.', ids: STARTER_IDS }),
-  Object.freeze({ id: 'rat_pack', name: 'Rat Pack', blurb: 'Fast, vicious bodies overwhelm the line before it can settle.', ids: Object.freeze(['dagger_imp', 'dagger_imp', 'twinfang', 'sellsword', 'hex_hurler', 'leeching_tick', 'road_ogre', 'duelist']) }),
-  Object.freeze({ id: 'iron_bastion', name: 'Iron Bastion', blurb: 'Durable defenders blunt the assault and win the long battle.', ids: Object.freeze(['oathbound', 'sellsword', 'twinfang', 'brood_wisp', 'aegis_knight', 'bulwark', 'plague_bearer', 'squire']) }),
-]);
+export const CARD_POOL = unionPool();
 const byId = new Map(CARD_POOL.map(c => [c.id, c]));
 export const getCard = id => ({ ...byId.get(id), keywords: [...(byId.get(id)?.keywords || [])] });
 export const starterDeck = () => STARTER_IDS.map(getCard);
@@ -148,7 +105,8 @@ const enemyCard = (kind, level) => {
 };
 export function enemyDeckFor(level) {
   const safeLevel = Math.min(RUN_CONFIG.LEVELS, Math.max(1, Number(level) || 1));
-  return enemyScriptFor(safeLevel).map(kind => enemyCard(kind, safeLevel));
+  const keyword = currentSeason().enemyKeyword;
+  return enemyScriptFor(safeLevel).map(kind => ({ ...enemyCard(kind, safeLevel), ...(keyword ? { keywords: [keyword] } : {}) }));
 }
 
 export function gapKind(level) {
@@ -389,7 +347,7 @@ export function draftOffers(rng = Math.random) {
   const offered = [];
   const draw = () => {
     const roll = rng(), tier = tiers.find(([, ceiling]) => roll < ceiling)?.[0] || 'mythic';
-    const cards = CARD_POOL.filter(card => card.tier === tier);
+    const pool = activePool(), cards = pool.filter(card => card.tier === tier);
     return getCard(cards[Math.min(cards.length - 1, Math.floor(rng() * cards.length))].id);
   };
   while (offered.length < 3) {
@@ -399,7 +357,7 @@ export function draftOffers(rng = Math.random) {
       if (!offered.some(existing => existing.id === candidate.id)) { card = candidate; break; }
     }
     if (!card) {
-      const remaining = CARD_POOL.filter(candidate => !offered.some(existing => existing.id === candidate.id));
+      const remaining = activePool().filter(candidate => !offered.some(existing => existing.id === candidate.id));
       card = getCard(remaining[Math.min(remaining.length - 1, Math.floor(rng() * remaining.length))].id);
     }
     offered.push(card);
