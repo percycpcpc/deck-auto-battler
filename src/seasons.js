@@ -7,7 +7,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('brood_wisp', 'Brood Wisp', 1, 1, 4, { tier: 'rare', deathrattle: 'summon1' }),
   card('hex_hurler', 'Hex Hurler', 1, 1, 5, { tier: 'rare', battlecry: 'hex_hurler' }),
   card('tax_collector', 'Tax Collector', 1, 1, 4, { tier: 'rare', battlecry: 'tax' }),
-  card('chrono_imp', 'Chrono Imp', 1, 1, 4, { tier: 'rare', battlecry: 'chrono' }),
+  card('chrono_imp', 'Chrono Imp', 1, 1, 4, { tier: 'rare', battlecry: 'chrono', text: 'The next card you reveal starts with 1 fewer charge turn, minimum 1.' }),
   card('gate_crasher', 'Gate Crasher', 1, 2, 4, { tier: 'rare', battlecry: 'gate' }),
   card('leeching_tick', 'Leeching Tick', 1, 1, 5, { tier: 'rare', onKill: 'grow' }),
   card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),

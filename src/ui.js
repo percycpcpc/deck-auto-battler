@@ -531,7 +531,7 @@ function battlecryCaption(event) {
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
   if (event.kind === 'duelist') return event.applied ? 'Battlecry: gain +2/+2' : 'Battlecry: adjacent ally prevents gain';
   if (event.kind === 'tax') return event.counterDelta ? 'Battlecry: enemy charge +1 turn' : 'Battlecry: no enemy charging';
-  if (event.kind === 'chrono') return event.counterDelta ? `Battlecry: own charge -1 turn${event.deployed ? ' and deploy' : ''}` : 'Battlecry: no friendly charge';
+  if (event.kind === 'chrono') return event.pending ? `Battlecry: ${event.target} will start with 1 fewer charge turn` : 'Battlecry: no upcoming reveal';
   if (event.kind === 'scout') return 'Battlecry: already scouted — enemy order is known';
   if (event.kind === 'doom') return event.destroyed ? 'Battlecry: destroy enemy charge' : 'Battlecry: no enemy charging';
   if (event.kind === 'meddler') return event.returned ? 'Battlecry: return enemy charge' : 'Battlecry: no enemy charging';

@@ -325,10 +325,42 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
 
 });
 
-test('Chrono Imp turns a 1 counter into immediate deployment', () => {
-  const s = empty(); s.player.charger = { card: getCard('sellsword'), counter: 1, justRevealed: false };
+test('Chrono Imp accelerates the next revealed charger by one turn', () => {
+  const s = createFight({ playerDeck: [getCard('colossus')], enemyDeck: [] });
   const chrono = summon(s, 'player', getCard('chrono_imp')); triggerBattlecry(s, 'player', chrono);
-  assert.equal(s.player.charger, null); assert.ok(s.player.board.some(u => u.name === 'Sellsword'));
+  assert.equal(s.player.onNextRevealChrono, true);
+  runRound(s);
+  assert.equal(s.player.charger.counter, getCard('colossus').cost - 1);
+  assert.equal(s.player.onNextRevealChrono, false);
+});
+
+test('Chrono Imp acceleration floors the modified starting charge at 1', () => {
+  const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [] });
+  const chrono = summon(s, 'player', getCard('chrono_imp')); triggerBattlecry(s, 'player', chrono);
+  runRound(s);
+  assert.equal(s.player.charger.counter, 1);
+  assert.equal(s.player.board.some(unit => unit.name === 'Sellsword'), false);
+});
+
+test('Chrono Imp narrates a fizzle when there is no upcoming reveal', () => {
+  const s = empty(), chrono = summon(s, 'player', getCard('chrono_imp'));
+  s.events = []; triggerBattlecry(s, 'player', chrono);
+  assert.equal(s.player.onNextRevealChrono, false);
+  assert.deepEqual(
+    (({ type, kind, pending, fizzle, target }) => ({ type, kind, pending, fizzle, target }))(s.events[0]),
+    { type: 'battlecry', kind: 'chrono', pending: false, fizzle: true, target: undefined },
+  );
+});
+
+test('Chrono Imp pending event names its resolved reveal target', () => {
+  const s = createFight({ playerDeck: [getCard('road_ogre')], enemyDeck: [] });
+  const chrono = summon(s, 'player', getCard('chrono_imp'));
+  assert.equal(getCard('chrono_imp').text, 'The next card you reveal starts with 1 fewer charge turn, minimum 1.');
+  s.events = []; triggerBattlecry(s, 'player', chrono);
+  assert.equal(s.events[0].kind, 'chrono');
+  assert.equal(s.events[0].pending, true);
+  assert.equal(s.events[0].target, 'Road Ogre');
+  assert.equal(s.events[0].targetCardId, 'road_ogre');
 });
 
 test('Meddler bounce returns to top and re-enters charger next reveal', () => {

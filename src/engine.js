@@ -64,8 +64,8 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = null, figh
   const enemyLine = enemyDeck || enemyDeckFor(fight);
   const state = {
     fight, round: 0, phase: 'ready', rng, deaths: 0, events: [], over: false, winner: null,
-    player: { hp: playerHp, deck: seeded ? shuffle(playerDeck, rng) : [...playerDeck], charger: null, board: [], scouted: false },
-    enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false },
+    player: { hp: playerHp, deck: seeded ? shuffle(playerDeck, rng) : [...playerDeck], charger: null, board: [], scouted: false, onNextRevealChrono: false },
+    enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false, onNextRevealChrono: false },
   };
   if (seeded) state.uidRng = rng;
   const boss = fightBoss(fight, state.uidRng || Math.random, milestonesOnly);
@@ -240,9 +240,10 @@ export function triggerBattlecry(state, side, unit) {
       emit(state, 'battlecry', { ...event, targetSide: foeSide, counterDelta: foe.charger ? 1 : 0, charger: foe.charger?.card.name });
       if (foe.charger) foe.charger.counter += 1; break;
     case 'chrono': {
-      const counterDelta = own.charger && own.charger.counter > 0 ? -1 : 0, deployed = !!own.charger && own.charger.counter === 1;
-      emit(state, 'battlecry', { ...event, targetSide: side, counterDelta, charger: own.charger?.card.name, deployed });
-      if (own.charger) { own.charger.counter = Math.max(0, own.charger.counter - 1); if (!own.charger.counter) deployCharger(state, side); } break;
+      const target = own.deck[0];
+      own.onNextRevealChrono = !!target;
+      emit(state, 'battlecry', { ...event, targetSide: side, target: target?.name, targetCardId: target?.id, counterDelta: target ? -1 : 0, pending: !!target, fizzle: !target });
+      break;
     }
     case 'gate': {
       const moved = !!opposite && foe.board.length < BOARD_CAP, toIndex = moved ? foe.board.length - 1 : undefined;
@@ -339,7 +340,9 @@ export function runRound(state) {
   state.round++; state.events = []; const beforeUnits = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
   state.phase = 'reveal';
   for (const side of ['player', 'enemy']) if (!state[side].charger && state[side].deck.length) {
-    const next = state[side].deck.shift(); state[side].charger = { card: next, counter: next.cost, justRevealed: true }; emit(state, 'reveal', { side, cost: next.cost });
+    const own = state[side], next = own.deck.shift(), chronoReduction = own.onNextRevealChrono ? 1 : 0;
+    own.onNextRevealChrono = false;
+    own.charger = { card: next, counter: Math.max(1, next.cost - chronoReduction), justRevealed: true }; emit(state, 'reveal', { side, cost: next.cost });
   }
   state.phase = 'tick';
   for (const side of ['player', 'enemy']) if (state[side].charger) {
