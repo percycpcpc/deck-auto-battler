@@ -77,11 +77,11 @@ export function effectiveStats(state, side, unit) {
 export const liveUnits = board => board.filter(unit => !unit.dead);
 
 export const fightBoss = (fight, rng = Math.random, milestonesOnly = false) => ((!milestonesOnly && fight === 2) || [5, 15].includes(fight))
-  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' }, rng)
+  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, fight === 15 ? 3 : 5), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' }, rng)
   : ((!milestonesOnly && fight === 3) || fight === 10)
-    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' }, rng)
+    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 0, 4), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' }, rng)
     : fight === 20
-      ? makeUnit(card('boss_broodmother', 'Broodmother', 0, 2, 12, { tier: 'mythic', aura: 'all' }), 'enemy', { boss: 'broodmother', text: 'Aura: all friendly units have +1/+1.' }, rng)
+      ? makeUnit(card('boss_broodmother', 'Broodmother', 0, 0, 5, { tier: 'mythic', aura: 'all' }), 'enemy', { boss: 'broodmother', text: 'Aura: all friendly units have +1/+1.' }, rng)
       : null;
 
 export function makeRng(seed) {
@@ -117,23 +117,26 @@ export function shuffle(items, rng = Math.random) {
 }
 
 const LEVEL_ONE_SCRIPT = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'grunt', 'grunt', 'brute', 'grunt']);
-const SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'brute']);
+const EARLY_SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'brute']);
+const SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'grunt']);
 function levelDeckSize(level) {
   if (level === 1) return 8;
-  if (level <= 4 || level === 20) return 6;
-  if (level <= 14) return 8;
+  if (level <= 6 || level === 20) return 6;
+  if ((level >= 10 && level <= 12) || (level >= 15 && level <= 19)) return 7;
+  if (level === 7 || (level >= 13 && level <= 14)) return 8;
   return 10;
 }
 function enemyScriptFor(level) {
   if (level === 1) return LEVEL_ONE_SCRIPT;
   const size = levelDeckSize(level);
-  return Array.from({ length: size }, (_, index) => SCRIPT_PATTERN[index % SCRIPT_PATTERN.length]);
+  const SCRIPT = level <= 4 ? EARLY_SCRIPT_PATTERN : SCRIPT_PATTERN;
+  return Array.from({ length: size }, (_, index) => SCRIPT[index % SCRIPT.length]);
 }
 const enemyCard = (kind, level) => {
   if (level === 1) return kind === 'brute'
     ? card('enemy_brute', 'Camp Brute', 2, 2, 6, { tier: 'common' })
     : card('enemy_grunt', 'Ash Grunt', 1, 2, 3, { tier: 'common' });
-  const band = Math.ceil(level / 4);
+  const band = level <= 6 ? 1 : level <= 12 ? 2 : level <= 19 ? 3 : 4;
   return kind === 'brute'
     ? card('enemy_brute', 'Camp Brute', 2, 2 + Math.floor(band / 2), 5 + band, { tier: 'common' })
     : card('enemy_grunt', 'Ash Grunt', 1, 2, 2 + band, { tier: 'common' });

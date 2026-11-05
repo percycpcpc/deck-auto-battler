@@ -263,9 +263,9 @@ test('gap cadence drafts normally and alternates remove then transform events', 
 test('level-20 Broodmother is pre-boarded and its all aura is effective', () => {
   const s = createFight({ fight: 20, playerDeck: [], enemyDeck: [] });
   const boss = s.enemy.board[0]; assert.equal(boss.name, 'Broodmother'); assert.equal(boss.boss, 'broodmother');
-  assert.deepEqual([boss.baseAtk, boss.baseMaxHp, boss.aura], [2, 12, 'all']);
+  assert.deepEqual([boss.baseAtk, boss.baseMaxHp, boss.aura], [0, 5, 'all']);
   const ally = summon(s, 'enemy', enemyDeckFor(20)[0]);
-  assert.deepEqual(effectiveStats(s, 'enemy', ally), { atk: 3, maxHp: 8, hp: 8 });
+  assert.deepEqual(effectiveStats(s, 'enemy', ally), { atk: 3, maxHp: 7, hp: 7 });
 });
 
 test('draft offers follow the seeded 50/35/15 tier weighting', () => {
@@ -309,7 +309,7 @@ test('next enemy script is previewed once and reused by the following fight', ()
 
 test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
   const state = createFight({ fight: 2 });
-  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].name, 'Warherald'); assert.equal(state.enemy.board[0].boss, 'herald'); assert.equal(state.enemy.board[0].baseMaxHp, 8);
+  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].name, 'Warherald'); assert.equal(state.enemy.board[0].boss, 'herald'); assert.equal(state.enemy.board[0].baseMaxHp, 5);
   assert.deepEqual(state.enemy.deck.map(card => card.id), ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute', 'enemy_grunt']);
   assert.equal(state.enemy.deck.length, 6); runRound(state);
   assert.ok(state.enemy.board.some(unit => unit.boss === 'herald')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 5);
