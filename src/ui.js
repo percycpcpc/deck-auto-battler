@@ -991,10 +991,10 @@ export function createDraftFlow({ deck, rng, advance, getOffers = draftOffers })
     },
   };
 }
-export function createDeckEventFlow({ deck, rng, kind }) {
-  let selectedIndex = null, complete = false;
+export function createDeckEventFlow({ deck, rng, kind, advance = () => {} }) {
+  let selectedIndex = null, complete = false, result = null, advanced = false;
   return {
-    state: () => ({ selectedIndex, complete }),
+    state: () => ({ selectedIndex, complete, result, advanced }),
     select: index => {
       if (complete || !Number.isInteger(index) || index < 0 || index >= deck.length) return false;
       selectedIndex = index; return true;
@@ -1009,7 +1009,12 @@ export function createDeckEventFlow({ deck, rng, kind }) {
         deck.splice(selectedIndex, 1, replacement);
       } else deck.splice(selectedIndex, 1);
       complete = true;
-      return { index: selectedIndex, removed, replacement };
+      result = { index: selectedIndex, removed, replacement };
+      return result;
+    },
+    continue: () => {
+      if (!result || advanced) return false;
+      advanced = true; advance(); return true;
     },
   };
 }
@@ -1033,21 +1038,27 @@ function showDeckEvent(kind) {
   const screen = el('section', 'screen draft deck-event');
   const title = kind === 'remove' ? 'REMOVE A CARD' : 'TRANSFORM A CARD';
   const copy = kind === 'remove' ? 'Choose carefully. The selected card will be permanently removed.' : 'Choose a card to replace with a random same-tier card.';
-  const count = el('p', 'deck-event__count'), choices = el('div', 'deck-event__choices');
-  const flow = createDeckEventFlow({ deck: run.deck, rng: run.rng, kind });
+  const rule = el('p', 'deck-event__rule', copy), count = el('p', 'deck-event__count'), choices = el('div', 'deck-event__choices');
+  let revealResult = null;
+  const flow = createDeckEventFlow({ deck: run.deck, rng: run.rng, kind, advance: beginFight });
   const confirm = button(kind === 'remove' ? 'Confirm Removal' : 'Confirm Transform', async () => {
+    if (revealResult) { flow.continue(); return; }
     const result = flow.confirm();
     if (!result) return;
     confirm.disabled = true; choices.classList.add('is-resolving');
     const chosen = choices.children[result.index];
     if (chosen) { chosen.style.setProperty('--event-leave', `${dur(TIMING.shift)}ms`); chosen.classList.add('is-departing'); }
     await wait(TIMING.shift);
-    render(result); choices.classList.remove('is-resolving');
+    if (kind === 'transform') {
+      revealResult = result; renderReveal(result); confirm.textContent = 'Continue'; confirm.disabled = false;
+      return;
+    }
+    render(); choices.classList.remove('is-resolving');
     await wait(TIMING.bannerHold);
     beginFight();
   });
   confirm.disabled = true;
-  const render = result => {
+  const render = () => {
     setText(count, `Deck ${run.deck.length} cards`);
     choices.replaceChildren(...run.deck.map((card, index) => {
       const choice = draftCard(card, () => {
@@ -1059,15 +1070,23 @@ function showDeckEvent(kind) {
       choice.classList.add('deck-event__card'); choice.setAttribute('aria-pressed', 'false');
       const action = choice.querySelector('.draft-confirm');
       if (action) setText(action, kind === 'remove' ? 'Select to remove' : 'Select to transform');
-      if (result?.replacement && index === result.index) {
-        choice.style.setProperty('--event-arrive', `${dur(TIMING.bannerHold)}ms`);
-        choice.classList.add('is-arriving'); choice.setAttribute('aria-label', `${card.name}, transformed replacement`);
-        if (action) setText(action, 'New same-tier card');
-      }
       return choice;
     }));
   };
-  screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', title), el('p', 'deck-event__rule', copy), count, createEnemyPreview(run.fight, run.enemyLine || []), choices, confirm);
+  const revealCard = (card, label, arriving = false) => {
+    const tile = draftCard(card, undefined, { readOnly: true });
+    if (arriving) { tile.style.setProperty('--event-arrive', `${dur(TIMING.bannerHold)}ms`); tile.classList.add('is-arriving'); }
+    const wrapper = el('div', `deck-event__reveal-card${arriving ? ' is-new' : ''}`);
+    wrapper.append(el('span', 'deck-event__reveal-label', label), tile, el('span', 'deck-event__tier', `${card.tier} tier`));
+    return wrapper;
+  };
+  const renderReveal = result => {
+    setText(rule, 'Transformation complete. Review the result, then continue.');
+    setText(count, `${result.removed.name} transformed into ${result.replacement.name}`);
+    choices.classList.remove('is-resolving'); choices.classList.add('deck-event__reveal');
+    choices.replaceChildren(revealCard(result.removed, 'Original card'), el('span', 'deck-event__arrow', '→'), revealCard(result.replacement, 'New card', true));
+  };
+  screen.append(img('banner', 'assets/banner_draft.png', ''), el('h1', '', title), rule, count, createEnemyPreview(run.fight, run.enemyLine || []), choices, confirm);
   render();
   app.replaceChildren(screen);
 }
