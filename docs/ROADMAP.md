@@ -67,6 +67,7 @@ target architecture; every item below lands as its own scoped pass.
 
 ## 4. Tech notes
 
+- ✅ B6 landed — Stripe one-time checkout + verified webhook → `premium` entitlement; mock sandbox purchase verified end to end.
 - ✅ B3 landed — Server-authoritative deck snapshots: POST snapshot at run end → deck
   ID; queueing sends ID; server validates ownership. PvE runs stay
   client-side (trust-on-first-use is acceptable — cheaters only forge

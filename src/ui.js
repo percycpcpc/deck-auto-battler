@@ -67,6 +67,17 @@ async function refreshEntitlement() {
     if (response.ok) premiumEntitled = Boolean((await response.json()).premium);
   } catch { /* entitlement display is optional when offline */ }
 }
+async function completeMockPurchase() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('purchase') !== 'success' || params.get('mock_checkout') !== '1') return;
+  const sessionId = params.get('sessionId');
+  if (!sessionId) return;
+  try {
+    await apiFetch('/api/payments/webhook', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId }),
+    });
+  } catch { /* purchase return remains fail-soft while offline */ }
+}
 async function bootstrapAuth() {
   ensureGuestToken();
   const session = stored('dab_session');
@@ -75,11 +86,11 @@ async function bootstrapAuth() {
       const response = await apiFetch('/api/auth/session');
       if (response.ok) {
         const result = await response.json(); authUser = result.user; store('dab_user', JSON.stringify(result.user));
-        await refreshEntitlement(); showTitle(); return;
+        await completeMockPurchase(); await refreshEntitlement(); showTitle(); return;
       }
     } catch { return; }
   }
-  try { await syncGuest(); await refreshEntitlement(); showTitle(); } catch { /* auth durability never blocks local PvE */ }
+  try { await syncGuest(); await completeMockPurchase(); await refreshEntitlement(); showTitle(); } catch { /* auth durability never blocks local PvE */ }
 }
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -525,6 +536,26 @@ function showTitle() {
     const status = el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`);
     if (premiumEntitled) status.append(el('span', 'premium-badge', 'PREMIUM'));
     actions.append(status);
+    if (!premiumEntitled) {
+      const upgrade = button('Upgrade to Premium — $4.99', async () => {
+        upgrade.disabled = true;
+        setText(upgrade, 'Opening checkout...');
+        try {
+          const response = await apiFetch('/api/checkout', { method: 'POST' });
+          if (!response.ok) throw new Error('checkout unavailable');
+          const { url } = await response.json();
+          location.assign(url);
+        } catch {
+          setText(upgrade, 'Upgrade unavailable — try again');
+          upgrade.disabled = false;
+        }
+      });
+      upgrade.classList.add('secondary', 'upgrade-button');
+      actions.append(upgrade);
+    }
+    const purchase = new URLSearchParams(location.search).get('purchase');
+    if (purchase === 'success' && premiumEntitled) actions.append(el('p', 'purchase-note', 'Welcome to Premium. Your purchase is active.'));
+    if (purchase === 'cancel') actions.append(el('p', 'purchase-note', 'Purchase cancelled. Nothing was charged.'));
   } else {
     const signIn = button('Sign in with Google', async () => {
       signIn.disabled = true;

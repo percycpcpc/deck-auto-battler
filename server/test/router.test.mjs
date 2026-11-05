@@ -78,14 +78,14 @@ for (const path of [
   });
 }
 
-test('checkout stub rejects requests without a bearer session', async () => {
+test('checkout rejects requests without a bearer session', async () => {
   const response = await worker.fetch(
     new Request('https://example.test/api/checkout', { method: 'POST' }),
     fakeEnv(),
     {},
   );
   assert.equal(response.status, 401);
-  assert.deepEqual(await response.json(), { error: 'unauthorized' });
+  assert.deepEqual(await response.json(), { error: 'sign in required before purchase' });
 });
 
 test('deck routes require a bearer session', async () => {

@@ -4,6 +4,7 @@ import { createGuestLogin, createLogin, readSession } from './auth/service.js';
 import { DeckError, createDeck, getDeck, listDecks } from './decks.js';
 import { getEntitlements, grantPremium, isPremium } from './entitlements.js';
 import { SlotError, listSlots, saveDeckToSlot } from './slots.js';
+import { getPaymentProvider } from './payments/provider.js';
 
 export const router = createRouter();
 
@@ -81,9 +82,34 @@ router.route('POST', '/api/entitlement/dev-grant', sessionRoute(async ({ request
   return json({ premium: true, entitlement });
 }));
 
-// B6 replaces this stub. The session wrapper is the login-gated checkout
-// contract: no purchase handler may run without a resolved Bearer session.
-router.route('POST', '/api/checkout', sessionRoute(() => notImplemented()));
+router.route('POST', '/api/checkout', async ({ request, env }) => {
+  const user = await sessionUser(request, env);
+  if (!user) return json({ error: 'sign in required before purchase' }, { status: 401 });
+  const origin = request.headers.get('origin') || new URL(request.url).origin;
+  const provider = getPaymentProvider(env);
+  const checkout = await provider.createCheckoutSession({
+    user,
+    successUrl: `${origin}/?purchase=success`,
+    cancelUrl: `${origin}/?purchase=cancel`,
+  });
+  return json({ url: checkout.url });
+});
+
+router.route('POST', '/api/payments/webhook', async ({ request, env }) => {
+  try {
+    const provider = getPaymentProvider(env);
+    const event = await provider.handleWebhook({
+      payload: await request.text(),
+      signature: request.headers.get('stripe-signature'),
+    });
+    if (event.type === 'checkout.session.completed') {
+      await grantPremium(env, event.userId, 'stripe-checkout');
+    }
+    return json({ received: true });
+  } catch {
+    return json({ error: 'invalid webhook' }, { status: 400 });
+  }
+});
 
 router.route('POST', '/api/decks', deckRoute(async ({ request, env, user }) => {
   const payload = await readJson(request);
