@@ -31,7 +31,7 @@ Tax Collector (+1 turn), Chrono Imp (−1 turn), Doomcaller (destroy), Meddler (
 Brood Wisp, Brood Queen, Gravedigger, and the Fight-3 boss summon tokens with no stated destination. *Resolution:* all tokens enter the **leftmost empty slot**; if the board is full, the summon is lost. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
 **7. Draft mechanics unspecified.**
-*Resolution:* each draft is two sequential 1-of-3 picks (pick → new set of 3). Each offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier, **with duplicates allowed**; starter cards are never removed. Deck grows 8 → 10 → 12.
+*Resolution:* each draft is two sequential 1-of-3 picks (pick → new set of 3). Each offer contains three distinct cards; each slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
 
 ### B. Keyword interactions the spec doesn't pin down
 
@@ -117,7 +117,7 @@ Reference resolution 1920×1080. Enemy row of slots across the **top** (y≈180)
 
 ### Motion & juice
 
-The shipped presentation pass keeps simulation timing untouched and scales all new event feedback through the playback-speed helper. Attack impact uses a 140ms lead-in, then a 75ms hit-stop on the acting unit. The battle root shakes without layout shift or page overflow: small impact shake is 2px for 130ms, medium death/hero-damage shake is 4px for 155ms, and large boss-deploy shake is 6px for 175ms. Reduced-motion mode removes spatial shake and perpetual motion while retaining event pacing and static combat feedback.
+The shipped presentation pass keeps simulation timing untouched and scales all new event feedback through the playback-speed helper. Attack impact uses a 140ms lead-in, then a 75ms hit-stop on the acting unit. The owner removed battle-root background shake; unit target shake, hit-stop, and other localized combat feedback remain.
 
 Board units breathe only on an inner wrapper, never on the uid-keyed lifecycle root: 2px upward travel with scale 1 to 1.015 over 2400ms, ease-in-out, infinite alternate. Their frame glow pulses faintly in the existing allegiance accent (teal for player, crimson for enemy). Sixteen noninteractive orange/violet embers drift slowly behind the board on 9000ms to 11520ms cycles at opacity no higher than 0.32.
 

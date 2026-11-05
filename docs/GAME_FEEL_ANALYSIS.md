@@ -45,8 +45,8 @@ war-room look is right for the theme. The gap is juice, not colors.
 1. **SFX pass (WebAudio, synthesized — no asset files)** — deploy click,
    card reveal, charge tick, deploy thud, attack impact, death, hero damage,
    victory sting. Biggest feel-per-effort win.
-2. **Screen shake + hit-stop** on attacks and deaths — one CSS class on the
-   battle root, ~120 ms, routed through the `dur()` speed helper.
+2. **Hit-stop retained; screen shake owner-removed.** Attack hit-stop remains
+   routed through the `dur()` speed helper, but the battle root no longer shakes.
 3. **Idle life** — every unit gets a subtle bob/breathe + glow pulse;
    drifting ember particles behind the board.
 4. **Impact frames** — white flash on hit, damage floaters, attacker

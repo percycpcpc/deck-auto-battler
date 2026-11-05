@@ -6,7 +6,7 @@ Web prototype. Auto-battler deckbuilder: 3 scripted fights, draft between fights
 Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-3 (twice) → fight 2 → draft (twice) → fight 3 → run ends (victory screen).
 - Lose = hero HP reaches 0 at any point → run over, restart.
 - Hero HP resets to full (40) at the start of each fight. The victory screen reports the HP remaining at the end of the last fight.
-- Each draft offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier; duplicates are allowed.
+- Each draft presents exactly 3 distinct cards. Every offer slot chooses a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier; duplicate rolls are re-rolled for that slot.
 - No map, no economy, no meta in v0.
 
 ## Combat rules

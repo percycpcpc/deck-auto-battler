@@ -339,11 +339,25 @@ function checkHeroEnd(state) {
 
 export function draftOffers(rng = Math.random) {
   const tiers = [['common', 0.5], ['rare', 0.85], ['mythic', 1]];
-  return Array.from({ length: 3 }, () => {
+  const offered = [];
+  const draw = () => {
     const roll = rng(), tier = tiers.find(([, ceiling]) => roll < ceiling)?.[0] || 'mythic';
     const cards = CARD_POOL.filter(card => card.tier === tier);
-    return getCard(cards[Math.floor(rng() * cards.length)].id);
-  });
+    return getCard(cards[Math.min(cards.length - 1, Math.floor(rng() * cards.length))].id);
+  };
+  while (offered.length < 3) {
+    let card;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = draw();
+      if (!offered.some(existing => existing.id === candidate.id)) { card = candidate; break; }
+    }
+    if (!card) {
+      const remaining = CARD_POOL.filter(candidate => !offered.some(existing => existing.id === candidate.id));
+      card = getCard(remaining[Math.min(remaining.length - 1, Math.floor(rng() * remaining.length))].id);
+    }
+    offered.push(card);
+  }
+  return offered;
 }
 
 export function createRun(rng = Math.random) { return { fight: 1, hp: HERO_HP, deck: starterDeck(), rng, enemyLine: null, won: false, lost: false }; }

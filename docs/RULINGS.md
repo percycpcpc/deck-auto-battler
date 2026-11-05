@@ -31,7 +31,7 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
 ## Draft
-- Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Each offer slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier; duplicates are allowed. Starter cards are never removed. Deck grows 8 → 10 → 12.
+- Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
 
 ## Fixed starter deck (8)
 Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogre.

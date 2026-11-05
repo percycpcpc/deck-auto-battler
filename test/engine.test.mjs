@@ -246,6 +246,18 @@ test('draft offers follow the seeded 50/35/15 tier weighting', () => {
   assert.ok(counts.mythic >= 60 && counts.mythic <= 120, `mythic=${counts.mythic}`);
 });
 
+test('draft offers always contain exactly three distinct cards', () => {
+  for (let seed = 1; seed <= 200; seed++) {
+    let value = seed; const rng = () => ((value = value * 48271 % 2147483647) - 1) / 2147483646;
+    const offers = draftOffers(rng);
+    assert.equal(offers.length, 3, `seed=${seed}`);
+    assert.equal(new Set(offers.map(card => card.id)).size, 3, `seed=${seed}`);
+  }
+  const fallbackOffers = draftOffers(() => 0);
+  assert.equal(fallbackOffers.length, 3, 'bounded fallback length');
+  assert.equal(new Set(fallbackOffers.map(card => card.id)).size, 3, 'bounded fallback uniqueness');
+});
+
 test('player order still varies while enemy NEXT stays deterministic', () => {
   const orders = new Set();
   for (let seed = 1; seed <= 100; seed++) {

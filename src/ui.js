@@ -2,7 +2,7 @@ import { CARD_POOL, createRun, draftOffers, effectiveStats, fightBoss, finishRun
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 
 // CONSTANTS
-export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, impactDelay: 140, hitStop: 75, shakeSmall: 130, shakeMedium: 155, shakeLarge: 175, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
+export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, impactDelay: 140, hitStop: 75, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
 export const SPEEDS = Object.freeze([1, 2, 3, 5, 10]);
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = typeof window === 'undefined' ? 2 : readSpeed();
@@ -189,7 +189,7 @@ export function mountBattleScreen(initialState, root = app) {
   updateEnemyQueuePanel();
   for (const side of SIDES) if (initialState[side]?.charger) populateCharger(side, initialState[side].charger);
   for (const side of SIDES) (initialState[side]?.board || []).forEach((unit, index) => createUnitEl(unit.uid, unit, side, index, initialState));
-  if ((initialState.enemy?.board || []).some(unit => unit.boss)) { playSfx('deploy'); shakeBattle('large'); }
+  if ((initialState.enemy?.board || []).some(unit => unit.boss)) playSfx('deploy');
   reconcile(snapshotView(initialState)); return els;
 }
 
@@ -297,7 +297,7 @@ function destinationRect(side, slotIndex) { const rect = els[side].lane.getBound
 async function playDeploy(event) {
   const side = event.side, unit = event.state[side].board.find(item => item.uid === event.uid); if (!unit) { await wait(TIMING.deploy); return; }
   const slotIndex = event.state[side].board.findIndex(item => item.uid === event.uid); autoScrollFor(side, slotIndex); const dest = destinationRect(side, slotIndex), ghost = makeFlightVisual(unit, true, true);
-  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); playSfx('deploy'); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', TIMING.pop); if (unit.boss) shakeBattle('large'); if (unit.dead) scheduleDeath(unit.uid); clearCharger(side); reconcile(event.state);
+  await flyCard(els[side].charger, dest, ghost, TIMING.deploy, { overshoot: true }); playSfx('deploy'); const card = createUnitEl(unit.uid, unit, side, slotIndex, event.state); pulse(card, 'fx-deploy-pop', TIMING.pop); if (unit.dead) scheduleDeath(unit.uid); clearCharger(side); reconcile(event.state);
 }
 
 let hoverTip = null, hoverTimer = null, hoverOwner = null;
@@ -333,7 +333,6 @@ function cardTipData(card, stats = null) {
   return { name: card.name || def.name, cost: def.cost ?? 0, atk: resolved.atk, hp: resolved.hp, maxHp: resolved.maxHp ?? resolved.hp, base: { atk: card.baseAtk ?? def.atk, hp: card.baseMaxHp ?? def.hp }, keys: printedKeywordsFor(card), text: descriptorText(card) };
 }
 function pulse(node, className, duration) { if (node) { const scaled = dur(duration); node.style.setProperty('--fx-duration', `${scaled}ms`); node.classList.add(className); setTimeout(() => { node.classList.remove(className); node.style.removeProperty('--fx-duration'); }, scaled); } }
-function shakeBattle(tier) { if (!els?.battle || reducedMotion()) return; const duration = { small: TIMING.shakeSmall, medium: TIMING.shakeMedium, large: TIMING.shakeLarge }[tier], className = `fx-shake-${tier}`, scaled = dur(duration); els.battle.classList.remove('fx-shake-small', 'fx-shake-medium', 'fx-shake-large'); void els.battle.offsetWidth; els.battle.style.setProperty('--shake-duration', `${scaled}ms`); els.battle.classList.add(className); setTimeout(() => { els?.battle?.classList.remove(className); els?.battle?.style.removeProperty('--shake-duration'); }, scaled); }
 function battlecryCaption(event) {
   const target = event.target || event.targets?.join(' and ');
   if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}` : 'Battlecry: no opposing unit';
@@ -373,7 +372,7 @@ async function playAttack(event) {
   const a = attacker.getBoundingClientRect(), b = target.getBoundingClientRect(); els.battle.querySelectorAll('.is-attacker:not(.fx-death), .is-target:not(.fx-death)').forEach(node => node.classList.remove('is-attacker', 'is-target'));
   const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2, factor = reducedMotion() ? 0 : Math.min(.28, 60 / (Math.hypot(dx, dy) || 1));
   attacker.style.setProperty('--lunge-x', `${dx * factor}px`); attacker.style.setProperty('--lunge-y', `${dy * factor}px`); attacker.style.setProperty('--fx-duration', `${dur(TIMING.attack + (event.targetUid ? TIMING.hitStop : 0))}ms`); attacker.classList.add('is-attacker', 'fx-lunge'); target.classList.add('is-target');
-  if (event.targetUid) { await wait(TIMING.impactDelay); attacker.classList.add('fx-hit-stop'); playSfx('impact'); shakeBattle('small'); await wait(TIMING.hitStop); attacker.classList.remove('fx-hit-stop'); await wait(TIMING.attack - TIMING.impactDelay); }
+  if (event.targetUid) { await wait(TIMING.impactDelay); attacker.classList.add('fx-hit-stop'); playSfx('impact'); await wait(TIMING.hitStop); attacker.classList.remove('fx-hit-stop'); await wait(TIMING.attack - TIMING.impactDelay); }
   else await wait(TIMING.attack);
   attacker.classList.remove('fx-lunge'); attacker.style.removeProperty('--fx-duration');
 }
@@ -403,8 +402,8 @@ async function playEvent(event, deployUids) {
   if (event.type === 'attack') return playAttack(event);
   if (event.type === 'damage') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); pulse(target, 'fx-hit', TIMING.damage); damageFloater(target, event.amount, rect); await wait(TIMING.damage); return; }
   if (event.type === 'statChange') { reconcile(event.state); pulse(getUnitEl(event.uid), 'fx-deploy-pop', TIMING.statChange); await wait(TIMING.statChange); return; }
-  if (event.type === 'death') { playSfx('death'); shakeBattle('medium'); scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
-  if (event.type === 'heroHit') { reconcile(event.state); playSfx('heroDamage'); shakeBattle('medium'); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
+  if (event.type === 'death') { playSfx('death'); scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
+  if (event.type === 'heroHit') { reconcile(event.state); playSfx('heroDamage'); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
   if (event.type === 'shield') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); damageFloater(target, 'BLOCKED', rect); pulse(getUnitEl(event.uid), 'fx-shield', TIMING.shield); await wait(TIMING.shield); return; }
   if (event.type === 'chargerDestroyed') { pulse(els[event.side].charger, 'fx-shatter', TIMING.chargerDestroyed); await wait(TIMING.chargerDestroyed); clearCharger(event.side); reconcile(event.state); return; }
   if (event.type === 'stalemate') { pulse(els.player.hero.panel, 'fx-stalemate', TIMING.stalemate); pulse(els.enemy.hero.panel, 'fx-stalemate', TIMING.stalemate); appendLog(`Stalemate: ${event.winner} wins`); await wait(TIMING.stalemate); return; }
