@@ -1,0 +1,15 @@
+name = "deck-auto-battler-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "deck_auto_battler"
+# Replace after: npx wrangler d1 create deck_auto_battler
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+ENVIRONMENT = "development"
+# OAuth and payment configuration names can be added here later.
+# Credentials must be stored with `wrangler secret put`, never committed here.
