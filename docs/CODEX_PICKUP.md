@@ -48,3 +48,30 @@ shipped — keep Done items linked to their commit as the audit trail.
 If a pass changes ratified behavior, mark the doc section "under owner
 evaluation" in the same commit and report the revert commit if the
 owner rejects it.
+
+## 6. Launch-run addenda (2026-11-05)
+
+Confirmed working conventions from the full A5→D3 run:
+
+- **Owner overrides outrank briefs.** Example: real Google OAuth deferred →
+  B2 shipped a mock auth provider behind a swappable interface; the
+  deferral is recorded in the issue comment and ship report.
+- **Engine freeze has exactly one exception:** D1's season wiring
+  (starters/pool/keyword sourced from `src/seasons.js`, data-only
+  config). All card/starter/balance data lives in `src/seasons.js`;
+  flipping a season is a config edit, never engine code.
+- **Verification batteries that caught real bugs:** balance_sim band
+  65–78%, `event_snapshot_check.mjs`, `ui_invariants_check.mjs`
+  (dur() discipline), server suite totals (48/48 at launch), and a
+  real-browser Playwright matrix per ticket under `refs/ui-audit/<feature>/`.
+- **Server suites at launch:** router 9, auth 5, decks 4, slots 5,
+  entitlements 5, payments 4, sim 4, ranked 4, friendly 4,
+  cosmetics 4. Engine 58, seasons 6, speed gating 3.
+- **Auth contract:** mock Google provider + guest tokens (B2);
+  `GET /api/entitlement` (B5) is the sole authority for premium
+  unlocks — client never trusts localStorage for entitlement (D3
+  test-asserted).
+- **Locked decisions:** Workers+D1 hosting; ELO K32, seasonal +
+  eternal ratings, deck-MMR (no piloting); replays full-information
+  (RULINGS.md); ranked premium-gated, friendlies free; speeds 1/2/3/10
+  with 3/10 premium.
