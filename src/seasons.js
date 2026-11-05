@@ -12,7 +12,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('leeching_tick', 'Leeching Tick', 1, 1, 5, { tier: 'rare', onKill: 'grow' }),
   card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),
   card('spiteful_imp', 'Spiteful Imp', 1, 1, 4, { tier: 'rare', deathrattle: 'spite' }),
-  card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'scout', heal: 2, healOn: 'battlecry', text: 'Battlecry: heal all units for 2.' }),
+  card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'oppositeAtkDown2', text: 'Battlecry: the opposing unit gets −2 ATK.' }),
   card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight' }),
   card('road_ogre', 'Road Ogre', 2, 3, 6, { tier: 'common' }),
   card('aegis_knight', 'Aegis Knight', 2, 2, 7, { tier: 'rare', keywords: ['shield'] }),

@@ -27,9 +27,14 @@ await test('season 2 rotates starter selection and enemy keyword', () => {
 await test('season 2 pool adds seven cards without removing base cards', () => {
   const baseIds = new Set(SEASONS[0].starters.flatMap(starter => starter.cards));
   const poolIds = new Set(activePool().map(card => card.id));
+  const scout = unionPool().find(card => card.id === 'scout');
   assert.equal(activePool().length, 43);
   assert.ok([...baseIds].every(id => poolIds.has(id)));
   assert.ok(SEASONS[1].poolExtras.every(id => poolIds.has(id)));
+  assert.deepEqual(
+    (({ cost, atk, hp, tier, battlecry, heal, healOn, text }) => ({ cost, atk, hp, tier, battlecry, heal, healOn, text }))(scout),
+    { cost: 1, atk: 2, hp: 4, tier: 'rare', battlecry: 'oppositeAtkDown2', heal: undefined, healOn: undefined, text: 'Battlecry: the opposing unit gets −2 ATK.' },
+  );
 });
 
 await test('season 2 draft offers can contain seasonal cards', () => {

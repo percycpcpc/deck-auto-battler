@@ -138,7 +138,7 @@ test('Bristleback growth triggers at most once per round per unit', () => {
 });
 
 test('healing is capped at original printed HP and heals both sides', () => {
-  const s = empty(), healer = summon(s, 'player', getCard('scout'));
+  const s = empty(), healer = summon(s, 'player', { id: 'battlecry_healer', name: 'Battlecry Healer', cost: 0, atk: 1, hp: 4, heal: 2, healOn: 'battlecry' });
   const ally = summon(s, 'player', getCard('sellsword'));
   const enemy = summon(s, 'enemy', getCard('sellsword'));
   ally.baseMaxHp += 3; ally.damage = 4; enemy.damage = 2; healer.damage = 1; s.events = [];
@@ -169,9 +169,33 @@ test('on-damaged healing fires only when the healer survives', () => {
 });
 
 test('battlecry healing is a no-op with no heal event at full HP', () => {
-  const s = empty(), healer = summon(s, 'player', getCard('scout'));
+  const s = empty(), healer = summon(s, 'player', { id: 'battlecry_healer', name: 'Battlecry Healer', cost: 0, atk: 1, hp: 4, heal: 2, healOn: 'battlecry' });
   summon(s, 'enemy', getCard('sellsword')); s.events = []; triggerBattlecry(s, 'player', healer);
   assert.equal(s.events.some(event => event.type === 'heal'), false);
+});
+
+test('Scout permanently reduces only the opposing unit ATK by 2 for the combat', () => {
+  const s = empty(), scout = summon(s, 'player', getCard('scout'));
+  const target = summon(s, 'enemy', getCard('road_ogre'));
+  const originalHp = effectiveStats(s, 'enemy', target).hp;
+  s.events = []; triggerBattlecry(s, 'player', scout);
+  assert.equal(effectiveStats(s, 'enemy', target).atk, 1);
+  assert.equal(effectiveStats(s, 'enemy', target).hp, originalHp);
+  assert.equal(target.baseAtk, 1);
+  assert.deepEqual(
+    (({ type, side, uid, unit, kind, targetUid, target, targetIndex, amount }) => ({ type, side, uid, unit, kind, targetUid, target, targetIndex, amount }))(s.events[0]),
+    { type: 'battlecry', side: 'player', uid: scout.uid, unit: 'Scout', kind: 'oppositeAtkDown2', targetUid: target.uid, target: 'Road Ogre', targetIndex: 0, amount: -2 },
+  );
+  exchange(s, 'player', scout, target);
+  assert.equal(effectiveStats(s, 'enemy', target).atk, 1);
+});
+
+test('Scout battlecry safely fizzles with no opposing unit', () => {
+  const s = empty(), scout = summon(s, 'player', getCard('scout'));
+  s.events = []; triggerBattlecry(s, 'player', scout);
+  assert.equal(s.events.length, 1);
+  assert.equal(s.events[0].type, 'battlecry');
+  assert.equal(s.events[0].targetUid, undefined);
 });
 
 test('a surviving initiating attacker still receives kill growth', () => {
@@ -299,8 +323,6 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false }; unit = summon(s, 'player', getCard('doomcaller')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.destroyed, true); assert.equal(s.events[1].type, 'chargerDestroyed');
 
-  s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false }; unit = summon(s, 'player', getCard('scout')); s.events = []; triggerBattlecry(s, 'player', unit);
-  event = s.events[0]; assert.equal(event.alreadyKnown, true); assert.equal(event.scouted, false); assert.equal(s.enemy.scouted, false);
 });
 
 test('Chrono Imp turns a 1 counter into immediate deployment', () => {

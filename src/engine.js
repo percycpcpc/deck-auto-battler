@@ -254,8 +254,9 @@ export function triggerBattlecry(state, side, unit) {
       emit(state, 'battlecry', { ...event, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: 1 });
       for (const i of neighbors) { own.board[i].baseAtk++; own.board[i].baseMaxHp++; } break;
     }
-    case 'scout':
-      emit(state, 'battlecry', { ...event, targetSide: foeSide, scouted: false, alreadyKnown: true }); break;
+    case 'oppositeAtkDown2':
+      emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined, amount: -2 });
+      if (opposite) opposite.baseAtk = Math.max(0, opposite.baseAtk - 2); break;
     case 'duelist': {
       const neighbors = [index - 1, index + 1].filter(i => own.board[i] && !own.board[i].dead), applied = neighbors.length === 0;
       emit(state, 'battlecry', { ...event, targetUid: unit.uid, target: unit.name, adjacent: neighbors.length, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: applied ? 2 : 0, applied, fizzle: !applied });
