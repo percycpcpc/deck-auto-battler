@@ -888,9 +888,15 @@ function showTitle() {
   app.replaceChildren(screen);
 }
 function showStarterSelection() {
+  // Each visit starts from the first banner, including after returning from Back.
   let selectedId = STARTERS[0].id;
   const screen = el('section', 'screen starter-select'), choices = el('div', 'starter-select__choices');
   const confirm = button('March', () => startRun(selectedId));
+  const back = button('Back', showTitle);
+  back.classList.add('secondary');
+  back.style.setProperty('--starter-hover', `${dur(TIMING.hover)}ms`);
+  const actions = el('div', 'starter-select__actions');
+  actions.append(confirm, back);
   const starterButtons = STARTERS.map(starter => {
     const choice = el('button', 'starter-choice');
     choice.type = 'button'; choice.setAttribute('aria-pressed', String(starter.id === selectedId));
@@ -905,7 +911,7 @@ function showStarterSelection() {
     return choice;
   });
   choices.append(...starterButtons);
-  screen.append(el('h1', '', 'CHOOSE YOUR BANNER'), el('p', 'starter-select__intro', 'Select the warband that will march into Fight 1.'), choices, confirm);
+  screen.append(el('h1', '', 'CHOOSE YOUR BANNER'), el('p', 'starter-select__intro', 'Select the warband that will march into Fight 1.'), choices, actions);
   app.replaceChildren(screen);
 }
 function startRun(starterId) { run = createRun(Math.random, starterId); stopped = false; beginFight(); }
