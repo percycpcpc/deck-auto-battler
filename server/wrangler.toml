@@ -6,10 +6,10 @@ compatibility_date = "2026-10-01"
 binding = "DB"
 database_name = "deck_auto_battler"
 # Replace after: npx wrangler d1 create deck_auto_battler
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "efa38ce8-3658-4db8-96b4-4f3c1479d5f5"
 migrations_dir = "migrations"
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 # OAuth and payment configuration names can be added here later.
 # Credentials must be stored with `wrangler secret put`, never committed here.

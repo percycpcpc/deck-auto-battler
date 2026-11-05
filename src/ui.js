@@ -4,7 +4,7 @@ import { SPEEDS, durationAtSpeed, isSpeedAvailable } from './speeds.js';
 
 // CONSTANTS
 export const TIMING = Object.freeze({ reveal: 300, tick: 250, deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnStart: 150, attack: 350, impactDelay: 140, hitStop: 75, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, chargerDestroyed: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
-export const API_BASE = (() => { try { return localStorage.getItem('dab_api_base') || 'https://deck-auto-battler-api.workers.dev'; } catch { return 'https://deck-auto-battler-api.workers.dev'; } })();
+export const API_BASE = (() => { try { return localStorage.getItem('dab_api_base') || 'https://deck-auto-battler-api.percycpcpc.workers.dev'; } catch { return 'https://deck-auto-battler-api.percycpcpc.workers.dev'; } })();
 const readSpeed = () => { try { const value = Number(localStorage.getItem('dab_speed')); return SPEEDS.includes(value) ? value : 2; } catch { return 2; } };
 let playbackSpeed = 2;
 export const dur = ms => durationAtSpeed(ms, playbackSpeed);
