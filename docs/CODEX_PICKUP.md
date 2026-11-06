@@ -43,6 +43,25 @@ when the pass is a coherent unit, and moves the board item to **Done**
 with the commit SHA in a closing comment. Board Status=Done means
 shipped — keep Done items linked to their commit as the audit trail.
 
+### Autonomous pickup mode (owner-ratified 2026-11-07)
+
+When no orchestrator is in the loop (hourly pickup worker), each pass
+lands on main directly — no draft-PR queue, no owner review pileup:
+
+1. Commit on `pass/<issue>-<slug>`, then `git fetch origin` and rebase
+   onto `origin/main` — never a stale base. Rebase conflicts resolve
+   per the precedence rules in the delegated-dev-pipeline skill.
+2. Re-run the full verification battery ON THE REBASED STATE. A
+   battery that was green before the rebase proves nothing after it.
+3. Green only: push to `main` (token-embedded URL — GCM is broken on
+   the worker machine; never print credentials), comment the issue
+   with the landed commit SHA, and move the board item to **Done**.
+4. Red: main is never touched. Comment the failure evidence on the
+   issue, move the item back to **Todo**, and pick the next ticket.
+   Three consecutive red passes halt the worker with a full report.
+5. The pass branch is deleted after landing; main history is the audit
+   trail. Draft PRs are not opened in this mode.
+
 ## 4. Owner experiments
 
 If a pass changes ratified behavior, mark the doc section "under owner
