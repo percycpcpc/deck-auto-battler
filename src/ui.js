@@ -191,6 +191,10 @@ async function showProfile() {
 }
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
+  tax: 'On deploy: gain 1 mana.',
+  chrono: 'On deploy: drain 1 enemy mana (minimum 0).',
+  meddler: 'On deploy: return the opposing non-boss unit to the top of its deck, stripped of changes.',
+  doom: 'On deploy: return the opposing non-boss unit to the bottom of its deck, stripped of changes.',
   hex_hurler: 'On deploy: deal 2 damage to the opposing unit.',
   gate: 'On deploy: shove the opposing unit to the far right.',
   squire: 'On deploy: give adjacent allies +1/+1.',
@@ -509,6 +513,9 @@ function battlecryCaption(event) {
   if (event.kind === 'squire') return event.neighborIndices?.length ? 'Battlecry: adjacent allies gain +1/+1' : 'Battlecry: no adjacent allies';
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
   if (event.kind === 'duelist') return event.applied ? 'Battlecry: gain +2/+2' : 'Battlecry: adjacent ally prevents gain';
+  if (event.kind === 'tax') return 'Battlecry: gain 1 mana';
+  if (event.kind === 'chrono') return `Battlecry: drain ${Math.abs(event.amount)} enemy mana`;
+  if (event.kind === 'meddler' || event.kind === 'doom') return event.fizzle ? 'Battlecry: no non-boss opposing unit' : `Battlecry: return ${event.target} to deck ${event.destination}`;
   if (event.kind === 'scout') return 'Battlecry: already scouted — enemy order is known';
   return `Battlecry: ${battlecryText(event).replace(/^On deploy:\s*/i, '') || 'no effect'}`;
 }
@@ -555,6 +562,24 @@ async function playEvent(event, deployUids) {
   els.phase.textContent = `${event.phase.toUpperCase()} · ROUND ${event.round}`;
   if (event.type === 'deploy') return playDeploy(event);
   if (event.type === 'battlecry') return playBattlecry(event);
+  if (event.type === 'manaChange') {
+    setText(els[event.side].mana, `MANA ${event.newPool}`);
+    pulse(els[event.side].mana, 'fx-deploy-pop', TIMING.statChange);
+    await wait(TIMING.statChange); return;
+  }
+  if (event.type === 'bounce') {
+    if (event.fizzle) { await wait(TIMING.battlecry); return; }
+    const target = getUnitEl(event.targetUid);
+    pulse(target, 'fx-battlecry-target', TIMING.battlecry);
+    await wait(TIMING.battlecry);
+    removeUnitEl(event.targetUid);
+    const def = CARD_POOL.find(card => card.id === event.cardId);
+    if (def) {
+      if (event.destination === 'top') deckQueues[event.targetSide].unshift(def); else deckQueues[event.targetSide].push(def);
+      replaceDeckTop(event.targetSide, deckQueues[event.targetSide][0]); updateEnemyQueuePanel();
+    }
+    return;
+  }
   if (event.type === 'summonPing') { pulse(getUnitEl(event.uid), 'fx-battlecry-source', TIMING.summonPing); pulse(getUnitEl(event.targetUid), 'fx-battlecry-target', TIMING.summonPing); await wait(TIMING.summonPing); return; }
   if (event.type === 'summon') { if (!deployUids.has(event.uid)) { const unit = event.state[event.side].board.find(item => item.uid === event.uid), index = event.state[event.side].board.findIndex(item => item.uid === event.uid); if (unit) pulse(createUnitEl(unit.uid, unit, event.side, index, event.state), 'fx-deploy-pop', TIMING.summon); } reconcile(event.state); await wait(TIMING.summon); return; }
   if (event.type === 'attack') return playAttack(event);
@@ -587,6 +612,8 @@ function appendEventLog(event) {
   if (event.type === 'shield') appendLog(`${who} shield blocks damage`);
   if (event.type === 'heal') appendLog(`${who} ${event.unit} heals ${event.amount} HP`);
   if (event.type === 'battlecry') appendLog(`${event.unit} — ${battlecryCaption(event)}.`);
+  if (event.type === 'manaChange') appendLog(`${event.unit} changes ${event.side === 'player' ? 'your' : 'enemy'} mana by ${event.amount}.`);
+  if (event.type === 'bounce') appendLog(event.fizzle ? `${event.unit} finds no unit to return.` : `${event.unit} returns ${event.target} to deck ${event.destination}.`);
   if (event.type === 'summonPing') appendLog(`${event.unit} pings ${event.target} for ${event.amount}.`);
   if (event.type === 'statChange' && event.reason === 'onDamaged') appendLog(`${event.unit} gains +${event.amount} Attack.`);
   if (event.type === 'statChange' && event.reason === 'onKill') appendLog(`${event.unit} gains +${event.amount}/+${event.amount}.`);
