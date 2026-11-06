@@ -52,6 +52,13 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 - Inquisitor tiebreak: **leftmost** among tied highest-ATK units (effective ATK, post-aura).
 - Gravedigger counts **all unit deaths on both sides** since the fight began, including tokens and deaths before Gravedigger entered, excluding itself.
 
+## Card text contract
+- **Bulwark** targets the leftmost enemy tied for highest effective ATK when its Deathrattle resolves and permanently reduces that unit's base ATK by 2, floored at 0. It does not depend on Bulwark's former opposite lane still being occupied.
+- **Gate Crasher** moves its living opposite target to the end of that same line. Units between the old position and line end shift left; it does not create or preserve an empty lane, and it does nothing when no move is possible.
+- **Copycat** replaces its base ATK with the opposite unit's current effective ATK and its base max HP with that unit's remaining effective HP. It does not copy keywords, abilities, damage, or status.
+- **Cataclysm** deals 2 damage to every living unit on both sides, including Cataclysm itself. Normal shields, damage triggers, Poisonous, and death resolution apply.
+- **Hexblade** sets only the opposite unit's base ATK and base max HP to 1 and clears its prior damage. It is not silence: keywords, abilities, status, and live aura modifiers remain.
+
 ## Replay information
 
 Replays are full-information: both decks and all events are visible to anyone with the link. Live-scouting invariants (`UI_ARCHITECTURE.md`) apply ONLY to in-run fights.

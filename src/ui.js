@@ -192,16 +192,16 @@ async function showProfile() {
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
   hex_hurler: 'On deploy: deal 2 damage to the opposing unit.',
-  gate: 'On deploy: shove the opposing unit to the far right.',
+  gate: 'On deploy: move the opposing unit to the end of its line.',
   squire: 'On deploy: give adjacent allies +1/+1.',
   scout: 'On deploy: already scouted — enemy order is known.',
   duelist: 'On deploy: gain +2/+2 if no adjacent ally.',
-  hexblade: 'On deploy: set the opposing unit to 1/1.',
+  hexblade: "On deploy: set the opposing unit's base ATK and HP to 1.",
   gravedigger: 'On deploy: summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.',
   inquisitor: "On deploy: deal 3 damage to the enemy's strongest unit.",
-  copycat: "On deploy: copy the opposing unit's ATK and HP.",
+  copycat: "On deploy: copy the opposing unit's current ATK and remaining HP.",
   cultist: 'On deploy: devour your leftmost other unit and gain its stats.',
-  cataclysm: 'On deploy: deal 2 damage to every unit.',
+  cataclysm: 'On deploy: deal 2 damage to every unit, including this one.',
   firebelch: 'On deploy: deal 1 damage to ALL enemy units.',
 });
 const DEATHRATTLE_TEXT = Object.freeze({
@@ -209,7 +209,7 @@ const DEATHRATTLE_TEXT = Object.freeze({
   summon2x2: 'Deathrattle: summon two 2/3s.',
   spite: 'Deathrattle: deal 1 damage to the opposing unit.',
   plague: 'Deathrattle: deal 1 damage to every enemy unit.',
-  oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
+  oppositeAtkDown: 'Deathrattle: the highest-ATK enemy loses 2 ATK.',
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
 const bossText = card => card?.text || '';

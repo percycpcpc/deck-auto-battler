@@ -54,7 +54,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to opposite unit
 4. Tax Collector (cost 1) — 1/4, Battlecry: enemy charging card +1 turn
 5. Chrono Imp (cost 1) — 1/4, Battlecry: your charging card ticks down 1 extra
-6. Gate Crasher (cost 1) — 2/4, Battlecry: push the unit opposite to the rightmost empty slot
+6. Gate Crasher (cost 1) — 2/4, Battlecry: move the opposite unit to the end of its line
 7. Leeching Tick (cost 1) — 1/5, when this kills a unit, gain +1/+1
 8. Squire (cost 1) — 1/4, Battlecry: adjacent units get +1/+1
 9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the unit opposite
@@ -63,7 +63,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 12. Venom Hound (cost 2) — 3/5 Poisonous
 13. Plague Bearer (cost 2) — 2/9, Deathrattle: deal 1 to all enemies
 14. Warlord (cost 2) — 2/9, Aura: adjacent +1/+0
-15. Bulwark (cost 2) — 1/9, Deathrattle: the unit opposite gets −2 ATK
+15. Bulwark (cost 2) — 1/9, Deathrattle: the highest-ATK enemy loses 2 ATK
 16. Duelist (cost 2) — 3/5, On deploy: gain +2/+2 if no adjacent ally
 17. Gravedigger (cost 2) — 2/6, Battlecry: summon a 1/2 for each unit that died this combat
 18. Meddler (cost 2) — 2/6, Battlecry: put the enemy's charging card back on top of their deck
@@ -74,9 +74,9 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 23. Quillback Elder (cost 3) — 3/13, when any other unit enters a battlefield, deal 1 damage to it
 
 **Mythic (8):**
-1. Hexblade (cost 2) — 2/6, Battlecry: set the unit opposite to 1/1
-2. Copycat (cost 2) — 3/6, Battlecry: copy the ATK/HP of the unit opposite
-3. Cataclysm (cost 3) — 2/6, Battlecry: deal 2 to ALL units (both sides)
+1. Hexblade (cost 2) — 2/6, Battlecry: set the opposite unit's base ATK and HP to 1 (keywords and auras remain)
+2. Copycat (cost 2) — 3/6, Battlecry: copy the opposite unit's current effective ATK and remaining HP as base stats (keywords are not copied)
+3. Cataclysm (cost 3) — 2/6, Battlecry: deal 2 to ALL units on both sides, including itself
 4. Cultist (cost 3) — 3/8, Battlecry: destroy your leftmost other unit, gain its ATK and HP
 5. Doomcaller (cost 3) — 4/10, Battlecry: destroy the enemy's charging card
 6. Inquisitor (cost 3) — 4/10, Battlecry: deal 3 to highest-ATK enemy
