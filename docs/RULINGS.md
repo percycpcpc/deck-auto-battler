@@ -28,6 +28,9 @@ Tax Collector, Chrono Imp, Meddler, and Doomcaller are deprecated from draft gen
 ## Tokens
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
+## Battlecry targeting
+- Squire gives +1/+1 to every other living friendly unit when it enters play. It never buffs itself or corpses; with no eligible ally, its Battlecry fizzles.
+
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
 - Soft seasons only add cards to the active draft pool; draft cadence and 50/35/15 tier weighting do not change as the pool grows.

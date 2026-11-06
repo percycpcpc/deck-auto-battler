@@ -1,49 +1,39 @@
 # CODEX_HANDOFF
 
-## Project Goal
+## Goal and phase
 
-Deliver the owner-evaluation `alt-turns` experiment: strict player/enemy turns with persistent mana, direct affordable deployment, active-side combat/cleanup, and no charging-slot UI.
+- Goal: issue #31, owner-selected Squire Option A.
+- Phase: maintenance balance pass, ready for review.
+- Branch: `pass/31-squire-battlecry-rework`.
 
-## Current Phase
+## Implemented
 
-- Phase: production experiment
-- Status: implemented and locally verified; no commit made
-
-## Latest Completed Work
-
-- Replaced the five-step simultaneous round with player-first strict alternation and observable `turn`/`mana` events.
-- Added persistent uncapped mana and repeated top-deck deployment into the leftmost empty slot.
-- Scoped corpse cleanup to the active side and retained mutual exchanges, keyword interactions, deterministic RNG, bosses, and the two-turn stalemate window.
-- Removed the charging-slot presentation, added both mana banks and active-turn indication, and retained battle-root DOM invariants.
-- Deprecated Tax Collector, Chrono Imp, Meddler, and Doomcaller from active draft pools; Scout remains active.
-- Updated experiment docs, event/balance tools, browser invariants, and rule-coupled tests.
-- Captured 12 screenshots in `refs/ui-audit/alt-turns/` at 1440x900 and 390x844.
-
-## Important Modified Files
-
-- `src/engine.js`, `src/seasons.js`, `src/ui.js`, `styles.css`
-- `test/engine.test.mjs`, `test/seasons.test.mjs`
-- `tools/balance_sim.mjs`, `tools/event_snapshot_check.mjs`, `tools/invariants.html`
-- `docs/SPEC.md`, `docs/RULINGS.md`
+- Squire now gives +1/+1 to every other living friendly unit, including non-adjacent allies.
+- Squire excludes itself and corpses; a lone Squire emits `fizzle: true`.
+- The `battlecry` event records target indices/uids/names before stat mutation.
+- Squire's card text, `docs/SPEC.md`, and binding `docs/RULINGS.md` match the implementation.
+- Focused engine coverage verifies broad targeting, exclusions, pre-mutation snapshots, and fizzle behavior.
 
 ## Verification
 
-- `node test/engine.test.mjs`: 67/67 passed
-- `node test/seasons.test.mjs`: 6/6 passed
-- `node test/speed_gating.test.mjs`: 3/3 passed
-- `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/balance_sim.mjs 1 200`: fights 1-3 reported win rate and turn percentiles
-- `node tools/ui_invariants_check.mjs`: PASS
-- Browser `tools/invariants.html` on port 8321: all CHECK lines PASS
-- `node --check src/engine.js`, `node --check src/ui.js`, `git diff --check`: PASS (line-ending warnings only)
-- Grep of `src/engine.js` and `src/ui.js` for old flow terminology: no matches
+- `node test/engine.test.mjs`: 72/72 passed.
+- `node test/seasons.test.mjs`: 6/6 passed.
+- `node test/speed_gating.test.mjs`: 3/3 passed.
+- `node tools/event_snapshot_check.mjs`: PASS.
+- `node tools/ui_invariants_check.mjs`: PASS.
+- Real-browser `tools/deferred_shift_audit.py` against this worktree on port 8324: PASS, including `INVARIANTS: PASS`.
+- `node tools/balance_sim.mjs 1 200`: Oathbound fight 1 remains 100%, outside the legacy 65–78% band.
+- Baseline bisect at untouched `cc8c04b`: fight-1 win rates were Oathbound 100%, Rat Pack 93%, Iron Bastion 100%, Ember Vanguard 100%.
+- Changed tree: the same 100% / 93% / 100% / 100%. Iron Bastion median margin moved 20 → 24; all other fight-1 summaries were unchanged.
+- `git diff --check`: PASS (line-ending warnings only).
 
-## Known Risks / Untested Areas
+## Risks and boundaries
 
-- Windows denied visible Edge focus/screenshot permissions, so the real-browser harness and screenshots were completed in headless Chrome instead of the visible Edge window.
-- The owner experiment intentionally has no balance-band assertion; fight 1 measured 100% and fight 2 measured 36% under the fixed starter harness.
-- Documentation uses `git revert <sha>` because this agent was explicitly prohibited from creating the orchestrator-owned commit.
+- The out-of-band win rates predate this pass and come from the owner-evaluation alternating-turn spine. This pass does not worsen any starter's fight-1 win rate, but it strengthens Iron Bastion's median margin by four HP as intended.
+- No UI/DOM, raster art, server, entitlement, persistence, or timing code changed.
+- The owner-evaluation combat experiment and its existing documented revert path remain intact.
+- `DEBUG_HANDOFF.md` was not created because no unresolved defect or repeated failed hypothesis remains.
 
-## Next Safest Task
+## Next safest task
 
-Owner review of the screenshot matrix and measured pacing, then orchestrator commit/ship or experiment revert.
+Review the draft PR and decide whether the intended Iron Bastion margin increase is acceptable while the alternating-turn baseline remains under owner evaluation.

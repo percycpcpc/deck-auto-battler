@@ -10,7 +10,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('chrono_imp', 'Chrono Imp', 1, 1, 4, { tier: 'rare', battlecry: 'chrono', text: 'The next card you reveal starts with 1 fewer charge turn, minimum 1.', deprecated: true }),
   card('gate_crasher', 'Gate Crasher', 1, 2, 4, { tier: 'rare', battlecry: 'gate' }),
   card('leeching_tick', 'Leeching Tick', 1, 1, 5, { tier: 'rare', onKill: 'grow' }),
-  card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),
+  card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire', text: 'Battlecry: Give all other friendly units +1/+1.' }),
   card('spiteful_imp', 'Spiteful Imp', 1, 1, 4, { tier: 'rare', deathrattle: 'spite' }),
   card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'oppositeAtkDown2', text: 'Battlecry: the opposing unit gets −2 ATK.' }),
   card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight' }),

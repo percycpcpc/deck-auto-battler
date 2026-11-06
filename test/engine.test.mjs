@@ -351,8 +351,24 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); unit = summon(s, 'player', getCard('inquisitor')); summon(s, 'enemy', getCard('sellsword')); const strongest = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.targetUid, strongest.uid); assert.equal(event.targetIndex, 1); assert.equal(s.events[1].type, 'damage');
 
-  s = empty(); summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
-  event = s.events[0]; assert.deepEqual(event.neighborIndices, [0]); assert.equal(event.targetUids.length, 1);
+  s = empty();
+  const firstAlly = summon(s, 'player', getCard('sellsword'));
+  const squireCorpse = summon(s, 'player', getCard('road_ogre')); squireCorpse.dead = true;
+  const distantAlly = summon(s, 'player', getCard('oathbound'));
+  unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0];
+  assert.deepEqual(event.targetIndices, [0, 2]);
+  assert.deepEqual(event.targetUids, [firstAlly.uid, distantAlly.uid]);
+  assert.equal(event.fizzle, false);
+  assert.equal(event.state.player.board[0].baseAtk, 2);
+  assert.equal(event.state.player.board[2].baseAtk, 2);
+  assert.equal(firstAlly.baseAtk, 3); assert.equal(firstAlly.baseMaxHp, 4);
+  assert.equal(distantAlly.baseAtk, 3); assert.equal(distantAlly.baseMaxHp, 7);
+  assert.equal(squireCorpse.baseAtk, 3); assert.equal(squireCorpse.baseMaxHp, 6);
+  assert.equal(unit.baseAtk, 1); assert.equal(unit.baseMaxHp, 4);
+
+  s = empty(); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.deepEqual(event.targetUids, []); assert.equal(event.fizzle, true);
 
   s = empty(); unit = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(unit.baseAtk, 5); assert.equal(unit.baseMaxHp, 7); assert.equal(effectiveStats(s, 'player', unit).hp, 7); assert.equal(event.targetUid, unit.uid); assert.equal(event.amount, 2); assert.equal(event.applied, true); assert.equal(event.fizzle, false);
