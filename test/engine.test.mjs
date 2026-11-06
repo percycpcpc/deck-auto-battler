@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
+  CARD_POOL, HERO_HP, MAX_COMBAT_TURNS, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
   draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, resolveDeaths, runEndSnapshot, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
@@ -368,8 +368,8 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
 
 });
 
-test('deck-out does nothing and stalemate valve favors player on tie', () => {
-  const s = empty(); runRound(s); assert.equal(s.over, false); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.hp, HERO_HP);
+test('deck-out does nothing and stalemate valve draws on equal HP', () => {
+  const s = empty(); runRound(s); assert.equal(s.over, false); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'draw'); assert.equal(s.player.hp, HERO_HP);
 });
 
 test('regular enemies deploy from the top of their deterministic deck on enemy turns', () => {
@@ -597,11 +597,39 @@ test('deathrattle fires immediately at lethal while its corpse stays in lane', (
   assert.ok(deathAt >= 0 && summonAt > deathAt); assert.ok(s.player.board.includes(wisp)); assert.equal(wisp.dead, true);
 });
 
-test('stalemate valve ignores corpses when comparing round progress', () => {
+test('stalemate valve ignores corpses when comparing round progress and resolves equal HP as a draw', () => {
   const s = empty(), corpse = summon(s, 'player', getCard('dagger_imp'));
   exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), corpse); s.events = [];
   runRound(s); runRound(s);
-  assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.board.length, 0); assert.ok(s.events.some(event => event.type === 'stalemate'));
+  assert.equal(s.over, true); assert.equal(s.winner, 'draw'); assert.equal(s.player.board.length, 0);
+  assert.ok(s.events.some(event => event.type === 'stalemate' && event.reason === 'noProgress'));
+});
+
+test('ongoing face damage is progress even when live-unit count is unchanged', () => {
+  const s = empty(); summon(s, 'player', { id: 'clock', name: 'Clock', cost: 0, atk: 1, hp: 99 });
+  runRound(s); runRound(s);
+  assert.equal(s.enemy.hp, HERO_HP - 1); assert.equal(s.over, false);
+  assert.equal(s.events.some(event => event.type === 'stalemate'), false);
+});
+
+test('a frozen board with no state change draws symmetrically', () => {
+  const play = swapped => {
+    const s = empty();
+    summon(s, swapped ? 'enemy' : 'player', { id: 'wall-a', name: 'Wall A', cost: 0, atk: 0, hp: 9 });
+    summon(s, swapped ? 'player' : 'enemy', { id: 'wall-b', name: 'Wall B', cost: 0, atk: 0, hp: 9 });
+    runRound(s); runRound(s); return s;
+  };
+  for (const s of [play(false), play(true)]) {
+    assert.equal(s.over, true); assert.equal(s.winner, 'draw');
+    assert.ok(s.events.some(event => event.type === 'stalemate' && event.reason === 'noProgress'));
+  }
+});
+
+test('maximum-turn valve terminates progressing combat with the same symmetric result rule', () => {
+  const s = empty(); summon(s, 'player', { id: 'clock', name: 'Clock', cost: 0, atk: 1, hp: 99 });
+  s.turnNumber = MAX_COMBAT_TURNS - 1; s.activeSide = 'player'; runRound(s);
+  assert.equal(s.over, true); assert.equal(s.winner, 'player');
+  assert.ok(s.events.some(event => event.type === 'stalemate' && event.reason === 'turnLimit'));
 });
 
 test('two corpses compact once at cleanup and preserve live left-to-right order', () => {

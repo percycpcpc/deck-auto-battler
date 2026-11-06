@@ -20,7 +20,7 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 - **Death and cleanup**: lethal marking and Deathrattles remain immediate. At the end of the active side's turn, after its combat sweep, remove marked corpses from both sides; for each affected side, emit one `shift { side, removedUids }` and compact once preserving order. The idle side therefore begins its turn corpse-free.
 - **Deck-out**: an empty deck does nothing; there is no reshuffle or fatigue.
 - **Bosses** start in column 1, act on the enemy's first combat, and count toward the 20-slot cap.
-- **Stalemate**: one full round is one player turn plus one enemy turn. If both decks are empty and total live-unit count does not change across that pair, higher hero HP wins; ties go to the player.
+- **Stalemate**: one full round is one player turn plus one enemy turn. If both decks are empty and a full round produces no meaningful combat-state change (hero HP, live-unit identity, stats, damage, or shield state), higher hero HP wins; equal HP is a draw. At 400 turns, the same HP comparison ends the fight as a safety limit even if combat is still changing.
 
 ## Keywords (v0)
 - **Divine Shield** — negates the first instance of damage, then breaks.

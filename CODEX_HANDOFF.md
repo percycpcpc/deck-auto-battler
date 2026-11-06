@@ -2,44 +2,45 @@
 
 ## Project Goal
 
-Establish a deterministic matched-seed starter-parity battery for issue #42 before any starter list or balance changes.
+Ship issue #33: progress-aware stalemate detection with side-symmetric draws across local fights, replays, friendlies, and ranked scoring.
 
 ## Current Phase
 
-- Phase: maintenance / balance evidence
-- Status: implementation and scoped pickup battery complete; ready to ship as a draft PR
+- Phase: maintenance
+- Status: implemented; shipping blocked by the required 65–78% fight-1 balance gate
 
 ## Latest Completed Work
 
-- Added `tools/starter_parity.mjs` with matched seeds across wide, tall, tempo-curve, Warherald, Hivematron, and Broodmother fixtures.
-- Added a deterministic one-draft comparison using a separate seeded offer and a documented pick policy.
-- Added focused coverage for starter/scenario completeness, identical seed sets, byte-identical reruns, evidence fields, and invalid seeds.
-- Published the 200-seed baseline and findings without changing starter lists, card stats, engine rules, season data, UI, or server code.
+- Replaced live-unit-count stalemate detection with a deterministic full-round combat fingerprint covering hero HP and live-unit identity/stats/damage/shields.
+- Added a 400-turn safety valve and explicit `noProgress` / `turnLimit` event reasons.
+- Equal-HP valves now resolve as `draw`; ranked ELO scores draws 0.5/0.5.
+- Added draw-safe battle-log, replay, friendly, and ranked result copy.
+- Updated `SPEC.md`, binding `RULINGS.md`, and stale implementation-ledger wording.
+- Captured desktop/mobile draw-state evidence in `refs/ui-audit/stalemate-draw/`.
 
 ## Important Modified Files
 
-- `tools/starter_parity.mjs`
-- `test/starter_parity.test.mjs`
-- `docs/STARTER_PARITY.md`
-- `CODEX_HANDOFF.md`
+- `src/engine.js`, `src/ui.js`
+- `server/src/ranked.js`
+- `test/engine.test.mjs`, `server/test/ranked.test.mjs`, `server/test/sim.test.mjs`
+- `docs/SPEC.md`, `docs/RULINGS.md`, `docs/WAR_LEDGER_IMPLEMENTATION.md`
 
 ## Verification
 
-- `node test/starter_parity.test.mjs`: 4/4 passed
-- `node tools/starter_parity.mjs 200`: deterministic 7,200-fight matrix completed twice with identical results
-- `node test/engine.test.mjs`: 72/72 passed
+- `node test/engine.test.mjs`: 75/75 passed
+- Full server suite: 48/48 passed
 - `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/ui_invariants_check.mjs`: PASS (static harness wiring; no UI files touched)
-- `node tools/balance_sim.mjs 1 200`: fight 1 = 100% twice; pre-existing drift proven by 70% at SHA `11542d9` and zero relevant diff from `origin/main`
-- `git diff --check`: PASS
-- Scope proof: no diff in engine, seasons, UI/CSS, server, or assets
+- `node tools/ui_invariants_check.mjs`: PASS
+- Real-browser invariants: checks 1, 2, 3, 6, 8, 10, 11 PASS
+- Draw smoke: `winner=draw`, `reason=noProgress`, battle log contains `Stalemate: draw`
+- Static syntax checks and `git diff --check`: PASS
+- `node tools/balance_sim.mjs 1 200`: fight 1 92%, fight 2 77%, fight 3 100%; historical 65–78% band remains broken by the owner-evaluation alternating-turn spine, bisected to `3cf09cc` + `7a51c50`. This ticket improves fight 1 from current-main baseline 100% to 92% by allowing progressing combat to continue.
 
 ## Known Risks / Untested Areas
 
-- The requested charging fixture is a documented 1/2/3-cost tempo proxy because the owner-evaluation combat spine removed charging slots.
-- A no-draft level-20 fixture is an isolation probe, not a real-run forecast; all starters correctly read 0% without the preceding drafts/events.
-- This battery measures one deterministic draft policy, not optimal player drafting.
+- Balance is not in the historical fight-1 band; this is a pre-existing experiment-level blocker, not introduced by #33.
+- Draw result labels were browser-smoked in battle playback; ranked/friendly draw panels are covered by shared result-contract logic but not forced through live D1 matchmaking in-browser.
 
 ## Next Safest Task
 
-Commit and push `pass/42-starter-parity-battery`, then open the draft PR with the verification and pre-existing tuning note.
+Ratify a new alternating-turn balance band or land a dedicated encounter/combat rebalance, then rerun the battery and ship #33 from `pass/33-stalemate-detection`.

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import worker from '../src/index.js';
-import { eloDelta, getCurrentSeason } from '../src/ranked.js';
+import { eloDelta, getCurrentSeason, rankedScores } from '../src/ranked.js';
 
 class FakeStatement {
   constructor(db, sql) { this.db = db; this.sql = sql.replace(/\s+/g, ' ').trim(); this.values = []; }
@@ -64,6 +64,8 @@ test('ELO uses locked K32 formula and half-away-from-zero rounding', () => {
   const diff = 400 * Math.log10((1 / 0.515625) - 1);
   assert.equal(eloDelta(1500, 1500 + diff, 1), 16);
   assert.equal(eloDelta(1500, 1500 + diff, 0), -17);
+  assert.deepEqual(rankedScores('draw'), { player: 0.5, enemy: 0.5 });
+  assert.equal(eloDelta(1500, 1500, rankedScores('draw').player), 0);
   assert.equal(getCurrentSeason(), 'season_1');
 });
 
