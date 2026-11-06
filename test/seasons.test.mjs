@@ -24,14 +24,16 @@ await test('season 2 rotates starter selection and enemy keyword', () => {
   assert.ok(engine.enemyDeckFor(1).every(card => card.keywords?.includes(SEASONS[1].enemyKeyword)));
 });
 
-await test('season 2 pool adds seven cards without removing base cards', () => {
+await test('season 2 draft pool adds seven cards and excludes only starter-only Oathbound', () => {
   const baseIds = new Set(SEASONS[0].starters.flatMap(starter => starter.cards));
   const poolIds = new Set(activePool().map(card => card.id));
   const scout = unionPool().find(card => card.id === 'scout');
-  assert.equal(activePool().length, 39);
+  assert.equal(activePool().length, 38);
   assert.deepEqual(unionPool().filter(card => card.deprecated).map(card => card.id), ['tax_collector', 'chrono_imp', 'meddler', 'doomcaller']);
   assert.ok(unionPool().find(card => card.id === 'scout') && !unionPool().find(card => card.id === 'scout').deprecated);
-  assert.ok([...baseIds].every(id => poolIds.has(id)));
+  assert.ok([...baseIds].filter(id => id !== 'oathbound').every(id => poolIds.has(id)));
+  assert.equal(poolIds.has('oathbound'), false);
+  assert.ok(unionPool().some(card => card.id === 'oathbound' && card.draftExcluded));
   assert.ok(SEASONS[1].poolExtras.every(id => poolIds.has(id)));
   assert.deepEqual(
     (({ cost, atk, hp, tier, battlecry, heal, healOn, text }) => ({ cost, atk, hp, tier, battlecry, heal, healOn, text }))(scout),

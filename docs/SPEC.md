@@ -44,7 +44,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 **Common (5):**
 1. Dagger Imp (cost 1) — 2/2, Rush
 2. Sellsword (cost 1) — 2/3
-3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve)
+3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve and excluded from ordinary draft offers)
 4. Road Ogre (cost 2) — 3/6
 5. Colossus (cost 3) — 6/9
 
@@ -71,7 +71,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 20. Firebelcher (cost 2) — 2/9, Battlecry: deal 1 damage to ALL enemy units
 21. Shield Saint (cost 2) — 3/6 Divine Shield
 22. Bristleback (cost 2) — 1/9, when this takes damage and survives, gain +3 Attack
-23. Quillback Elder (cost 3) — 3/13, when any other unit enters a battlefield, deal 1 damage to it
+23. Quillback Elder (cost 3) — 3/10, when any other unit enters a battlefield, deal 1 damage to it
 
 **Mythic (8):**
 1. Hexblade (cost 2) — 2/6, Battlecry: set the unit opposite to 1/1
