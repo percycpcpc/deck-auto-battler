@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { HERO_HP, getCard, makeRng, runRound, startRunFight } from '../../src/engine.js';
 import worker from '../src/index.js';
-import { simulateDeckBattle } from '../src/sim.js';
+import { simulateDeckBattle, simulateSoloFight } from '../src/sim.js';
 
 class FakeStatement {
   constructor(db, sql) { this.db = db; this.sql = sql.replace(/\s+/g, ' ').trim(); this.values = []; }
@@ -133,4 +133,42 @@ test('validates auth, seeds, missing decks, mirrors, and missing replays', async
   assert.equal((await request(db, '/api/sim', { method: 'POST', token, body: { ...body, deckBId: crypto.randomUUID() } })).status, 404);
   assert.equal((await request(db, '/api/sim', { method: 'POST', token, body: { deckAId: a.id, deckBId: a.id, seed: 7 } })).status, 200);
   assert.equal((await request(db, `/api/replays/${crypto.randomUUID()}`)).status, 404);
+});
+
+test('solo simulation is byte-identical including generated uids', async () => {
+  const { db, token } = await setup();
+  const body = { deckCardIds: deckA, seed: 0x54c0ffee, fight: 1 };
+  const first = await (await request(db, '/api/sim/solo', { method: 'POST', token, body })).json();
+  const second = await (await request(db, '/api/sim/solo', { method: 'POST', token, body })).json();
+  assert.equal(JSON.stringify(first.events), JSON.stringify(second.events));
+  const firstUids = first.events.flatMap(event => [event.uid, event.targetUid].filter(Boolean));
+  assert.ok(firstUids.length > 0);
+  assert.deepEqual(firstUids, second.events.flatMap(event => [event.uid, event.targetUid].filter(Boolean)));
+});
+
+test('solo simulation rejects out-of-pool cards and missing auth', async () => {
+  const { db, token } = await setup();
+  const body = { deckCardIds: deckA, seed: 54, fight: 1 };
+  assert.equal((await request(db, '/api/sim/solo', { method: 'POST', body })).status, 401);
+  assert.equal((await request(db, '/api/sim/solo', { method: 'POST', token, body: { ...body, deckCardIds: [...deckA, 'not_in_union_pool'] } })).status, 400);
+});
+
+test('solo endpoint winner and rounds match the local engine run', async () => {
+  const { db, token } = await setup();
+  const body = { deckCardIds: deckA, seed: 987654321, fight: 3 };
+  const response = await request(db, '/api/sim/solo', { method: 'POST', token, body });
+  assert.equal(response.status, 200);
+  const server = await response.json();
+
+  const rng = makeRng(body.seed);
+  const localRun = { fight: body.fight, hp: HERO_HP, deck: body.deckCardIds.map(getCard), rng, enemyLine: null, won: false, lost: false, starterId: null };
+  const local = startRunFight(localRun); local.uidRng = localRun.rng;
+  const events = [];
+  while (!local.over) { runRound(local); events.push(...local.events); }
+  assert.equal(server.winner, local.winner);
+  assert.equal(server.rounds, local.round);
+  assert.ok(events.length > 0);
+  const direct = simulateSoloFight(body);
+  assert.equal(direct.winner, local.winner);
+  assert.equal(direct.rounds, local.round);
 });

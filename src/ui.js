@@ -915,7 +915,49 @@ function showStarterSelection() {
   app.replaceChildren(screen);
 }
 function startRun(starterId) { run = createRun(Math.random, starterId); stopped = false; beginFight(); }
-async function beginFight() { fight = startRunFight(run); mountBattleScreen(fight); await wait(TIMING.bannerHold + TIMING.deathFallback); els?.openingPreview?.classList.add('is-dismissed'); await wait(TIMING.bannerOut); while (!fight.over && !stopped) { runRound(fight); await playEvents(fight.events); await wait(TIMING.betweenRounds); } if (stopped) return; const completedLevel = run.fight; finishRunFight(run, fight); if (run.lost) return showEnd(false); if (run.won) return showEnd(true); await wait(TIMING.deathFallback); showGap(completedLevel); }
+export function buildReplayFight({ deckCardIds, seed, fight: fightNumber = 1, enemyCardIds = null }) {
+  const replayRun = { fight: fightNumber, hp: HERO_HP, deck: deckCardIds.map(getCard), rng: makeRng(seed), enemyLine: enemyCardIds?.map(getCard) || null, won: false, lost: false, starterId: null };
+  const built = startRunFight(replayRun); built.uidRng = replayRun.rng; return built;
+}
+function soloSeed() { return crypto.getRandomValues(new Uint32Array(1))[0]; }
+async function playLocalFight(localFight) {
+  while (!localFight.over && !stopped) { runRound(localFight); await playEvents(localFight.events); await wait(TIMING.betweenRounds); }
+}
+async function dismissOpeningPreview() {
+  if (!els?.openingPreview || els.openingPreview.classList.contains('is-dismissed')) return;
+  els.openingPreview.classList.add('is-dismissed'); await wait(TIMING.bannerOut);
+}
+async function beginFight() {
+  const seed = soloSeed(), deckCardIds = run.deck.map(card => card.id), fightNumber = run.fight;
+  fight = buildReplayFight({ deckCardIds, seed, fight: fightNumber }); mountBattleScreen(fight);
+  if (els?.banner) { els.banner.textContent = 'CONTACTING SERVER'; els.banner.hidden = false; }
+  let result;
+  try {
+    const response = await apiFetch('/api/sim/solo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deckCardIds, seed, fight: fightNumber }) });
+    if (!response.ok) throw Object.assign(new Error(`solo simulation failed (${response.status})`), { response });
+    result = await response.json();
+  } catch (caught) {
+    if (caught?.response && caught.response.status < 500) {
+      if (els?.banner) els.banner.textContent = 'FIGHT UNAVAILABLE';
+      return;
+    }
+    if (els?.banner) els.banner.textContent = 'OFFLINE — LOCAL FIGHT';
+    await wait(TIMING.bannerHold); if (els?.banner) els.banner.hidden = true;
+    await dismissOpeningPreview();
+    await playLocalFight(fight);
+    result = { winner: fight.winner, rounds: fight.round, events: fight.events };
+  }
+  if (stopped) return;
+  if (els?.banner) els.banner.hidden = true;
+  await dismissOpeningPreview();
+  if (!fight.over) await playEvents(result.events);
+  const finalState = result.events.at(-1)?.state;
+  if (finalState) { fight.player.hp = finalState.player.hp; fight.enemy.hp = finalState.enemy.hp; }
+  fight.winner = result.winner; fight.round = result.rounds; fight.over = true;
+  const completedLevel = run.fight; finishRunFight(run, fight);
+  if (run.lost) return showEnd(false); if (run.won) return showEnd(true);
+  await wait(TIMING.deathFallback); showGap(completedLevel);
+}
 function tooltip(card) { return descriptorText(card) || [...(card.keywords || [])].map(key => KEYWORD_NAMES[key] || key).join(' · ') || 'No deploy effect.'; }
 export function draftCard(def, choose = () => {}, { readOnly = false } = {}) { const node = el(readOnly ? 'span' : 'button', 'draft-card'), visual = el('span', 'draft-visual'); visual.append(img('draft-art', unitPortrait(def), ''), img('draft-frame', frameFor(def.tier), ''), createCostDot(def.cost)); node.append(visual, el('strong', '', def.name), el('span', '', `${def.cost} turn${def.cost > 1 ? 's' : ''}`), el('b', '', `${def.atk} / ${def.hp}`), el('small', 'draft-effect', tooltip(def))); if (!readOnly) { node.append(el('span', 'draft-confirm', 'Choose card')); bindMouseHover(node, () => cardTipData(def)); node.addEventListener('click', () => { playSfx('uiClick'); choose(def); }); } return node; }
 
@@ -949,10 +991,7 @@ export async function loadReplay(id) {
   const idsB = replay.deckB?.cardIds || replay.cardIdsB;
   if (!Array.isArray(idsA) || !Array.isArray(idsB)) return replayMessage('Replay unavailable', 'This replay has an invalid deck record.');
   const cardsA = idsA.map(getCard), cardsB = idsB.map(getCard);
-  const buildFight = () => {
-    const replayRun = { fight: 1, hp: HERO_HP, deck: idsA.map(getCard), rng: makeRng(replay.seed), enemyLine: idsB.map(getCard), won: false, lost: false, starterId: null };
-    const built = startRunFight(replayRun); built.uidRng = replayRun.rng; return built;
-  };
+  const buildFight = () => buildReplayFight({ deckCardIds: idsA, enemyCardIds: idsB, seed: replay.seed });
   const simulationFight = buildFight();
   while (!simulationFight.over) runRound(simulationFight);
   if (JSON.stringify(simulationFight.events) !== JSON.stringify(replay.events)) console.warn('Replay event mismatch; using locally reconstructed events.', { replayId: replay.replayId || replay.id });

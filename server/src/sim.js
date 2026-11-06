@@ -18,3 +18,21 @@ export function simulateDeckBattle({ cardIdsA, cardIdsB, seed }) {
   while (!fight.over) runRound(fight);
   return { winner: fight.winner, rounds: fight.round, events: fight.events };
 }
+
+export function simulateSoloFight({ deckCardIds, seed, fight: fightNumber }) {
+  const run = {
+    fight: fightNumber,
+    hp: HERO_HP,
+    deck: deckCardIds.map(getCard),
+    rng: makeRng(seed),
+    enemyLine: null,
+    won: false,
+    lost: false,
+    starterId: null,
+  };
+  const fight = startRunFight(run);
+  fight.uidRng = run.rng;
+  const events = [];
+  while (!fight.over) { runRound(fight); events.push(...fight.events); }
+  return { winner: fight.winner, rounds: fight.round, events };
+}

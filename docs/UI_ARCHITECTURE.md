@@ -10,6 +10,8 @@
 
 `mountBattleScreen()` builds this tree exactly once at fight start. After mount, **no structural region is ever recreated** — only leaf mutations, class toggles, and unit-element create/remove occur.
 
+Solo and ranked playback obey the same invariant: build one initial fight-shaped presentation model, mount the battle root once, then feed the complete server event log through `playEvents()`. The online solo path never advances combat with client `runRound`; it may use the local engine only after a server-unreachable/network failure. Contacting-server and offline-fallback messages reuse the existing mounted banner leaf. Replay state remains uid-keyed, creates/removes units only at their documented lifecycle boundaries, performs no `innerHTML` mutation beneath the battle root, and routes every animation and wait through `dur()` so speed 1/2/3/10 remains live during playback.
+
 ```html
 <div id="battle-screen">
   <div class="side side--enemy">
