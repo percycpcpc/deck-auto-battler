@@ -90,6 +90,11 @@ Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogr
 
 Owner tuning: 1-cost 2/4 to soften early game.
 
+## Season 2 — Emberwake
+- Starter selection retains the three Founders March identities and adds Ember Vanguard as a fourth seasonal showcase. Every starter is an eight-card deck drawn from the cumulative legal pool.
+- Furnace Hound is a 2-cost 4/4 Poisonous sidegrade to Venom Hound's 3/5; Phoenix Matron is a 3-cost 4/9 Deathrattle sidegrade to Brood Queen's 3/10. Ember Scout's after-action team heal makes its 2/2 body mechanically distinct.
+- Enemy Divine Shield is absent from the opening encounters, appears on teaching levels 4/5 and 9/10, is absent again on levels 11–13, then applies broadly on levels 14–20. The schedule is season config, not a global combat rule.
+
 ## Enemies (scripted, escalating)
 - **Fight 1 — Vanilla midrange**: deck of 2/3 Ash Grunts and 2/6 Camp Brutes. Both are Common-tier cards. Teaches reveal/charging; beatable by starter deck.
 - **Fight 2 — Aura boss**: support deck uses legacy weaker Common 2/2 Ash Grunts and Common 2/5 Camp Brutes so the boss fight stays easier. Starts with Warherald on board: 1/8, "friendly units enter play with +1/+1" (aura; dies with the boss). Clean answers: wipe (Plague Bearer/Cataclysm) or racing before buffs snowball.

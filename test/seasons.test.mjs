@@ -16,12 +16,33 @@ await test('currentSeason selects windows and deterministic fallbacks', () => {
   assert.equal(currentSeason(Date.parse('2027-01-01T00:00:00Z')).id, 'season_2');
 });
 
-await test('season 2 rotates starter selection and enemy keyword', () => {
+await test('season 2 preserves the three established starters, adds Ember Vanguard, and stages its enemy keyword', () => {
   __setNowOverride('2026-12-01T00:00:00Z');
-  assert.deepEqual(activeStarters().map(starter => starter.id), ['ember_vanguard']);
-  assert.deepEqual(engine.STARTERS.map(starter => starter.id), ['ember_vanguard']);
-  assert.equal(engine.createRun(() => 0).starterId, 'ember_vanguard');
-  assert.ok(engine.enemyDeckFor(1).every(card => card.keywords?.includes(SEASONS[1].enemyKeyword)));
+  const ids = ['oathbound_line', 'rat_pack', 'iron_bastion', 'ember_vanguard'];
+  assert.deepEqual(activeStarters().map(starter => starter.id), ids);
+  assert.deepEqual(engine.STARTERS.map(starter => starter.id), ids);
+  assert.equal(engine.createRun(() => 0).starterId, 'oathbound_line');
+  assert.ok(engine.enemyDeckFor(1).every(card => !card.keywords?.includes(SEASONS[1].enemyKeyword)));
+  for (const level of SEASONS[1].enemyKeywordLevels) {
+    assert.ok(engine.enemyDeckFor(level).every(card => card.keywords?.includes(SEASONS[1].enemyKeyword)));
+  }
+  assert.ok(engine.enemyDeckFor(13).every(card => !card.keywords?.includes(SEASONS[1].enemyKeyword)));
+  assert.deepEqual(SEASONS[1].enemyKeywordLevels, [4, 5, 9, 10, 14, 15, 16, 17, 18, 19, 20]);
+});
+
+await test('season 2 additions are sidegrades and all starters are valid eight-card decks', () => {
+  const cards = new Map(unionPool().map(card => [card.id, card]));
+  const furnace = cards.get('furnace_hound'), venom = cards.get('venom_hound');
+  const phoenix = cards.get('phoenix_matron'), brood = cards.get('brood_queen');
+  assert.ok(furnace.atk > venom.atk && furnace.hp < venom.hp);
+  assert.equal(furnace.atk + furnace.hp, venom.atk + venom.hp);
+  assert.ok(phoenix.atk > brood.atk && phoenix.hp < brood.hp);
+  assert.equal(phoenix.atk + phoenix.hp, brood.atk + brood.hp);
+  assert.equal(SEASONS[1].starters.length, 4);
+  for (const starter of SEASONS[1].starters) {
+    assert.equal(starter.cards.length, 8);
+    assert.ok(starter.cards.every(id => cards.has(id)), `${starter.id} contains only legal cards`);
+  }
 });
 
 await test('season 2 pool adds seven cards without removing base cards', () => {
