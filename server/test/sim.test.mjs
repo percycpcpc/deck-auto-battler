@@ -81,7 +81,7 @@ test('simulates stored decks and exposes a public replay with both ordered decks
   const response = await request(db, '/api/sim', { method: 'POST', token, body: { deckAId: a.id, deckBId: b.id, seed: 123 } });
   assert.equal(response.status, 200);
   const result = await response.json();
-  assert.ok(['player', 'enemy'].includes(result.winner));
+  assert.ok(['player', 'enemy', 'draw'].includes(result.winner));
   assert.ok(result.rounds > 0);
   assert.ok(result.events.length > 0);
   assert.ok(db.replays.has(result.replayId));

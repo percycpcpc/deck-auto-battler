@@ -14,6 +14,10 @@ export function eloDelta(ratingA, ratingB, scoreA) {
   return roundHalfAwayFromZero(K_FACTOR * (scoreA - expected));
 }
 
+export const rankedScores = winner => winner === 'draw'
+  ? { player: 0.5, enemy: 0.5 }
+  : { player: winner === 'player' ? 1 : 0, enemy: winner === 'enemy' ? 1 : 0 };
+
 export function getCurrentSeason() {
   return currentSeason().id;
 }
@@ -72,11 +76,12 @@ export async function queueRanked(env, user, deckId) {
   const opponentEternal = await ratingRow(env, opponent.user_id, opponentDeck.id, 'eternal');
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
   const simulation = simulateDeckBattle({ cardIdsA: deck.cardIds, cardIdsB: opponentDeck.cardIds, seed });
-  const meWon = simulation.winner === 'player';
-  const myDelta = eloDelta(mySeasonal.rating, opponentSeasonal.rating, meWon ? 1 : 0);
-  const opponentDelta = eloDelta(opponentSeasonal.rating, mySeasonal.rating, meWon ? 0 : 1);
-  const myEternalDelta = eloDelta(myEternal.rating, opponentEternal.rating, meWon ? 1 : 0);
-  const opponentEternalDelta = eloDelta(opponentEternal.rating, myEternal.rating, meWon ? 0 : 1);
+  const draw = simulation.winner === 'draw', meWon = simulation.winner === 'player';
+  const { player: myScore, enemy: opponentScore } = rankedScores(simulation.winner);
+  const myDelta = eloDelta(mySeasonal.rating, opponentSeasonal.rating, myScore);
+  const opponentDelta = eloDelta(opponentSeasonal.rating, mySeasonal.rating, opponentScore);
+  const myEternalDelta = eloDelta(myEternal.rating, opponentEternal.rating, myScore);
+  const opponentEternalDelta = eloDelta(opponentEternal.rating, myEternal.rating, opponentScore);
   const replayId = crypto.randomUUID();
   const result = {
     winner: simulation.winner,
@@ -110,7 +115,7 @@ export async function queueRanked(env, user, deckId) {
   try { await checkMatchBadges(env, opponent.user_id, opponentSeasonal.rating + opponentDelta, season); }
   catch { /* Cosmetic grants never fail ranked resolution. */ }
 
-  return { status: 'matched', replayId, winner: meWon ? 'me' : 'them', myRating: mySeasonal.rating + myDelta, ratingDelta: myDelta, opponentRating: opponentSeasonal.rating };
+  return { status: 'matched', replayId, winner: draw ? 'draw' : meWon ? 'me' : 'them', myRating: mySeasonal.rating + myDelta, ratingDelta: myDelta, opponentRating: opponentSeasonal.rating };
 }
 
 export async function unqueueRanked(env, user) {

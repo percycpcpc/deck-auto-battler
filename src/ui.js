@@ -564,7 +564,7 @@ async function playEvent(event, deployUids) {
   if (event.type === 'death') { playSfx('death'); scheduleDeath(event.uid); await wait(TIMING.death); return; } if (event.type === 'shift') return playShift(event);
   if (event.type === 'heroHit') { reconcile(event.state); playSfx('heroDamage'); pulse(els[event.side].hero.portrait, 'fx-hit', TIMING.heroHit); pulse(els[event.side].root, 'fx-hero-hit', TIMING.heroHit); await wait(TIMING.heroHit); return; }
   if (event.type === 'shield') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); damageFloater(target, 'BLOCKED', rect); pulse(getUnitEl(event.uid), 'fx-shield', TIMING.shield); await wait(TIMING.shield); return; }
-  if (event.type === 'stalemate') { pulse(els.player.hero.panel, 'fx-stalemate', TIMING.stalemate); pulse(els.enemy.hero.panel, 'fx-stalemate', TIMING.stalemate); appendLog(`Stalemate: ${event.winner} wins`); await wait(TIMING.stalemate); return; }
+  if (event.type === 'stalemate') { pulse(els.player.hero.panel, 'fx-stalemate', TIMING.stalemate); pulse(els.enemy.hero.panel, 'fx-stalemate', TIMING.stalemate); appendLog(event.winner === 'draw' ? 'Stalemate: draw' : `Stalemate: ${event.winner} wins`); await wait(TIMING.stalemate); return; }
   if (event.type === 'cleanup') { for (const side of SIDES) els[side].root.classList.remove('is-active-turn'); await wait(TIMING.cleanup); return; } reconcile(event.state); await wait(TIMING[event.type] || TIMING.cleanup);
 }
 export async function playEvents(eventStream) {
@@ -627,13 +627,13 @@ function rankedRatingCard(label, value = {}) {
 
 function showRankedResult(screen, result) {
   stopRankedPolling();
-  const panel = el('section', `ranked-result ranked-result--${result.winner === 'me' ? 'win' : 'loss'}`);
+  const panel = el('section', `ranked-result ranked-result--${result.winner === 'draw' ? 'draw' : result.winner === 'me' ? 'win' : 'loss'}`);
   const before = result.myRating - result.ratingDelta;
   const delta = `${result.ratingDelta >= 0 ? '+' : ''}${result.ratingDelta}`;
   const watch = button('Watch replay', () => { location.search = `?replay=${encodeURIComponent(result.replayId)}`; });
   watch.disabled = !result.replayId;
   panel.append(
-    el('h2', '', result.winner === 'me' ? 'VICTORY' : 'DEFEAT'),
+    el('h2', '', result.winner === 'draw' ? 'DRAW' : result.winner === 'me' ? 'VICTORY' : 'DEFEAT'),
     el('p', 'ranked-result__movement', `${before} → ${result.myRating} (${delta})`),
     el('p', '', `Opponent rating: ${result.opponentRating}`), watch,
   );
@@ -647,7 +647,7 @@ function resultFromLastMatch(lastMatch) {
   const delta = meIsA ? ranked.deltaA : ranked.deltaB;
   const before = meIsA ? ranked.ratingA : ranked.ratingB;
   const won = (lastMatch.winner === 'player') === meIsA;
-  return { winner: won ? 'me' : 'them', myRating: before + delta, ratingDelta: delta, opponentRating: meIsA ? ranked.ratingB : ranked.ratingA, replayId: lastMatch.replayId };
+  return { winner: lastMatch.winner === 'draw' ? 'draw' : won ? 'me' : 'them', myRating: before + delta, ratingDelta: delta, opponentRating: meIsA ? ranked.ratingB : ranked.ratingA, replayId: lastMatch.replayId };
 }
 
 export async function showRankedScreen() {
@@ -721,7 +721,7 @@ function friendlyDeckOption(entry, label) {
 }
 
 function showFriendlyResult(state, result) {
-  const panel = el('section', `friendly-result friendly-result--${result.winner === 'player' ? 'win' : 'loss'}`);
+  const panel = el('section', `friendly-result friendly-result--${result.winner === 'draw' ? 'draw' : result.winner === 'player' ? 'win' : 'loss'}`);
   const replayUrl = new URL(result.url || `/?replay=${encodeURIComponent(result.replayId)}`, location.href).href;
   const watch = button('Watch replay', () => { location.href = replayUrl; });
   const copy = button('Copy replay link', async () => {
@@ -730,7 +730,7 @@ function showFriendlyResult(state, result) {
   });
   copy.classList.add('secondary');
   panel.append(
-    el('h2', '', result.winner === 'player' ? 'YOUR DECK WINS' : 'OPPONENT DECK WINS'),
+    el('h2', '', result.winner === 'draw' ? 'DRAW' : result.winner === 'player' ? 'YOUR DECK WINS' : 'OPPONENT DECK WINS'),
     el('p', 'friendly-result__rounds', `${result.rounds} round${result.rounds === 1 ? '' : 's'}`),
     watch,
     copy,
@@ -973,7 +973,7 @@ export async function loadReplay(id) {
     const winner = replay.winner || replay.result?.winner || simulationFight.winner;
     const end = el('section', 'replay-end');
     const copy = button('Copy link', async () => { try { await navigator.clipboard.writeText(location.href); copy.textContent = 'Link copied'; } catch { /* clipboard can be unavailable */ } });
-    end.append(el('h2', '', `${winner === 'player' ? 'DECK A' : 'DECK B'} WINS`), copy, button('Back', leaveReplay));
+    end.append(el('h2', '', winner === 'draw' ? 'DRAW' : `${winner === 'player' ? 'DECK A' : 'DECK B'} WINS`), copy, button('Back', leaveReplay));
     stage.append(end);
   });
   controls.append(start, button('Back', leaveReplay)); header.append(title, controls);

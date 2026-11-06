@@ -2,48 +2,45 @@
 
 ## Project Goal
 
-Deliver the owner-evaluation `alt-turns` experiment: strict player/enemy turns with persistent mana, direct affordable deployment, active-side combat/cleanup, and no charging-slot UI.
+Ship issue #33: progress-aware stalemate detection with side-symmetric draws across local fights, replays, friendlies, and ranked scoring.
 
 ## Current Phase
 
-- Phase: production experiment
-- Status: implemented and locally verified; no commit made
+- Phase: maintenance
+- Status: implemented; shipping blocked by the required 65–78% fight-1 balance gate
 
 ## Latest Completed Work
 
-- Replaced the five-step simultaneous round with player-first strict alternation and observable `turn`/`mana` events.
-- Added persistent uncapped mana and repeated top-deck deployment into the leftmost empty slot.
-- Scoped corpse cleanup to the active side and retained mutual exchanges, keyword interactions, deterministic RNG, bosses, and the two-turn stalemate window.
-- Removed the charging-slot presentation, added both mana banks and active-turn indication, and retained battle-root DOM invariants.
-- Deprecated Tax Collector, Chrono Imp, Meddler, and Doomcaller from active draft pools; Scout remains active.
-- Updated experiment docs, event/balance tools, browser invariants, and rule-coupled tests.
-- Captured 12 screenshots in `refs/ui-audit/alt-turns/` at 1440x900 and 390x844.
+- Replaced live-unit-count stalemate detection with a deterministic full-round combat fingerprint covering hero HP and live-unit identity/stats/damage/shields.
+- Added a 400-turn safety valve and explicit `noProgress` / `turnLimit` event reasons.
+- Equal-HP valves now resolve as `draw`; ranked ELO scores draws 0.5/0.5.
+- Added draw-safe battle-log, replay, friendly, and ranked result copy.
+- Updated `SPEC.md`, binding `RULINGS.md`, and stale implementation-ledger wording.
+- Captured desktop/mobile draw-state evidence in `refs/ui-audit/stalemate-draw/`.
 
 ## Important Modified Files
 
-- `src/engine.js`, `src/seasons.js`, `src/ui.js`, `styles.css`
-- `test/engine.test.mjs`, `test/seasons.test.mjs`
-- `tools/balance_sim.mjs`, `tools/event_snapshot_check.mjs`, `tools/invariants.html`
-- `docs/SPEC.md`, `docs/RULINGS.md`
+- `src/engine.js`, `src/ui.js`
+- `server/src/ranked.js`
+- `test/engine.test.mjs`, `server/test/ranked.test.mjs`, `server/test/sim.test.mjs`
+- `docs/SPEC.md`, `docs/RULINGS.md`, `docs/WAR_LEDGER_IMPLEMENTATION.md`
 
 ## Verification
 
-- `node test/engine.test.mjs`: 67/67 passed
-- `node test/seasons.test.mjs`: 6/6 passed
-- `node test/speed_gating.test.mjs`: 3/3 passed
+- `node test/engine.test.mjs`: 75/75 passed
+- Full server suite: 48/48 passed
 - `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/balance_sim.mjs 1 200`: fights 1-3 reported win rate and turn percentiles
 - `node tools/ui_invariants_check.mjs`: PASS
-- Browser `tools/invariants.html` on port 8321: all CHECK lines PASS
-- `node --check src/engine.js`, `node --check src/ui.js`, `git diff --check`: PASS (line-ending warnings only)
-- Grep of `src/engine.js` and `src/ui.js` for old flow terminology: no matches
+- Real-browser invariants: checks 1, 2, 3, 6, 8, 10, 11 PASS
+- Draw smoke: `winner=draw`, `reason=noProgress`, battle log contains `Stalemate: draw`
+- Static syntax checks and `git diff --check`: PASS
+- `node tools/balance_sim.mjs 1 200`: fight 1 92%, fight 2 77%, fight 3 100%; historical 65–78% band remains broken by the owner-evaluation alternating-turn spine, bisected to `3cf09cc` + `7a51c50`. This ticket improves fight 1 from current-main baseline 100% to 92% by allowing progressing combat to continue.
 
 ## Known Risks / Untested Areas
 
-- Windows denied visible Edge focus/screenshot permissions, so the real-browser harness and screenshots were completed in headless Chrome instead of the visible Edge window.
-- The owner experiment intentionally has no balance-band assertion; fight 1 measured 100% and fight 2 measured 36% under the fixed starter harness.
-- Documentation uses `git revert <sha>` because this agent was explicitly prohibited from creating the orchestrator-owned commit.
+- Balance is not in the historical fight-1 band; this is a pre-existing experiment-level blocker, not introduced by #33.
+- Draw result labels were browser-smoked in battle playback; ranked/friendly draw panels are covered by shared result-contract logic but not forced through live D1 matchmaking in-browser.
 
 ## Next Safest Task
 
-Owner review of the screenshot matrix and measured pacing, then orchestrator commit/ship or experiment revert.
+Ratify a new alternating-turn balance band or land a dedicated encounter/combat rebalance, then rerun the battery and ship #33 from `pass/33-stalemate-detection`.

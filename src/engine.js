@@ -1,5 +1,6 @@
 export const HERO_HP = 40; // First tuning dial; K3 recommends 30.
 export const BOARD_CAP = 20;
+export const MAX_COMBAT_TURNS = 400;
 export const RUN_CONFIG = Object.freeze({ LEVELS: 20, PICKS_PER_DRAFT: 1, EVENT_EVERY: 3 });
 import { ACTIVE_STARTERS as STARTERS, STARTER_IDS, activePool, currentSeason, unionPool } from './seasons.js';
 export { ACTIVE_STARTERS as STARTERS, STARTER_IDS, unionPool } from './seasons.js';
@@ -327,7 +328,7 @@ function actionFor(state, side, index, acted) {
 export function runRound(state) {
   if (state.over) return state;
   const side = state.activeSide;
-  if (side === 'player') state.fullRoundStartLive = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
+  if (side === 'player') state.fullRoundStartProgress = combatProgressFingerprint(state);
   state.turnNumber++; state.round = Math.ceil(state.turnNumber / 2); state.events = [];
   state.phase = 'upkeep'; emit(state, 'turn', { side, turnNumber: state.turnNumber });
   state[side].mana++; emit(state, 'mana', { side, amount: state[side].mana });
@@ -343,12 +344,24 @@ export function runRound(state) {
   state.phase = 'cleanup'; resolveDeaths(state);
   for (const cleanupSide of ['player', 'enemy']) cleanupCorpses(state, cleanupSide);
   checkHeroEnd(state);
-  const afterUnits = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
-  if (!state.over && side === 'enemy' && !state.player.deck.length && !state.enemy.deck.length && state.fullRoundStartLive === afterUnits) {
-    state.over = true; state.winner = state.player.hp >= state.enemy.hp ? 'player' : 'enemy'; emit(state, 'stalemate', { winner: state.winner });
-  }
+  const fullRoundComplete = side === 'enemy';
+  const noCombatProgress = fullRoundComplete && state.fullRoundStartProgress === combatProgressFingerprint(state);
+  if (!state.over && fullRoundComplete && !state.player.deck.length && !state.enemy.deck.length && noCombatProgress) resolveCombatValve(state, 'noProgress');
+  else if (!state.over && state.turnNumber >= MAX_COMBAT_TURNS) resolveCombatValve(state, 'turnLimit');
   state.activeSide = other(side);
   return state;
+}
+
+function combatProgressFingerprint(state) {
+  const unit = value => [value.uid, value.cardId, value.baseAtk, value.baseMaxHp, value.damage, value.shield ? 1 : 0].join(':');
+  const side = value => `${value.hp}|${liveUnits(value.board).map(unit).join(',')}`;
+  return `${side(state.player)}//${side(state.enemy)}`;
+}
+
+function resolveCombatValve(state, reason) {
+  state.over = true;
+  state.winner = state.player.hp === state.enemy.hp ? 'draw' : state.player.hp > state.enemy.hp ? 'player' : 'enemy';
+  emit(state, 'stalemate', { winner: state.winner, reason });
 }
 
 function checkHeroEnd(state) {
