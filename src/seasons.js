@@ -6,8 +6,8 @@ export const BASE_CARD_POOL = Object.freeze([
   card('twinfang', 'Twinfang', 1, 1, 4, { tier: 'rare', keywords: ['windfury'] }),
   card('brood_wisp', 'Brood Wisp', 1, 1, 4, { tier: 'rare', deathrattle: 'summon1' }),
   card('hex_hurler', 'Hex Hurler', 1, 1, 5, { tier: 'rare', battlecry: 'hex_hurler' }),
-  card('tax_collector', 'Tax Collector', 1, 1, 4, { tier: 'rare', battlecry: 'tax' }),
-  card('chrono_imp', 'Chrono Imp', 1, 1, 4, { tier: 'rare', battlecry: 'chrono', text: 'The next card you reveal starts with 1 fewer charge turn, minimum 1.' }),
+  card('tax_collector', 'Tax Collector', 1, 1, 4, { tier: 'rare', battlecry: 'tax', deprecated: true }),
+  card('chrono_imp', 'Chrono Imp', 1, 1, 4, { tier: 'rare', battlecry: 'chrono', text: 'The next card you reveal starts with 1 fewer charge turn, minimum 1.', deprecated: true }),
   card('gate_crasher', 'Gate Crasher', 1, 2, 4, { tier: 'rare', battlecry: 'gate' }),
   card('leeching_tick', 'Leeching Tick', 1, 1, 5, { tier: 'rare', onKill: 'grow' }),
   card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),
@@ -23,7 +23,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('duelist', 'Duelist', 2, 3, 5, { tier: 'rare', battlecry: 'duelist' }),
   card('hexblade', 'Hexblade', 2, 2, 6, { tier: 'mythic', battlecry: 'hexblade' }),
   card('gravedigger', 'Gravedigger', 2, 2, 6, { tier: 'rare', battlecry: 'gravedigger', text: 'Summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.' }),
-  card('meddler', 'Meddler', 2, 2, 6, { tier: 'rare', battlecry: 'meddler' }),
+  card('meddler', 'Meddler', 2, 2, 6, { tier: 'rare', battlecry: 'meddler', deprecated: true }),
   card('headsman', 'Headsman', 2, 3, 8, { tier: 'rare', onKill: 2, portraitId: 'doomcaller' }),
   card('firebelcher', 'Firebelcher', 2, 2, 9, { tier: 'rare', battlecry: 'firebelch', portraitId: 'plague_bearer' }),
   card('shield_saint', 'Shield Saint', 2, 3, 6, { tier: 'rare', keywords: ['shield'], portraitId: 'aegis_knight' }),
@@ -31,7 +31,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('colossus', 'Colossus', 3, 6, 9, { tier: 'common' }),
   card('inquisitor', 'Inquisitor', 3, 4, 10, { tier: 'mythic', battlecry: 'inquisitor' }),
   card('brood_queen', 'Brood Queen', 3, 3, 10, { tier: 'mythic', deathrattle: 'summon2x2' }),
-  card('doomcaller', 'Doomcaller', 3, 4, 10, { tier: 'mythic', battlecry: 'doom' }),
+  card('doomcaller', 'Doomcaller', 3, 4, 10, { tier: 'mythic', battlecry: 'doom', deprecated: true }),
   card('copycat', 'Copycat', 2, 3, 6, { tier: 'mythic', battlecry: 'copycat' }),
   card('overlord', 'Overlord', 3, 2, 10, { tier: 'mythic', aura: 'all' }),
   card('cultist', 'Cultist', 3, 3, 8, { tier: 'mythic', battlecry: 'cultist' }),
@@ -79,7 +79,7 @@ export const activeStarters = now => currentSeason(now).starters;
 export function activePool(now) {
   const activeIndex = SEASONS.indexOf(currentSeason(now));
   const ids = new Set([...BASE_CARD_POOL.map(cardDef => cardDef.id), ...SEASONS.slice(0, activeIndex + 1).flatMap(season => season.poolExtras)]);
-  return unionPool().filter(cardDef => ids.has(cardDef.id));
+  return unionPool().filter(cardDef => ids.has(cardDef.id) && !cardDef.deprecated);
 }
 export function unionPool() {
   return Object.freeze([...BASE_CARD_POOL, ...SEASONS.flatMap(season => Object.values(season.cardDefs))]);

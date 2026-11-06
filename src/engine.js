@@ -63,9 +63,9 @@ export function createFight({ playerDeck = starterDeck(), enemyDeck = null, figh
   if (seeded) rng = makeRng(seed);
   const enemyLine = enemyDeck || enemyDeckFor(fight);
   const state = {
-    fight, round: 0, phase: 'ready', rng, deaths: 0, deathLog: [], events: [], over: false, winner: null,
-    player: { hp: playerHp, deck: seeded ? shuffle(playerDeck, rng) : [...playerDeck], charger: null, board: [], scouted: false, onNextRevealChrono: false },
-    enemy: { hp: HERO_HP, deck: [...enemyLine], charger: null, board: [], scouted: false, onNextRevealChrono: false },
+    fight, round: 0, turnNumber: 0, activeSide: 'player', phase: 'ready', rng, deaths: 0, deathLog: [], events: [], over: false, winner: null,
+    player: { hp: playerHp, mana: 0, deck: seeded ? shuffle(playerDeck, rng) : [...playerDeck], board: [] },
+    enemy: { hp: HERO_HP, mana: 0, deck: [...enemyLine], board: [] },
   };
   if (seeded) state.uidRng = rng;
   const boss = fightBoss(fight, state.uidRng || Math.random, milestonesOnly);
@@ -126,14 +126,14 @@ export function gapKind(level) {
 const other = side => side === 'player' ? 'enemy' : 'player';
 export function snapshotView(state) {
   return structuredClone({
-    round: state.round,
+    round: state.round, turnNumber: state.turnNumber, activeSide: state.activeSide,
     phase: state.phase,
-    player: { hp: state.player.hp, board: state.player.board, charger: state.player.charger },
-    enemy: { hp: state.enemy.hp, deck: state.enemy.deck, board: state.enemy.board, charger: state.enemy.charger },
+    player: { hp: state.player.hp, mana: state.player.mana, deck: state.player.deck, board: state.player.board },
+    enemy: { hp: state.enemy.hp, mana: state.enemy.mana, deck: state.enemy.deck, board: state.enemy.board },
   });
 }
 
-const emit = (s, type, data = {}) => s.events.push({ round: s.round, phase: s.phase, type, ...data, state: snapshotView(s) });
+const emit = (s, type, data = {}) => s.events.push({ round: s.round, turnNumber: s.turnNumber, phase: s.phase, type, ...data, state: snapshotView(s) });
 
 function healAll(state, source) {
   if (!source?.heal || source.dead) return;
@@ -201,13 +201,11 @@ export function resolveDeaths(state) {
   if (state.player.board.some(u => !u.dead && isDead(state, 'player', u)) || state.enemy.board.some(u => !u.dead && isDead(state, 'enemy', u))) resolveDeaths(state);
 }
 
-function cleanupCorpses(state) {
-  for (const side of ['player', 'enemy']) {
-    const removedUids = state[side].board.filter(unit => unit.dead).map(unit => unit.uid);
-    if (!removedUids.length) continue;
-    state[side].board = liveUnits(state[side].board);
-    emit(state, 'shift', { side, removedUids });
-  }
+function cleanupCorpses(state, side) {
+  const removedUids = state[side].board.filter(unit => unit.dead).map(unit => unit.uid);
+  if (!removedUids.length) return;
+  state[side].board = liveUnits(state[side].board);
+  emit(state, 'shift', { side, removedUids });
 }
 
 function triggerDeathrattle(state, side, unit, oldIndex) {
@@ -221,13 +219,16 @@ function triggerDeathrattle(state, side, unit, oldIndex) {
 
 const liveAt = (board, index) => board[index]?.dead ? undefined : board[index];
 
-function deployCharger(state, side) {
+function deployAffordable(state, side) {
   const own = state[side];
-  if (!own.charger || own.charger.counter > 0 || own.board.length >= BOARD_CAP) return false;
-  const def = own.charger.card; own.charger = null; own.scouted = false;
-  const unit = summon(state, side, def); emit(state, 'deploy', { side, unit: unit.name, uid: unit.uid });
-  if (own.board.includes(unit) && !unit.dead) triggerBattlecry(state, side, unit);
-  resolveDeaths(state); return true;
+  while (own.deck.length && own.board.length < BOARD_CAP && own.mana >= own.deck[0].cost) {
+    const def = own.deck.shift();
+    own.mana -= def.cost;
+    const unit = summon(state, side, def);
+    emit(state, 'deploy', { side, unit: unit.name, uid: unit.uid, cost: def.cost, mana: own.mana });
+    if (own.board.includes(unit) && !unit.dead) triggerBattlecry(state, side, unit);
+    resolveDeaths(state);
+  }
 }
 
 export function triggerBattlecry(state, side, unit) {
@@ -237,15 +238,6 @@ export function triggerBattlecry(state, side, unit) {
     case 'hex_hurler':
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined, amount: 2 });
       dealDamage(state, unit, opposite, 2); break;
-    case 'tax':
-      emit(state, 'battlecry', { ...event, targetSide: foeSide, counterDelta: foe.charger ? 1 : 0, charger: foe.charger?.card.name });
-      if (foe.charger) foe.charger.counter += 1; break;
-    case 'chrono': {
-      const target = own.deck[0];
-      own.onNextRevealChrono = !!target;
-      emit(state, 'battlecry', { ...event, targetSide: side, target: target?.name, targetCardId: target?.id, counterDelta: target ? -1 : 0, pending: !!target, fizzle: !target });
-      break;
-    }
     case 'gate': {
       const moved = !!opposite && foe.board.length < BOARD_CAP, toIndex = moved ? foe.board.length - 1 : undefined;
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, fromIndex: moved ? index : undefined, toIndex, moved });
@@ -272,18 +264,12 @@ export function triggerBattlecry(state, side, unit) {
       emit(state, 'battlecry', { ...event, count });
       for (let i = 0; i < count; i++) summon(state, side, tokenCard()); break;
     }
-    case 'meddler':
-      emit(state, 'battlecry', { ...event, targetSide: foeSide, charger: foe.charger?.card.name, returned: !!foe.charger });
-      if (foe.charger) { foe.deck.unshift(foe.charger.card); foe.charger = null; foe.scouted = false; } break;
     case 'inquisitor': {
       const targets = liveUnits(foe.board), highest = targets.length ? Math.max(...targets.map(t => effectiveStats(state, foeSide, t).atk)) : null;
       const target = highest === null ? null : targets.find(t => effectiveStats(state, foeSide, t).atk === highest);
       emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: target ? targets.indexOf(target) : undefined, amount: 3 });
       dealDamage(state, unit, target, 3); break;
     }
-    case 'doom':
-      emit(state, 'battlecry', { ...event, targetSide: foeSide, charger: foe.charger?.card.name, destroyed: !!foe.charger });
-      if (foe.charger) { emit(state, 'chargerDestroyed', { side: foeSide }); foe.charger = null; foe.scouted = false; } break;
     case 'copycat':
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined });
       if (opposite) { const e = effectiveStats(state, foeSide, opposite); unit.baseAtk = e.atk; unit.baseMaxHp = e.hp; unit.damage = 0; } break;
@@ -338,36 +324,26 @@ function actionFor(state, side, index, acted) {
 
 export function runRound(state) {
   if (state.over) return state;
-  state.round++; state.events = []; const beforeUnits = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
-  state.phase = 'reveal';
-  for (const side of ['player', 'enemy']) if (!state[side].charger && state[side].deck.length) {
-    const own = state[side], next = own.deck.shift(), chronoReduction = own.onNextRevealChrono ? 1 : 0;
-    own.onNextRevealChrono = false;
-    own.charger = { card: next, counter: Math.max(1, next.cost - chronoReduction), justRevealed: true }; emit(state, 'reveal', { side, cost: next.cost });
+  const side = state.activeSide;
+  if (side === 'player') state.fullRoundStartLive = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
+  state.turnNumber++; state.round = Math.ceil(state.turnNumber / 2); state.events = [];
+  state.phase = 'upkeep'; emit(state, 'turn', { side, turnNumber: state.turnNumber });
+  state[side].mana++; emit(state, 'mana', { side, amount: state[side].mana });
+  state.phase = 'deploy'; deployAffordable(state, side);
+  state.phase = 'combat'; const acted = new Set();
+  for (const unit of state[side].board) unit.summonedThisAction = false;
+  let i = 0;
+  while (!state.over && i < state[side].board.length) {
+    const unit = state[side].board[i];
+    actionFor(state, side, i, acted);
+    if (state[side].board[i] === unit) i++;
   }
-  state.phase = 'tick';
-  for (const side of ['player', 'enemy']) if (state[side].charger) {
-    if (!state[side].charger.justRevealed) state[side].charger.counter = Math.max(0, state[side].charger.counter - 1);
-    state[side].charger.justRevealed = false; emit(state, 'tick', { side, counter: state[side].charger.counter });
-  }
-  state.phase = 'deploy'; deployCharger(state, 'player'); deployCharger(state, 'enemy');
-  state.phase = 'action'; const acted = new Set();
-  for (const s of ['player', 'enemy']) for (const u of state[s].board) u.summonedThisAction = false;
-  for (const side of ['player', 'enemy']) {
-    if (state.over) break;
-    emit(state, 'turnStart', { side });
-    let i = 0;
-    while (!state.over && i < state[side].board.length) {
-      const unit = state[side].board[i];
-      actionFor(state, side, i, acted);
-      if (state[side].board[i] === unit) i++;
-    }
-  }
-  state.phase = 'cleanup'; emit(state, 'cleanup'); resolveDeaths(state); cleanupCorpses(state); checkHeroEnd(state);
+  state.phase = 'cleanup'; resolveDeaths(state); cleanupCorpses(state, side); checkHeroEnd(state);
   const afterUnits = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
-  if (!state.over && !state.player.deck.length && !state.enemy.deck.length && !state.player.charger && !state.enemy.charger && beforeUnits === afterUnits) {
+  if (!state.over && side === 'enemy' && !state.player.deck.length && !state.enemy.deck.length && state.fullRoundStartLive === afterUnits) {
     state.over = true; state.winner = state.player.hp >= state.enemy.hp ? 'player' : 'enemy'; emit(state, 'stalemate', { winner: state.winner });
   }
+  state.activeSide = other(side);
   return state;
 }
 

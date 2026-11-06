@@ -23,11 +23,14 @@
     };
     const scout = engine.getCard('scout');
     const fight = engine.createFight({ playerDeck:[scout, engine.getCard('sellsword'), engine.getCard('dagger_imp')], rng:()=>.5 });
+    fight.player.board.push(engine.makeUnit({ id:'audit-player', name:'Audit Player', cost:0, atk:5, hp:1 }, 'player'));
+    fight.enemy.board.push(engine.makeUnit({ id:'audit-enemy', name:'Audit Enemy', cost:0, atk:5, hp:1 }, 'enemy'));
+    ui.setPlaybackSpeed(10);
     ui.mountBattleScreen(fight, document.querySelector('#app'));
     const battle = document.querySelector('#battle-screen');
 
     let srcMutations = 0, forbiddenWrites = 0;
-    const cardDeltas = [], ghostCounts = [], scoutWindows = [], deathWindows = new Map(), cleanupShifts = [];
+    const cardDeltas = [], ghostCounts = [], deathWindows = new Map(), cleanupShifts = [];
     const imageObserver = new MutationObserver(records => { srcMutations += records.filter(r => r.type === 'attributes' && r.attributeName === 'src' && r.target.closest('#battle-screen')).length; });
     imageObserver.observe(battle, { subtree:true, attributes:true, attributeFilter:['src'] });
     const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
@@ -44,10 +47,8 @@
         }
         for (const node of record.addedNodes) {
           if (node.nodeType === 1 && node.matches?.('.card')) cardDeltas.push(1);
-          if (node.nodeType === 1 && (node.matches?.('.is-scout-revealed') || node.querySelector?.('.is-scout-revealed'))) scoutWindows.push({ start:now });
         }
         for (const node of record.removedNodes) {
-          if (node.nodeType === 1 && node.matches?.('.is-scout-revealed')) { const window = scoutWindows.findLast(x => !x.end); if (window) window.end = now; }
           if (node.nodeType === 1 && node.matches?.('.card')) { cardDeltas.push(-1); const window = deathWindows.get(node.dataset.uid); if (window) window.end = now; }
         }
       }
@@ -55,7 +56,7 @@
     });
     observer.observe(battle, { subtree:true, childList:true, attributes:true, attributeFilter:['class'] });
 
-    for (let round = 0; round < 3 && !fight.over; round++) { engine.runRound(fight); cleanupShifts.push(...fight.events.filter(event => event.type === 'shift')); await ui.playEvents(fight.events); }
+    for (let turn = 0; turn < 4 && !fight.over; turn++) { engine.runRound(fight); cleanupShifts.push(...fight.events.filter(event => event.type === 'shift')); await ui.playEvents(fight.events); }
     await new Promise(resolve => setTimeout(resolve, 550));
     observer.disconnect(); imageObserver.disconnect();
     Object.defineProperty(Element.prototype, 'innerHTML', descriptor); Element.prototype.insertAdjacentHTML = originalInsert;
@@ -68,10 +69,10 @@
     const next = fight.enemy.deck[0], shownNext = document.querySelector('.side--enemy .deck-top .card__name')?.textContent;
     const shownCount = document.querySelector('.side--enemy .deck-count')?.textContent;
     const shownQueue = [...document.querySelectorAll('.enemy-queue-list li:not([hidden])')].map(node => node.textContent.split(' · ')[0]);
-    const expectedQueue = fight.enemy.deck.map(card => card.name), chargerName = fight.enemy.charger?.card.name;
-    const shownCharger = document.querySelector('.side--enemy .charger-card .card__name')?.textContent;
-    const queueConsistent = shownNext === next?.name && shownCount === `${fight.enemy.deck.length} left` && JSON.stringify(shownQueue) === JSON.stringify(expectedQueue) && shownCharger === chargerName;
-    report(8, queueConsistent, `NEXT ${shownNext}; ${shownCount}; charger ${shownCharger}; ordered queue [${shownQueue.join(', ')}]`);
+    const expectedQueue = fight.enemy.deck.map(card => card.name);
+    const queueConsistent = shownNext === next?.name && shownCount === `${fight.enemy.deck.length} left` && JSON.stringify(shownQueue) === JSON.stringify(expectedQueue);
+    const manaVisible = [...document.querySelectorAll('.mana-bank')].map(node => node.textContent);
+    report(8, queueConsistent && manaVisible.length === 2, `NEXT ${shownNext}; ${shownCount}; mana [${manaVisible.join(', ')}]; ordered queue [${shownQueue.join(', ')}]`);
     const completedDeaths = [...deathWindows.entries()].filter(([, window]) => window.end);
     const deathDurations = completedDeaths.map(([, window]) => window.end - window.start);
     const persisted = completedDeaths.every(([, window]) => window.corpseAt && window.corpseAt < window.end);

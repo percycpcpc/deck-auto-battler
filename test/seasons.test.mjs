@@ -28,7 +28,9 @@ await test('season 2 pool adds seven cards without removing base cards', () => {
   const baseIds = new Set(SEASONS[0].starters.flatMap(starter => starter.cards));
   const poolIds = new Set(activePool().map(card => card.id));
   const scout = unionPool().find(card => card.id === 'scout');
-  assert.equal(activePool().length, 43);
+  assert.equal(activePool().length, 39);
+  assert.deepEqual(unionPool().filter(card => card.deprecated).map(card => card.id), ['tax_collector', 'chrono_imp', 'meddler', 'doomcaller']);
+  assert.ok(unionPool().find(card => card.id === 'scout') && !unionPool().find(card => card.id === 'scout').deprecated);
   assert.ok([...baseIds].every(id => poolIds.has(id)));
   assert.ok(SEASONS[1].poolExtras.every(id => poolIds.has(id)));
   assert.deepEqual(

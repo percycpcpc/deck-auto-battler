@@ -3,7 +3,7 @@ import { createFight, runRound } from '../src/engine.js';
 const fight = createFight({ fight: 1, rng: () => 0 });
 const events = [];
 
-for (let round = 0; round < 3 && !fight.over; round++) {
+for (let turn = 0; turn < 40 && !fight.over; turn++) {
   runRound(fight);
   events.push(...fight.events);
 }

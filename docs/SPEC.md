@@ -10,14 +10,17 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 - No map, no economy, no meta in v0.
 
 ## Combat rules
+> **OWNER EXPERIMENT — under owner evaluation.** This alternating-turn combat spine replaces the prior simultaneous five-step round for this pass. After the orchestrator commits it, revert with `git revert 953b3c5`.
+
 - **Battlefield**: up to 20 slots per side (viewport shows 5, scrolls horizontally). Columns are aligned: each unit faces the unit directly opposite.
-- **Reveal phase**: both sides reveal the top card of their deck into a charging slot. The card enters play when its cost (in turns) ticks down: cost 1 = next round, cost 2 = two rounds, cost 3 = three rounds. On entering, it lands in the **leftmost empty slot**. Bosses are the only pre-boarded enemy units.
-- **Information**: the player sees their own top card's identity; their deeper draw order remains private. The enemy's scripted queue is public by owner ruling: its deck-top, charger identity, remaining count, and complete ordered queue may be inspected. No future-fight or RNG information is exposed during a fight.
-- **Action phase (owner test — under evaluation)**: every surviving player unit acts left-to-right, then every surviving enemy unit acts left-to-right. Lethal units remain as inert corpses in their lanes until round-end cleanup. Corpses never act or count as valid units, auras, pingers, or targets; an attacker opposite a corpse therefore attacks the enemy hero. Each attack remains a **mutual exchange** (attacker and a living defender both deal their ATK to each other). Overkill damage is lost. The prior interleaved order is preserved in git history at commit `f5b2fdd`.
-- **Death and cleanup**: lethal damage, the `death` event, the death counter, and Deathrattles resolve immediately. The marked corpse stays in the board array and leaves an empty combat lane until the end of the full round (both side sweeps). Cleanup removes all corpses in one batch per affected side, emits `shift { side, removedUids }`, and shifts survivors left once while preserving order. A unit that dies before its action does not act.
-- **Deck-out**: when a deck is empty, nothing happens — no more cards revealed, no reshuffle, no fatigue. Deck never refills in v0.
-- **Board cap 20**: if a charging card finishes its timer while the board is full, it waits at 0 and enters on the next free slot.
-- **Bosses** start on board before the first reveal: they occupy column 1, act in the first action phase, count toward the 20-slot cap.
+- **Strict turns**: player takes the first turn, then sides alternate P, E, P, E. The idle side does nothing.
+- **Upkeep and mana**: the active side gains +1 persistent, uncapped mana. Mana never resets.
+- **Deploy**: repeatedly spend the top card's cost and put it in the leftmost empty slot while it is affordable and the board is below 20. Resolve each Battlecry before checking the new top card. A blocked or unaffordable card spends no mana.
+- **Combat**: the active side's living units sweep left-to-right. Mutual exchanges, Windfury, moment-of-action opposite targeting, overkill loss, and corpse-lane hero hits are unchanged.
+- **Death and cleanup**: lethal marking and Deathrattles remain immediate. At the end of the active side's combat, remove only that side's marked corpses in one batch, emit `shift { side, removedUids }`, and compact once preserving order.
+- **Deck-out**: an empty deck does nothing; there is no reshuffle or fatigue.
+- **Bosses** start in column 1, act on the enemy's first combat, and count toward the 20-slot cap.
+- **Stalemate**: one full round is one player turn plus one enemy turn. If both decks are empty and total live-unit count does not change across that pair, higher hero HP wins; ties go to the player.
 
 ## Keywords (v0)
 - **Divine Shield** — negates the first instance of damage, then breaks.

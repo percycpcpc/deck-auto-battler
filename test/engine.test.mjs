@@ -33,7 +33,7 @@ test('createRun and run-end snapshots preserve the resolved starter id', () => {
   assert.equal(createRun(() => 0, 'nope').starterId, STARTERS[0].id);
 });
 
-test('fight seeds reproduce event logs and vary the player reveal order', () => {
+test('fight seeds reproduce event logs and vary the player deployment order', () => {
   const playerDeck = CARD_POOL.slice(0, 8), enemyDeck = enemyDeckFor(1);
   const play = seed => {
     const fight = createFight({ playerDeck, enemyDeck, seed });
@@ -43,17 +43,15 @@ test('fight seeds reproduce event logs and vary the player reveal order', () => 
   };
   const first = play(1), replay = play(1), different = play(2);
   assert.deepEqual(replay, first);
-  const firstReveal = events => events.find(event => event.type === 'reveal' && event.side === 'player').state.player.charger.card.id;
-  assert.notEqual(firstReveal(different), firstReveal(first));
+  const firstDeploy = events => events.find(event => event.type === 'deploy' && event.side === 'player').state.player.board[0].cardId;
+  assert.notEqual(firstDeploy(different), firstDeploy(first));
 });
 
-test('round ordering and cost-1 deploys on the following round', () => {
+test('turn ordering and cost-1 deploys during active-side upkeep', () => {
   const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [] });
-  runRound(s); assert.equal(s.player.board.length, 0); assert.equal(s.player.charger.counter, 1);
-  // Prevent the empty-deck valve from ending this focused fixture.
-  s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); s.over = false; s.winner = null;
-  runRound(s); assert.equal(s.player.board[0].name, 'Sellsword');
-  assert.deepEqual([...new Set(s.events.map(e => e.phase))], ['reveal', 'tick', 'deploy', 'action', 'cleanup']);
+  runRound(s); assert.equal(s.player.board[0].name, 'Sellsword'); assert.equal(s.player.mana, 0);
+  assert.deepEqual([...new Set(s.events.map(e => e.phase))], ['upkeep', 'deploy', 'combat']);
+  assert.deepEqual(s.events.slice(0, 2).map(e => e.type), ['turn', 'mana']);
 });
 
 test('mutual exchange: 2/3 versus 2/3 survive once and die on the second trade', () => {
@@ -68,12 +66,12 @@ test('Windfury performs two full exchanges', () => {
   runRound(s); const attacks = s.events.filter(e => e.type === 'attack' && e.unit === 'Twinfang'); assert.equal(attacks.length, 2);
 });
 
-test('player sweep completes before the first enemy attack', () => {
+test('strict alternation gives player a complete sweep before the enemy turn', () => {
   const s = empty();
   for (let i = 0; i < 2; i++) { summon(s, 'player', { id: `p${i}`, name: `P${i}`, cost: 0, atk: 0, hp: 10 }); summon(s, 'enemy', { id: `e${i}`, name: `E${i}`, cost: 0, atk: 0, hp: 10 }); }
   s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
-  const attacks = s.events.map((event, index) => ({ event, index })).filter(({ event }) => event.type === 'attack');
-  assert.ok(Math.max(...attacks.filter(x => x.event.side === 'player').map(x => x.index)) < Math.min(...attacks.filter(x => x.event.side === 'enemy').map(x => x.index)));
+  assert.ok(s.events.filter(e => e.type === 'attack').every(e => e.side === 'player'));
+  runRound(s); assert.ok(s.events.filter(e => e.type === 'attack').every(e => e.side === 'enemy'));
 });
 
 test('enemy killed during the player sweep emits no attack', () => {
@@ -82,14 +80,14 @@ test('enemy killed during the player sweep emits no attack', () => {
   assert.equal(s.events.some(event => event.type === 'attack' && event.uid === doomed.uid), false);
 });
 
-test('turnStart events flank the two action sweeps', () => {
+test('turn and mana events precede each active-side combat sweep', () => {
   const s = empty(); summon(s, 'player', { id: 'p', name: 'P', cost: 0, atk: 0, hp: 10 }); summon(s, 'enemy', { id: 'e', name: 'E', cost: 0, atk: 0, hp: 10 });
   s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
-  const playerTurn = s.events.findIndex(event => event.type === 'turnStart' && event.side === 'player');
+  const playerTurn = s.events.findIndex(event => event.type === 'turn' && event.side === 'player');
   const playerAttack = s.events.findIndex(event => event.type === 'attack' && event.side === 'player');
-  const enemyTurn = s.events.findIndex(event => event.type === 'turnStart' && event.side === 'enemy');
-  const enemyAttack = s.events.findIndex(event => event.type === 'attack' && event.side === 'enemy');
-  assert.ok(playerTurn < playerAttack && playerAttack < enemyTurn && enemyTurn < enemyAttack);
+  assert.ok(playerTurn < playerAttack); assert.equal(s.events[1].type, 'mana');
+  runRound(s); const enemyTurn = s.events.findIndex(event => event.type === 'turn' && event.side === 'enemy');
+  const enemyAttack = s.events.findIndex(event => event.type === 'attack' && event.side === 'enemy'); assert.ok(enemyTurn < enemyAttack);
 });
 
 test('Divine Shield negates one complete damage instance', () => {
@@ -248,7 +246,7 @@ test('Quillback Elder pings enemy and friendly arrivals, can kill a fragile entr
 
 test('Quillback Elder pings Hivematron boss-spawned tokens', () => {
   const s = createFight({ fight: 3, playerDeck: [], enemyDeck: [] }); summon(s, 'player', getCard('quillback_elder'));
-  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s); runRound(s);
   const tokenSummon = s.events.find(event => event.type === 'summon' && event.unit === '1/2 Token');
   assert.ok(tokenSummon); assert.ok(s.events.some(event => event.type === 'summonPing' && event.targetUid === tokenSummon.uid));
   assert.equal(s.enemy.board.find(unit => unit.uid === tokenSummon.uid)?.damage, 1);
@@ -256,8 +254,8 @@ test('Quillback Elder pings Hivematron boss-spawned tokens', () => {
 
 test('an entrant killed by Quillback Elder does not fire its Battlecry', () => {
   const s = empty(); summon(s, 'player', getCard('quillback_elder'));
-  s.enemy.charger = { card: { ...getCard('firebelcher'), hp: 1 }, counter: 0, justRevealed: false };
-  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  s.enemy.deck.push({ ...getCard('firebelcher'), cost: 1, hp: 1 });
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s); runRound(s);
   assert.equal(s.events.some(event => event.type === 'battlecry' && event.kind === 'firebelch'), false);
 });
 
@@ -322,10 +320,8 @@ test('Gravedigger ignores friendly token deaths and all enemy deaths', () => {
 });
 
 test('battlecries emit ordered source, target, change, and fizzle details', () => {
-  let s = empty(), unit = summon(s, 'player', getCard('tax_collector')); s.events = []; triggerBattlecry(s, 'player', unit);
-  let event = s.events[0]; assert.equal(event.type, 'battlecry'); assert.equal(event.uid, unit.uid); assert.equal(event.kind, 'tax'); assert.equal(event.counterDelta, 0);
-
-  s = empty(); unit = summon(s, 'player', getCard('hex_hurler')); const opposite = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
+  let s = empty(), unit = summon(s, 'player', getCard('hex_hurler')); const opposite = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
+  let event = s.events[0]; assert.equal(event.type, 'battlecry'); assert.equal(event.uid, unit.uid); assert.equal(event.kind, 'hex_hurler');
   event = s.events[0]; assert.equal(event.targetUid, opposite.uid); assert.equal(event.amount, 2); assert.equal(s.events[1].type, 'damage');
 
   s = empty(); unit = summon(s, 'player', getCard('inquisitor')); summon(s, 'enemy', getCard('sellsword')); const strongest = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
@@ -346,65 +342,18 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); unit = summon(s, 'player', getCard('gate_crasher')); const moved = summon(s, 'enemy', getCard('sellsword')); summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.targetUid, moved.uid); assert.equal(event.fromIndex, 0); assert.equal(event.toIndex, 1);
 
-  s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false }; unit = summon(s, 'player', getCard('doomcaller')); s.events = []; triggerBattlecry(s, 'player', unit);
-  event = s.events[0]; assert.equal(event.destroyed, true); assert.equal(s.events[1].type, 'chargerDestroyed');
-
-});
-
-test('Chrono Imp accelerates the next revealed charger by one turn', () => {
-  const s = createFight({ playerDeck: [getCard('colossus')], enemyDeck: [] });
-  const chrono = summon(s, 'player', getCard('chrono_imp')); triggerBattlecry(s, 'player', chrono);
-  assert.equal(s.player.onNextRevealChrono, true);
-  runRound(s);
-  assert.equal(s.player.charger.counter, getCard('colossus').cost - 1);
-  assert.equal(s.player.onNextRevealChrono, false);
-});
-
-test('Chrono Imp acceleration floors the modified starting charge at 1', () => {
-  const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [] });
-  const chrono = summon(s, 'player', getCard('chrono_imp')); triggerBattlecry(s, 'player', chrono);
-  runRound(s);
-  assert.equal(s.player.charger.counter, 1);
-  assert.equal(s.player.board.some(unit => unit.name === 'Sellsword'), false);
-});
-
-test('Chrono Imp narrates a fizzle when there is no upcoming reveal', () => {
-  const s = empty(), chrono = summon(s, 'player', getCard('chrono_imp'));
-  s.events = []; triggerBattlecry(s, 'player', chrono);
-  assert.equal(s.player.onNextRevealChrono, false);
-  assert.deepEqual(
-    (({ type, kind, pending, fizzle, target }) => ({ type, kind, pending, fizzle, target }))(s.events[0]),
-    { type: 'battlecry', kind: 'chrono', pending: false, fizzle: true, target: undefined },
-  );
-});
-
-test('Chrono Imp pending event names its resolved reveal target', () => {
-  const s = createFight({ playerDeck: [getCard('road_ogre')], enemyDeck: [] });
-  const chrono = summon(s, 'player', getCard('chrono_imp'));
-  assert.equal(getCard('chrono_imp').text, 'The next card you reveal starts with 1 fewer charge turn, minimum 1.');
-  s.events = []; triggerBattlecry(s, 'player', chrono);
-  assert.equal(s.events[0].kind, 'chrono');
-  assert.equal(s.events[0].pending, true);
-  assert.equal(s.events[0].target, 'Road Ogre');
-  assert.equal(s.events[0].targetCardId, 'road_ogre');
-});
-
-test('Meddler bounce returns to top and re-enters charger next reveal', () => {
-  const s = empty(); s.enemy.charger = { card: getCard('colossus'), counter: 2, justRevealed: false };
-  const med = summon(s, 'player', getCard('meddler')); triggerBattlecry(s, 'player', med); assert.equal(s.enemy.deck[0].id, 'colossus');
-  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s); assert.equal(s.enemy.charger.card.id, 'colossus');
 });
 
 test('deck-out does nothing and stalemate valve favors player on tie', () => {
-  const s = empty(); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.hp, HERO_HP);
+  const s = empty(); runRound(s); assert.equal(s.over, false); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.hp, HERO_HP);
 });
 
-test('regular enemies remain in the trickle deck and reveal one charger at a time', () => {
+test('regular enemies deploy from the top of their deterministic deck on enemy turns', () => {
   const first = createFight({ fight: 1 });
   assert.equal(first.enemy.board.length, 0); assert.equal(first.enemy.deck.length, 8);
-  runRound(first);
-  assert.equal(first.enemy.deck.length, 7); assert.equal(first.enemy.charger.card.id, 'enemy_grunt'); assert.equal(first.enemy.board.length, 0);
-  assert.ok(first.events.some(event => event.type === 'reveal' && event.side === 'enemy'));
+  runRound(first); runRound(first);
+  assert.equal(first.enemy.deck.length, 7); assert.equal(first.enemy.board[0].cardId, 'enemy_grunt');
+  assert.ok(first.events.some(event => event.type === 'deploy' && event.side === 'enemy'));
 });
 
 test('enemy order is identical across 100 runs of the same fight', () => {
@@ -551,14 +500,14 @@ test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
   const state = createFight({ fight: 2 });
   assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].name, 'Warherald'); assert.equal(state.enemy.board[0].boss, 'herald'); assert.equal(state.enemy.board[0].baseMaxHp, 5);
   assert.deepEqual(state.enemy.deck.map(card => card.id), ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute', 'enemy_grunt']);
-  assert.equal(state.enemy.deck.length, 6); runRound(state);
-  assert.ok(state.enemy.board.some(unit => unit.boss === 'herald')); assert.equal(state.enemy.charger.card.id, 'enemy_grunt'); assert.equal(state.enemy.deck.length, 5);
+  assert.equal(state.enemy.deck.length, 6); runRound(state); runRound(state);
+  assert.ok(state.enemy.board.some(unit => unit.boss === 'herald')); assert.ok(state.enemy.board.some(unit => unit.cardId === 'enemy_grunt')); assert.equal(state.enemy.deck.length, 5);
 });
 
 test('fight-3 boss token appears only after attack damage and only with room', () => {
   const s = createFight({ fight: 3, playerDeck: [], enemyDeck: [] }); summon(s, 'player', getCard('sellsword'));
   assert.equal(s.enemy.board[0].name, 'Hivematron'); assert.equal(s.enemy.board[0].boss, 'hive');
-  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s); runRound(s);
   const attackAt = s.events.findIndex(e => e.type === 'attack' && e.unit === 'Hivematron'); const summonAt = s.events.findIndex((e, i) => i > attackAt && e.type === 'summon' && e.unit === '1/2 Token');
   assert.ok(attackAt >= 0 && summonAt > attackAt);
 });
@@ -619,7 +568,7 @@ test('deathrattle fires immediately at lethal while its corpse stays in lane', (
 test('stalemate valve ignores corpses when comparing round progress', () => {
   const s = empty(), corpse = summon(s, 'player', getCard('dagger_imp'));
   exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), corpse); s.events = [];
-  runRound(s);
+  runRound(s); runRound(s);
   assert.equal(s.over, true); assert.equal(s.winner, 'player'); assert.equal(s.player.board.length, 0); assert.ok(s.events.some(event => event.type === 'stalemate'));
 });
 
@@ -632,22 +581,22 @@ test('two corpses compact once at cleanup and preserve live left-to-right order'
   assert.equal(s.events.filter(event => event.type === 'shift' && event.side === 'player').length, 1);
 });
 
-test('round events carry post-event view snapshots for deploys and deaths', () => {
+test('turn events carry post-event view snapshots for deploys and deaths', () => {
   const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [getCard('sellsword')] });
-  runRound(s);
-  s.over = false; s.winner = null;
-  runRound(s);
-  assert.ok(s.events.length > 0 && s.events.every(event => event.state));
-  const deploy = s.events.find(event => event.type === 'deploy');
+  const events = [];
+  while (!events.some(event => event.type === 'death')) { runRound(s); events.push(...s.events); }
+  assert.ok(events.length > 0 && events.every(event => event.state));
+  const deploy = events.find(event => event.type === 'deploy');
   assert.ok(deploy.state[deploy.side].board.some(unit => unit.uid === deploy.uid));
-  const death = s.events.find(event => event.type === 'death');
+  const death = events.find(event => event.type === 'death');
   const corpse = death?.state[death.side].board.find(unit => unit.uid === death.uid);
   assert.ok(corpse?.dead);
-  const shift = s.events.find(event => event.type === 'shift' && event.side === death.side && event.removedUids.includes(death.uid));
+  while (!events.some(event => event.type === 'shift' && event.side === death.side && event.removedUids.includes(death.uid))) { runRound(s); events.push(...s.events); }
+  const shift = events.find(event => event.type === 'shift' && event.side === death.side && event.removedUids.includes(death.uid));
   assert.ok(shift && !shift.state[death.side].board.some(unit => unit.uid === death.uid));
-  assert.deepEqual(Object.keys(death.state).sort(), ['enemy', 'phase', 'player', 'round']);
-  assert.deepEqual(Object.keys(death.state.player).sort(), ['board', 'charger', 'hp']);
-  assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'charger', 'deck', 'hp']);
+  assert.deepEqual(Object.keys(death.state).sort(), ['activeSide', 'enemy', 'phase', 'player', 'round', 'turnNumber']);
+  assert.deepEqual(Object.keys(death.state.player).sort(), ['board', 'deck', 'hp', 'mana']);
+  assert.deepEqual(Object.keys(death.state.enemy).sort(), ['board', 'deck', 'hp', 'mana']);
 });
 
 test('each level starts at full HP and the run wins only after level 20', () => {

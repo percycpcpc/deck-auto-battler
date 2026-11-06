@@ -3,15 +3,15 @@
 Every ruling below is BINDING for the v0 implementation. Where the spec was ambiguous, this is the answer. Source: K3 plan review of docs/SPEC.md.
 
 ## Round structure (exact order)
-1. **Reveal**: if a side's charger slot is empty and its deck is non-empty, top card enters the charger with counter = cost.
-2. **Tick**: all charging counters −1.
-3. **Deploy**: any charger at 0 enters the leftmost empty slot; Battlecries resolve (player first). If board full, charger waits at 0 and deploys at the next Deploy step with a free slot.
-4. **Action (owner test — under evaluation)**: the player side completes a live left-to-right sweep, then the enemy side completes a live left-to-right sweep. A lethal unit becomes an inert corpse in its current slot, never acts, and is treated as no unit for targeting; its lane can therefore be hit through to the hero. The previous interleaved ruling is preserved at commit `f5b2fdd`.
-5. **Cleanup**: after both sweeps, all corpses are removed in one batch per affected side and survivors shift left once.
+> **OWNER EXPERIMENT — under owner evaluation.** After the orchestrator commits it, revert with `git revert 953b3c5`.
 
-A card revealed on round N with cost 1 deploys on round N+1 and acts that same round.
+Player always takes the first turn, then turns strictly alternate.
 
-**Enemy deployment owner clarification:** “the order of the enemy is preseeded, not starting all on board at round1.” Regular enemy units remain in the deck and reveal, charge, and deploy through the normal one-per-round economy. Only Hivematron/Warherald begin pre-boarded in column 1 in fights 2/3. Each fight uses the fixed order documented in `SPEC.md`; the enemy deck-top, charger identity, remaining count, and full current-fight queue are public. Scout therefore narrates an “already scouted” fizzle rather than revealing hidden information.
+1. **Upkeep**: active side gains +1 persistent, uncapped mana.
+2. **Deploy**: repeatedly spend the top card's cost and put it into the leftmost empty slot while affordable and below the 20-unit cap. Resolve each Battlecry before checking the new top card. Unspent mana persists; blocked cards cost nothing.
+3. **Combat**: active living units sweep left-to-right using the existing mutual-exchange rules. Windfury performs two exchanges. Units killed before their action do not act.
+4. **Cleanup**: remove only the active side's marked corpses in one batch, emit `shift { side, removedUids }`, and compact once preserving order.
+5. **Pass**: the opponent becomes active.
 
 ## Damage
 - **Mutual exchange within sequential sweeps**: when a unit attacks a living defender, attacker and defender both deal their ATK to each other. Every attack is an exchange; Windfury = two exchanges. This supersedes the old within-round interleaving/simultaneous-action interpretation for the owner test, but does not change `exchange`: a defender that survives until its own side's sweep may later initiate its own exchange. (If playtests show fights ending too fast, the fallback is attacker-only damage — config flag.)
@@ -22,10 +22,8 @@ A card revealed on round N with cost 1 deploys on round N+1 and acts that same r
 - In a mutual exchange that kills both, **player's Deathrattles resolve first**, then enemy's. DR summons append subject to the physical board cap (corpses still occupy slots) and never act in the current action phase.
 - Cleanup removes all marked corpses while preserving survivor order, then emits one `shift { side, removedUids }` event per affected side. There is no second death event and no mid-sweep compaction.
 
-## Charger manipulation
-- Tax Collector, Chrono Imp, Doomcaller, Meddler all fizzle if their target charger slot is empty.
-- Chrono Imp reducing a counter from 1 to 0 deploys the card immediately (same Deploy step).
-- Meddler's bounced card goes on top of the enemy deck and re-enters the charger on the next Reveal.
+## Experiment card exclusions
+Tax Collector, Chrono Imp, Meddler, and Doomcaller are deprecated from draft generation because their live text depends on the removed slot. They remain legal in the union pool for saved-deck compatibility. Scout remains active because its live Battlecry now reduces the opposing unit's ATK and has no dependency on the removed system.
 
 ## Tokens
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
