@@ -191,11 +191,11 @@ async function showProfile() {
 }
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
-  hex_hurler: 'On deploy: deal 2 damage to the opposing unit.',
+  hex_hurler: 'On deploy: deal 2 damage to the opposing unit, otherwise the rightmost enemy.',
   gate: 'On deploy: shove the opposing unit to the far right.',
-  squire: 'On deploy: give adjacent allies +1/+1.',
+  squire: 'On deploy: give the ally immediately to the left +1/+1.',
   scout: 'On deploy: already scouted — enemy order is known.',
-  duelist: 'On deploy: gain +2/+2 if no adjacent ally.',
+  duelist: 'On deploy: gain +2/+2 if your line has no other living unit.',
   hexblade: 'On deploy: set the opposing unit to 1/1.',
   gravedigger: 'On deploy: summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.',
   inquisitor: "On deploy: deal 3 damage to the enemy's strongest unit.",
@@ -207,7 +207,7 @@ const BATTLECRY_TEXT = Object.freeze({
 const DEATHRATTLE_TEXT = Object.freeze({
   summon1: 'Deathrattle: summon a 1/2.',
   summon2x2: 'Deathrattle: summon two 2/3s.',
-  spite: 'Deathrattle: deal 1 damage to the opposing unit.',
+  spite: 'Deathrattle: deal 1 damage to the lowest-HP enemy unit.',
   plague: 'Deathrattle: deal 1 damage to every enemy unit.',
   oppositeAtkDown: 'Deathrattle: the opposing unit loses 1 ATK.',
 });
@@ -498,7 +498,7 @@ function cardTipData(card, stats = null) {
 function pulse(node, className, duration) { if (node) { const scaled = dur(duration); node.style.setProperty('--fx-duration', `${scaled}ms`); node.classList.add(className); setTimeout(() => { node.classList.remove(className); node.style.removeProperty('--fx-duration'); }, scaled); } }
 function battlecryCaption(event) {
   const target = event.target || event.targets?.join(' and ');
-  if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}` : 'Battlecry: no opposing unit';
+  if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}${event.fallback ? ' (rightmost fallback)' : ''}` : 'Battlecry: no enemy unit';
   if (event.kind === 'inquisitor') return target ? 'Battlecry: 3 damage → strongest enemy' : 'Battlecry: no enemy units';
   if (event.kind === 'hexblade') return target ? `Battlecry: ${target} becomes 1/1` : 'Battlecry: no opposing unit';
   if (event.kind === 'copycat') return target ? `Battlecry: copy ${target}'s stats` : 'Battlecry: no opposing unit';
@@ -506,9 +506,9 @@ function battlecryCaption(event) {
   if (event.kind === 'gate') return event.moved ? `Battlecry: shove ${target} right` : 'Battlecry: no unit to shove';
   if (event.kind === 'cataclysm') return 'Battlecry: 2 damage to all units';
   if (event.kind === 'firebelch') return event.targetUids?.length ? 'Battlecry: 1 damage to all enemies' : 'Battlecry: no enemy units';
-  if (event.kind === 'squire') return event.neighborIndices?.length ? 'Battlecry: adjacent allies gain +1/+1' : 'Battlecry: no adjacent allies';
+  if (event.kind === 'squire') return event.targetUid ? 'Battlecry: left ally gains +1/+1' : 'Battlecry: no ally to the left';
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
-  if (event.kind === 'duelist') return event.applied ? 'Battlecry: gain +2/+2' : 'Battlecry: adjacent ally prevents gain';
+  if (event.kind === 'duelist') return event.applied ? 'Battlecry: lone fighter gains +2/+2' : 'Battlecry: another living ally prevents gain';
   if (event.kind === 'scout') return 'Battlecry: already scouted — enemy order is known';
   return `Battlecry: ${battlecryText(event).replace(/^On deploy:\s*/i, '') || 'no effect'}`;
 }

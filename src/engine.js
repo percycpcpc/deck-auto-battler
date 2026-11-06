@@ -171,7 +171,7 @@ function dealDamage(state, source, target, amount) {
   if (target.shield) { target.shield = false; emit(state, 'shield', { unit: target.name, uid: target.uid }); return false; }
   target.damage += amount;
   if (source?.keywords?.includes('poisonous')) target.poisoned = true;
-  emit(state, 'damage', { unit: target.name, uid: target.uid, amount });
+  emit(state, 'damage', { unit: target.name, uid: target.uid, amount, sourceSide: source?.side, sourceUid: source?.uid, source: source?.name });
   // Bristleback identity retuning is deferred to the balance wave; this pass only caps its growth trigger per round.
   if (target.onDamaged && target.lastOnDamagedGrowthRound !== state.round && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) {
     target.lastOnDamagedGrowthRound = state.round;
@@ -213,7 +213,11 @@ function triggerDeathrattle(state, side, unit, oldIndex) {
   const foe = other(side);
   if (unit.deathrattle === 'summon1') summon(state, side, tokenCard(), { summonedThisAction: true });
   if (unit.deathrattle === 'summon2x2') { summon(state, side, tokenCard(2, 3), { summonedThisAction: true }); summon(state, side, tokenCard(2, 3), { summonedThisAction: true }); }
-  if (unit.deathrattle === 'spite') dealDamage(state, unit, liveAt(state[foe].board, oldIndex), 1);
+  if (unit.deathrattle === 'spite') {
+    const targets = liveUnits(state[foe].board);
+    const target = targets.reduce((lowest, candidate) => !lowest || effectiveStats(state, foe, candidate).hp < effectiveStats(state, foe, lowest).hp ? candidate : lowest, null);
+    dealDamage(state, unit, target, 1);
+  }
   if (unit.deathrattle === 'plague') for (const target of liveUnits(state[foe].board)) dealDamage(state, unit, target, 1);
   if (unit.deathrattle === 'oppositeAtkDown') { const t = liveAt(state[foe].board, oldIndex); if (t) t.baseAtk = Math.max(0, t.baseAtk - 1); }
 }
@@ -236,25 +240,27 @@ export function triggerBattlecry(state, side, unit) {
   const foeSide = other(side), own = state[side], foe = state[foeSide], index = own.board.indexOf(unit), opposite = liveAt(foe.board, index);
   const event = { side, uid: unit.uid, unit: unit.name, kind: unit.battlecry };
   switch (unit.battlecry) {
-    case 'hex_hurler':
-      emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined, amount: 2 });
-      dealDamage(state, unit, opposite, 2); break;
+    case 'hex_hurler': {
+      const target = opposite || [...liveUnits(foe.board)].at(-1), targetIndex = target ? foe.board.indexOf(target) : undefined;
+      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex, fallback: !!target && target !== opposite, amount: 2, fizzle: !target });
+      dealDamage(state, unit, target, 2); break;
+    }
     case 'gate': {
       const moved = !!opposite && foe.board.length < BOARD_CAP, toIndex = moved ? foe.board.length - 1 : undefined;
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, fromIndex: moved ? index : undefined, toIndex, moved });
       if (moved) { foe.board.splice(index, 1); foe.board.push(opposite); } break;
     }
     case 'squire': {
-      const neighbors = [index - 1, index + 1].filter(i => own.board[i] && !own.board[i].dead);
-      emit(state, 'battlecry', { ...event, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: 1 });
-      for (const i of neighbors) { own.board[i].baseAtk++; own.board[i].baseMaxHp++; } break;
+      const targetIndex = index - 1, target = liveAt(own.board, targetIndex);
+      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: target ? targetIndex : undefined, targetUids: target ? [target.uid] : [], amount: target ? 1 : 0, fizzle: !target });
+      if (target) { target.baseAtk++; target.baseMaxHp++; } break;
     }
     case 'oppositeAtkDown2':
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined, amount: -2 });
       if (opposite) opposite.baseAtk = Math.max(0, opposite.baseAtk - 2); break;
     case 'duelist': {
-      const neighbors = [index - 1, index + 1].filter(i => own.board[i] && !own.board[i].dead), applied = neighbors.length === 0;
-      emit(state, 'battlecry', { ...event, targetUid: unit.uid, target: unit.name, adjacent: neighbors.length, neighborIndices: neighbors, targetUids: neighbors.map(i => own.board[i].uid), targets: neighbors.map(i => own.board[i].name), amount: applied ? 2 : 0, applied, fizzle: !applied });
+      const allies = own.board.map((ally, allyIndex) => ({ ally, allyIndex })).filter(({ ally }) => ally !== unit && !ally.dead), applied = allies.length === 0;
+      emit(state, 'battlecry', { ...event, targetUid: unit.uid, target: unit.name, adjacent: allies.length, neighborIndices: allies.map(({ allyIndex }) => allyIndex), targetUids: allies.map(({ ally }) => ally.uid), targets: allies.map(({ ally }) => ally.name), amount: applied ? 2 : 0, applied, fizzle: !applied });
       if (applied) { unit.baseAtk += 2; unit.baseMaxHp += 2; } break;
     }
     case 'hexblade':

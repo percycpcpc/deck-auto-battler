@@ -51,20 +51,20 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 **Rare (23):**
 1. Twinfang (cost 1) — 1/4 Rush, Windfury
 2. Brood Wisp (cost 1) — 1/4, Deathrattle: summon 1/2
-3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to opposite unit
+3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to the opposite unit, otherwise the rightmost enemy
 4. Tax Collector (cost 1) — 1/4, Battlecry: enemy charging card +1 turn
 5. Chrono Imp (cost 1) — 1/4, Battlecry: your charging card ticks down 1 extra
 6. Gate Crasher (cost 1) — 2/4, Battlecry: push the unit opposite to the rightmost empty slot
 7. Leeching Tick (cost 1) — 1/5, when this kills a unit, gain +1/+1
-8. Squire (cost 1) — 1/4, Battlecry: adjacent units get +1/+1
-9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the unit opposite
+8. Squire (cost 1) — 1/4, Battlecry: the ally immediately to its left gets +1/+1
+9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the lowest-HP enemy unit (leftmost on ties)
 10. Scout (cost 1) — 2/4, Battlecry: reveal the identity of the enemy's charging card
 11. Aegis Knight (cost 2) — 2/7 Divine Shield
 12. Venom Hound (cost 2) — 3/5 Poisonous
 13. Plague Bearer (cost 2) — 2/9, Deathrattle: deal 1 to all enemies
 14. Warlord (cost 2) — 2/9, Aura: adjacent +1/+0
 15. Bulwark (cost 2) — 1/9, Deathrattle: the unit opposite gets −2 ATK
-16. Duelist (cost 2) — 3/5, On deploy: gain +2/+2 if no adjacent ally
+16. Duelist (cost 2) — 3/5, On deploy: gain +2/+2 if your line has no other living unit
 17. Gravedigger (cost 2) — 2/6, Battlecry: summon a 1/2 for each unit that died this combat
 18. Meddler (cost 2) — 2/6, Battlecry: put the enemy's charging card back on top of their deck
 19. Headsman (cost 2) — 3/8, after this kills a unit, gain +2/+2

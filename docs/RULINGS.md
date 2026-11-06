@@ -52,6 +52,14 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 - Inquisitor tiebreak: **leftmost** among tied highest-ATK units (effective ATK, post-aura).
 - Gravedigger counts **all unit deaths on both sides** since the fight began, including tokens and deaths before Gravedigger entered, excluding itself.
 
+## Positional targeting
+- Corpses never satisfy an opposite, adjacent, fallback, or lowest-HP target query.
+- Squire targets only the live ally immediately to its left when it enters; it does not search farther left and can never have a right neighbor at leftmost-empty deployment time.
+- Hex Hurler targets its live opposite first. If that lane is empty or holds a corpse, it targets the rightmost live enemy instead. It fizzles only when no live enemy exists.
+- Spiteful Imp's Deathrattle targets the live enemy with the lowest effective remaining HP; ties resolve to the leftmost unit.
+- Hexblade and Copycat are deliberately exact-opposite effects and have no fallback target.
+- Duelist is a recovery card: its deploy bonus applies only when its line contains no other living unit. Corpses do not prevent the bonus.
+
 ## Replay information
 
 Replays are full-information: both decks and all events are visible to anyone with the link. Live-scouting invariants (`UI_ARCHITECTURE.md`) apply ONLY to in-run fights.
