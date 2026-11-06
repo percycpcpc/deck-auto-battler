@@ -2,48 +2,44 @@
 
 ## Project Goal
 
-Deliver the owner-evaluation `alt-turns` experiment: strict player/enemy turns with persistent mana, direct affordable deployment, active-side combat/cleanup, and no charging-slot UI.
+Establish a deterministic matched-seed starter-parity battery for issue #42 before any starter list or balance changes.
 
 ## Current Phase
 
-- Phase: production experiment
-- Status: implemented and locally verified; no commit made
+- Phase: maintenance / balance evidence
+- Status: implementation and scoped pickup battery complete; ready to ship as a draft PR
 
 ## Latest Completed Work
 
-- Replaced the five-step simultaneous round with player-first strict alternation and observable `turn`/`mana` events.
-- Added persistent uncapped mana and repeated top-deck deployment into the leftmost empty slot.
-- Scoped corpse cleanup to the active side and retained mutual exchanges, keyword interactions, deterministic RNG, bosses, and the two-turn stalemate window.
-- Removed the charging-slot presentation, added both mana banks and active-turn indication, and retained battle-root DOM invariants.
-- Deprecated Tax Collector, Chrono Imp, Meddler, and Doomcaller from active draft pools; Scout remains active.
-- Updated experiment docs, event/balance tools, browser invariants, and rule-coupled tests.
-- Captured 12 screenshots in `refs/ui-audit/alt-turns/` at 1440x900 and 390x844.
+- Added `tools/starter_parity.mjs` with matched seeds across wide, tall, tempo-curve, Warherald, Hivematron, and Broodmother fixtures.
+- Added a deterministic one-draft comparison using a separate seeded offer and a documented pick policy.
+- Added focused coverage for starter/scenario completeness, identical seed sets, byte-identical reruns, evidence fields, and invalid seeds.
+- Published the 200-seed baseline and findings without changing starter lists, card stats, engine rules, season data, UI, or server code.
 
 ## Important Modified Files
 
-- `src/engine.js`, `src/seasons.js`, `src/ui.js`, `styles.css`
-- `test/engine.test.mjs`, `test/seasons.test.mjs`
-- `tools/balance_sim.mjs`, `tools/event_snapshot_check.mjs`, `tools/invariants.html`
-- `docs/SPEC.md`, `docs/RULINGS.md`
+- `tools/starter_parity.mjs`
+- `test/starter_parity.test.mjs`
+- `docs/STARTER_PARITY.md`
+- `CODEX_HANDOFF.md`
 
 ## Verification
 
-- `node test/engine.test.mjs`: 67/67 passed
-- `node test/seasons.test.mjs`: 6/6 passed
-- `node test/speed_gating.test.mjs`: 3/3 passed
+- `node test/starter_parity.test.mjs`: 4/4 passed
+- `node tools/starter_parity.mjs 200`: deterministic 7,200-fight matrix completed twice with identical results
+- `node test/engine.test.mjs`: 72/72 passed
 - `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/balance_sim.mjs 1 200`: fights 1-3 reported win rate and turn percentiles
-- `node tools/ui_invariants_check.mjs`: PASS
-- Browser `tools/invariants.html` on port 8321: all CHECK lines PASS
-- `node --check src/engine.js`, `node --check src/ui.js`, `git diff --check`: PASS (line-ending warnings only)
-- Grep of `src/engine.js` and `src/ui.js` for old flow terminology: no matches
+- `node tools/ui_invariants_check.mjs`: PASS (static harness wiring; no UI files touched)
+- `node tools/balance_sim.mjs 1 200`: fight 1 = 100% twice; pre-existing drift proven by 70% at SHA `11542d9` and zero relevant diff from `origin/main`
+- `git diff --check`: PASS
+- Scope proof: no diff in engine, seasons, UI/CSS, server, or assets
 
 ## Known Risks / Untested Areas
 
-- Windows denied visible Edge focus/screenshot permissions, so the real-browser harness and screenshots were completed in headless Chrome instead of the visible Edge window.
-- The owner experiment intentionally has no balance-band assertion; fight 1 measured 100% and fight 2 measured 36% under the fixed starter harness.
-- Documentation uses `git revert <sha>` because this agent was explicitly prohibited from creating the orchestrator-owned commit.
+- The requested charging fixture is a documented 1/2/3-cost tempo proxy because the owner-evaluation combat spine removed charging slots.
+- A no-draft level-20 fixture is an isolation probe, not a real-run forecast; all starters correctly read 0% without the preceding drafts/events.
+- This battery measures one deterministic draft policy, not optimal player drafting.
 
 ## Next Safest Task
 
-Owner review of the screenshot matrix and measured pacing, then orchestrator commit/ship or experiment revert.
+Commit and push `pass/42-starter-parity-battery`, then open the draft PR with the verification and pre-existing tuning note.
