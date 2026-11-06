@@ -3,14 +3,14 @@
 Every ruling below is BINDING for the v0 implementation. Where the spec was ambiguous, this is the answer. Source: K3 plan review of docs/SPEC.md.
 
 ## Round structure (exact order)
-> **OWNER EXPERIMENT — under owner evaluation.** After the orchestrator commits it, revert with `git revert 953b3c5`.
+> **OWNER EXPERIMENT — under owner evaluation.** Revert the whole experiment (spine + follow-ups) with `git revert 3cf09cc^..HEAD`.
 
 Player always takes the first turn, then turns strictly alternate.
 
 1. **Upkeep**: active side gains +1 persistent, uncapped mana.
 2. **Deploy**: repeatedly spend the top card's cost and put it into the leftmost empty slot while affordable and below the 20-unit cap. Resolve each Battlecry before checking the new top card. Unspent mana persists; blocked cards cost nothing.
-3. **Combat**: active living units sweep left-to-right using the existing mutual-exchange rules. Windfury performs two exchanges. Units killed before their action do not act.
-4. **Cleanup**: remove only the active side's marked corpses in one batch, emit `shift { side, removedUids }`, and compact once preserving order.
+3. **Combat**: active living units sweep left-to-right using the existing mutual-exchange rules. A unit with `enteredTurn` equal to the current `turnNumber` has summoning sickness and does not act unless it has Rush. Windfury performs two exchanges; sick Windfury units do not act, while Rush Windfury units exchange twice normally. Units killed before their action do not act.
+4. **Cleanup**: after the combat sweep, remove marked corpses from both sides. Emit one `shift { side, removedUids }` per affected side and compact each affected side once preserving order, so the idle side begins its turn corpse-free.
 5. **Pass**: the opponent becomes active.
 
 ## Damage
@@ -20,13 +20,13 @@ Player always takes the first turn, then turns strictly alternate.
 ## Death, shift, Deathrattle ordering
 - Deaths are checked after every individual action. Lethal units are marked dead immediately, emit `death`, increment the death count, and fire Deathrattles, but remain in place until round-end cleanup. Corpses are excluded from actions, targeting, auras, Battlecries, summon pings, and every other live-unit query.
 - In a mutual exchange that kills both, **player's Deathrattles resolve first**, then enemy's. DR summons append subject to the physical board cap (corpses still occupy slots) and never act in the current action phase.
-- Cleanup removes all marked corpses while preserving survivor order, then emits one `shift { side, removedUids }` event per affected side. There is no second death event and no mid-sweep compaction.
+- Cleanup at each player's end of turn removes all marked corpses from both sides while preserving survivor order, then emits one `shift { side, removedUids }` event per affected side. There is no second death event and no mid-sweep compaction.
 
 ## Experiment card exclusions
 Tax Collector, Chrono Imp, Meddler, and Doomcaller are deprecated from draft generation because their live text depends on the removed slot. They remain legal in the union pool for saved-deck compatibility. Scout remains active because its live Battlecry now reduces the opposing unit's ATK and has no dependency on the removed system.
 
 ## Tokens
-- All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
+- All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
 
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
@@ -42,6 +42,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
 Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-value the boss after clearing the line.
 
 ## Keyword interactions
+- Rush ignores summoning sickness only; it does not change entry timing, Battlecries, targeting, or exchanges.
 - Windfury vs Divine Shield: first exchange pops the shield (whole instance negated), second exchange damages normally. Poisonous only triggers if damage actually lands — a negated hit does not kill.
 - Poisonous in a mutual exchange: any unit damaged by a Poisonous source dies, regardless of HP — both can die in one exchange. Hero damage is never Poisonous-relevant.
 - **Base stats + dynamic auras**: units store base ATK/HP; living aura sources recompute continuously. Corpses provide no aura, and their empty lane breaks adjacency until cleanup compacts the board.

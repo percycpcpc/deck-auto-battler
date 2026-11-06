@@ -84,12 +84,10 @@
     const enemyScroll = document.querySelector('.side--enemy .board-scroll'), playerScroll = document.querySelector('.side--player .board-scroll');
     const battleStyles = getComputedStyle(document.querySelector('#battle-screen'));
     const pitch = parseFloat(battleStyles.getPropertyValue('--slot-w')) + parseFloat(battleStyles.getPropertyValue('--slot-gap'));
-    playerScroll.scrollLeft = pitch * 6; await new Promise(requestAnimationFrame);
+    const sharedSlider = document.querySelector('.march-control__slider'); sharedSlider.value = '6'; sharedSlider.dispatchEvent(new Event('input', { bubbles:true })); await new Promise(requestAnimationFrame);
     const firstVisible = node => Math.floor((node.scrollLeft + 1) / pitch);
-    const programmaticAligned = firstVisible(enemyScroll) === firstVisible(playerScroll) && Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft) <= 1;
-    enemyScroll.scrollLeft += pitch; await new Promise(requestAnimationFrame);
-    const enemyFollowed = Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft) <= 1;
-    report(11, programmaticAligned && enemyFollowed, `slot>=6 first-visible enemy/player ${firstVisible(enemyScroll)}/${firstVisible(playerScroll)}; user-source delta ${Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft).toFixed(2)}px`);
+    const bothRevealSeven = firstVisible(enemyScroll) === 6 && firstVisible(playerScroll) === 6;
+    report(11, !!sharedSlider && bothRevealSeven && Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft) <= 1, `shared slot 7 first-visible enemy/player ${firstVisible(enemyScroll) + 1}/${firstVisible(playerScroll) + 1}; delta ${Math.abs(enemyScroll.scrollLeft - playerScroll.scrollLeft).toFixed(2)}px`);
     const passed = lines.every(line => line.includes(': PASS'));
     document.title = `INVARIANTS: ${passed ? 'PASS' : 'FAIL'} | ${lines.join(' | ')}`;
   </script>

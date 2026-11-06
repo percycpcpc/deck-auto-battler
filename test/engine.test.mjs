@@ -50,7 +50,7 @@ test('fight seeds reproduce event logs and vary the player deployment order', ()
 test('turn ordering and cost-1 deploys during active-side upkeep', () => {
   const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [] });
   runRound(s); assert.equal(s.player.board[0].name, 'Sellsword'); assert.equal(s.player.mana, 0);
-  assert.deepEqual([...new Set(s.events.map(e => e.phase))], ['upkeep', 'deploy', 'combat']);
+  assert.deepEqual([...new Set(s.events.map(e => e.phase))], ['upkeep', 'deploy']);
   assert.deepEqual(s.events.slice(0, 2).map(e => e.type), ['turn', 'mana']);
 });
 
@@ -133,6 +133,30 @@ test('Bristleback growth triggers at most once per round per unit', () => {
   s.round = 2; exchange(s, 'enemy', attacker, bristle);
   assert.equal(bristle.baseAtk, 7);
   assert.equal(s.events.filter(event => event.type === 'statChange' && event.reason === 'onDamaged').length, 2);
+});
+
+test('summoning sickness defers a deployed unit until its controller next turn', () => {
+  const s = createFight({ playerDeck: [getCard('sellsword')], enemyDeck: [] });
+  runRound(s); const unit = s.player.board[0]; assert.equal(unit.enteredTurn, 1); assert.equal(s.events.some(event => event.type === 'attack' && event.uid === unit.uid), false);
+  runRound(s); runRound(s); assert.equal(s.events.some(event => event.type === 'attack' && event.uid === unit.uid), true);
+});
+
+test('Rush acts during the combat sweep of its entry turn', () => {
+  const s = createFight({ playerDeck: [getCard('dagger_imp')], enemyDeck: [] });
+  runRound(s); const unit = s.player.board[0]; assert.equal(unit.rush, true); assert.equal(s.events.some(event => event.type === 'attack' && event.uid === unit.uid), true);
+});
+
+test('pre-boarded boss acts on the enemy first combat sweep', () => {
+  const s = createFight({ playerDeck: [], enemyDeck: [], fight: 2 });
+  const boss = s.enemy.board[0]; assert.equal(boss.enteredTurn, 0); runRound(s); runRound(s);
+  assert.equal(s.events.some(event => event.type === 'attack' && event.uid === boss.uid), true);
+});
+
+test('a token summoned during combat has summoning sickness', () => {
+  const s = empty(), wisp = summon(s, 'player', getCard('brood_wisp'));
+  summon(s, 'enemy', { id: 'token_killer', name: 'Token Killer', cost: 0, atk: 4, hp: 10 });
+  runRound(s); const token = s.player.board.find(unit => unit.token);
+  assert.ok(token); assert.equal(token.enteredTurn, s.turnNumber); assert.equal(s.events.some(event => event.type === 'attack' && event.uid === token.uid), false); assert.equal(wisp.dead, true);
 });
 
 test('healing is capped at original printed HP and heals both sides', () => {
@@ -555,6 +579,14 @@ test('cleanup emits one batch shift for an affected side', () => {
   runRound(s);
   const shifts = s.events.filter(event => event.type === 'shift' && event.side === 'player');
   assert.equal(shifts.length, 1); assert.deepEqual(shifts[0].removedUids, [first.uid, second.uid]); assert.equal(shifts[0].phase, 'cleanup');
+});
+
+test('end-of-turn cleanup clears both sides and emits one shift per affected side', () => {
+  const s = empty(), playerCorpse = summon(s, 'player', getCard('sellsword')), enemyCorpse = summon(s, 'enemy', getCard('sellsword'));
+  exchange(s, 'enemy', makeUnit(getCard('colossus'), 'enemy'), playerCorpse); exchange(s, 'player', makeUnit(getCard('colossus')), enemyCorpse); s.events = [];
+  runRound(s); const shifts = s.events.filter(event => event.type === 'shift');
+  assert.deepEqual(shifts.map(event => event.side), ['player', 'enemy']); assert.deepEqual(shifts.map(event => event.removedUids), [[playerCorpse.uid], [enemyCorpse.uid]]);
+  assert.equal(s.player.board.includes(playerCorpse), false); assert.equal(s.enemy.board.includes(enemyCorpse), false); assert.ok(shifts.every(event => event.phase === 'cleanup'));
 });
 
 test('deathrattle fires immediately at lethal while its corpse stays in lane', () => {

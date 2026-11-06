@@ -10,14 +10,14 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 - No map, no economy, no meta in v0.
 
 ## Combat rules
-> **OWNER EXPERIMENT — under owner evaluation.** This alternating-turn combat spine replaces the prior simultaneous five-step round for this pass. After the orchestrator commits it, revert with `git revert 953b3c5`.
+> **OWNER EXPERIMENT — under owner evaluation.** This alternating-turn combat spine replaces the prior simultaneous five-step round for this pass. Revert the whole experiment (spine + follow-ups) with `git revert 3cf09cc^..HEAD`.
 
 - **Battlefield**: up to 20 slots per side (viewport shows 5, scrolls horizontally). Columns are aligned: each unit faces the unit directly opposite.
 - **Strict turns**: player takes the first turn, then sides alternate P, E, P, E. The idle side does nothing.
 - **Upkeep and mana**: the active side gains +1 persistent, uncapped mana. Mana never resets.
 - **Deploy**: repeatedly spend the top card's cost and put it in the leftmost empty slot while it is affordable and the board is below 20. Resolve each Battlecry before checking the new top card. A blocked or unaffordable card spends no mana.
-- **Combat**: the active side's living units sweep left-to-right. Mutual exchanges, Windfury, moment-of-action opposite targeting, overkill loss, and corpse-lane hero hits are unchanged.
-- **Death and cleanup**: lethal marking and Deathrattles remain immediate. At the end of the active side's combat, remove only that side's marked corpses in one batch, emit `shift { side, removedUids }`, and compact once preserving order.
+- **Combat**: the active side's living, non-sick units sweep left-to-right. A unit that entered during the current side's turn cannot act until its controller's next turn unless it has Rush. Mutual exchanges, Windfury, moment-of-action opposite targeting, overkill loss, and corpse-lane hero hits are unchanged.
+- **Death and cleanup**: lethal marking and Deathrattles remain immediate. At the end of the active side's turn, after its combat sweep, remove marked corpses from both sides; for each affected side, emit one `shift { side, removedUids }` and compact once preserving order. The idle side therefore begins its turn corpse-free.
 - **Deck-out**: an empty deck does nothing; there is no reshuffle or fatigue.
 - **Bosses** start in column 1, act on the enemy's first combat, and count toward the 20-slot cap.
 - **Stalemate**: one full round is one player turn plus one enemy turn. If both decks are empty and total live-unit count does not change across that pair, higher hero HP wins; ties go to the player.
@@ -28,6 +28,7 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 - **Deathrattle** — triggers when the unit dies.
 - **Aura** — continuous buff to adjacent (or all friendly) units while alive; ends when the aura unit dies.
 - **Windfury** — acts twice per action phase (two full attacks; second attack hits shieldless/face if the first broke a shield).
+- **Rush** — can act in the combat sweep of the turn it enters (ignores summoning sickness).
 - **Battlecry** — triggers when the unit ENTERS PLAY (lands on the board), NOT when revealed/charging.
 
 ## Card pool (36)
@@ -41,14 +42,14 @@ Keywords count toward the toughness budget: Divine Shield is worth roughly 2 HP,
 Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost is shown by the top-left cost gem.
 
 **Common (5):**
-1. Dagger Imp (cost 1) — 2/2
+1. Dagger Imp (cost 1) — 2/2, Rush
 2. Sellsword (cost 1) — 2/3
 3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve)
 4. Road Ogre (cost 2) — 3/6
 5. Colossus (cost 3) — 6/9
 
 **Rare (23):**
-1. Twinfang (cost 1) — 1/4 Windfury
+1. Twinfang (cost 1) — 1/4 Rush, Windfury
 2. Brood Wisp (cost 1) — 1/4, Deathrattle: summon 1/2
 3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to opposite unit
 4. Tax Collector (cost 1) — 1/4, Battlecry: enemy charging card +1 turn

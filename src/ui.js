@@ -1,4 +1,4 @@
-import { CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
+import { BOARD_CAP, CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 import { SPEEDS, durationAtSpeed, isSpeedAvailable } from './speeds.js';
 
@@ -189,7 +189,7 @@ async function showProfile() {
   badgeRow.append(badges); state.append(trophyShelf, badgeRow);
   if (data.offline) state.prepend(el('p', 'cosmetics-offline', 'Offline profile — showing last synced ownership.'));
 }
-const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
+const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
   hex_hurler: 'On deploy: deal 2 damage to the opposing unit.',
   gate: 'On deploy: shove the opposing unit to the far right.',
@@ -214,8 +214,8 @@ const DEATHRATTLE_TEXT = Object.freeze({
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
 const bossText = card => card?.text || '';
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
-const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura', heal: 'Heal' });
-const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry', 'heal'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
+const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', rush: 'Rush', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura', heal: 'Heal' });
+const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry', 'heal'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
 export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
 const descriptorText = card => bossText(card) || [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
 const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${descriptorText(unit) ? `. ${descriptorText(unit)}` : ''}`;
@@ -266,6 +266,7 @@ function createHeroPanel(side) {
 
 function createSide(side) {
   const root = el('div', `side side--${side}`), info = el('div', 'side__info');
+  const turnMarker = el('div', 'side-turn-marker', side === 'player' ? 'YOUR TURN' : 'ENEMY TURN'); turnMarker.setAttribute('aria-hidden', 'true');
   const hero = createHeroPanel(side), deck = createDeckStack(side), mana = el('div', 'mana-bank', 'MANA 0');
   mana.setAttribute('aria-label', `${side === 'player' ? 'Your' : 'Enemy'} banked mana`);
   const plaque = el('div', 'deck-plaque'); plaque.id = `deck-detail-${side}`; deck.stack.setAttribute('aria-describedby', plaque.id); info.append(hero.panel, deck.stack, mana, plaque);
@@ -276,12 +277,8 @@ function createSide(side) {
   for (let n = 0; n < 5; n++) ghosts.append(el('div', 'slot-ghost'));
   const empty = el('span', 'board-empty', 'NO UNITS IN LINE');
   lane.append(ghosts, empty); scroll.append(lane); scroll.tabIndex = 0; scroll.setAttribute('role', 'region'); scroll.setAttribute('aria-label', side === 'player' ? 'Your line' : 'Enemy line');
-  const prev = el('button', 'lane-arrow lane-arrow--prev', '‹'), next = el('button', 'lane-arrow lane-arrow--next', '›');
-  prev.setAttribute('aria-label', 'Scroll previous slot'); next.setAttribute('aria-label', 'Scroll next slot');
-  const updateArrows = left => { const position = left ?? scroll.scrollLeft; prev.disabled = position <= 0; next.disabled = position >= scroll.scrollWidth - scroll.clientWidth - 1; };
-  prev.addEventListener('click', () => scrollBattleLanesBy(-slotPitch, scroll)); next.addEventListener('click', () => scrollBattleLanesBy(slotPitch, scroll));
-  scroll.addEventListener('scroll', () => updateArrows()); scroll.addEventListener('keydown', event => { if (event.target === scroll && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); scrollBattleLanesBy(event.key === 'ArrowLeft' ? -slotPitch : slotPitch, scroll); } });
-  prev.disabled = true; root.append(info, scroll, prev, next); return { root, hero, deck, mana, plaque, scroll, lane, ghosts, empty, updateArrows };
+  scroll.addEventListener('keydown', event => { if (event.target === scroll && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); scrollBattleLanesBy(event.key === 'ArrowLeft' ? -slotPitch : slotPitch, scroll); } });
+  root.append(info, scroll, turnMarker); return { root, hero, deck, mana, plaque, scroll, lane, ghosts, empty, turnMarker };
 }
 
 let synchronizingBattleLanes = false;
@@ -289,7 +286,8 @@ function setBattleScrollLeft(left) {
   if (!els?.enemy || !els?.player) return;
   const max = Math.min(...SIDES.map(side => Math.max(0, els[side].scroll.scrollWidth - els[side].scroll.clientWidth)));
   const position = Math.max(0, Math.min(left, max)); synchronizingBattleLanes = true;
-  for (const side of SIDES) { els[side].scroll.scrollLeft = position; els[side].updateArrows(position); }
+  for (const side of SIDES) els[side].scroll.scrollLeft = position;
+  if (els.marchSlider && slotPitch) els.marchSlider.value = String(Math.round(position / slotPitch));
   synchronizingBattleLanes = false;
 }
 function scrollBattleLanesBy(delta, source) { setBattleScrollLeft((source?.scrollLeft ?? els?.player?.scroll.scrollLeft ?? 0) + delta); }
@@ -329,9 +327,11 @@ export function mountBattleScreen(initialState, root = app) {
   header.append(el('b', 'battle-fight', `FIGHT ${initialState.fight || 1} / ${RUN_CONFIG.LEVELS}`), phase);
   const headerMeta = el('div', 'battle-header__meta'), headerCount = el('span', 'header-count'); headerMeta.append(headerCount, speedLabel, speedControl); header.append(headerMeta);
   const enemy = createSide('enemy'), log = el('div', 'battle-log'), player = createSide('player'), flight = el('div', 'flight-layer'), banner = el('div', 'turn-banner'), queue = createEnemyQueuePanel(), embers = el('div', 'ember-layer'); banner.hidden = true;
+  const marchControl = el('label', 'march-control'), marchLabel = el('span', 'march-control__label', 'MARCHING LINE'), marchSlider = el('input', 'march-control__slider');
+  marchSlider.type = 'range'; marchSlider.min = '0'; marchSlider.max = String(BOARD_CAP - 5); marchSlider.step = '1'; marchSlider.value = '0'; marchSlider.setAttribute('aria-label', 'Shared battlefield column'); marchSlider.addEventListener('input', () => setBattleScrollLeft(Number(marchSlider.value) * slotPitch)); marchControl.append(marchLabel, marchSlider);
   embers.setAttribute('aria-hidden', 'true'); for (let i = 0; i < 16; i++) { const ember = el('i', 'ember'); ember.style.setProperty('--ember-x', `${(i * 37) % 101}%`); ember.style.setProperty('--ember-drift', `${(i % 5 - 2) * 13}px`); ember.style.setProperty('--ember-delay', `${-dur(i * 510)}ms`); ember.style.setProperty('--ember-duration', `${dur(TIMING.emberMin + (i % 7) * TIMING.emberStep)}ms`); embers.append(ember); }
   const openingPreview = createEnemyPreview(initialState.fight, initialState.enemy.deck, initialState.enemy.board); openingPreview.classList.add('enemy-preview--opening');
-  battle.style.setProperty('--idle-duration', `${dur(TIMING.idle)}ms`); battle.append(embers, header, enemy.root, log, player.root, flight, banner, queue.panel, openingPreview); root.append(battle);
+  battle.style.setProperty('--idle-duration', `${dur(TIMING.idle)}ms`); battle.append(embers, header, enemy.root, marchControl, log, player.root, flight, banner, queue.panel, openingPreview); root.append(battle);
   const history = el('div', 'battle-log__history'), detail = el('div', 'battle-detail'), live = el('span', 'sr-only'), toggle = el('button', 'log-toggle', 'Log');
   detail.hidden = true; live.setAttribute('aria-live', 'polite'); toggle.setAttribute('aria-expanded', 'false'); history.id = 'battle-history'; toggle.setAttribute('aria-controls', history.id);
   for (let i = 0; i < 4; i++) history.append(el('p', 'battle-log__line', i === 3 ? 'Combat proceeds automatically' : ''));
@@ -339,7 +339,7 @@ export function mountBattleScreen(initialState, root = app) {
   toggle.addEventListener('click', () => { const open = log.classList.toggle('is-expanded'); toggle.setAttribute('aria-expanded', String(open)); });
   battle.addEventListener('keydown', event => { if (event.key === 'Escape') { detail.hidden = true; log.classList.remove('is-expanded'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
   battle.addEventListener('click', event => { if (event.target.closest('button')) playSfx('uiClick'); });
-  els = { battle, phase, headerCount, speedControl, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player }; renderSpeedAvailability(); bindSynchronizedBattleLanes();
+  els = { battle, phase, headerCount, speedControl, marchSlider, log, history, detail, live, flight, banner, openingPreview, queue, enemy, player }; renderSpeedAvailability(); bindSynchronizedBattleLanes();
   const toggleQueue = open => { queue.panel.hidden = open === undefined ? !queue.panel.hidden : !open; enemy.deck.stack.setAttribute('aria-expanded', String(!queue.panel.hidden)); };
   enemy.deck.stack.tabIndex = 0; enemy.deck.stack.setAttribute('role', 'button'); enemy.deck.stack.setAttribute('aria-controls', queue.panel.id); enemy.deck.stack.setAttribute('aria-expanded', 'false');
   enemy.deck.stack.addEventListener('pointerdown', () => { enemy.deck.stack._queueWasOpen = !queue.panel.hidden; });
@@ -364,12 +364,12 @@ export function createUnitEl(uid, unit, side, slotIndex, snapshot = lastSnapshot
   const idle = el('div', `card__idle card__idle--${side}`), atk = el('span', 'card__atk', String(stats.atk)), hp = el('span', 'card__hp', String(stats.hp)), badges = el('div', 'card__badges');
   const badgeEls = new Map();
   for (const key of ['shield', 'aura', 'poisonous', 'windfury', 'deathrattle', 'battlecry']) { const badge = img('card__badge', `assets/${iconFor(key)}`, key); badge.title = key === 'battlecry' ? battlecryText(unit) : key; badges.append(badge); badgeEls.set(key, badge); }
+  const status = el('span', 'card__status'); idle.append(createFace(unit), atk, hp, badges, status); if (unit.boss) idle.append(el('p', 'card__trait', bossText(unit)), el('em', 'card__crown', '♛')); card.append(idle);
   const more = el('span', 'card__badge card__badge--more'); badges.append(more);
-  idle.append(createFace(unit), atk, hp, badges); if (unit.boss) idle.append(el('p', 'card__trait', bossText(unit)), el('em', 'card__crown', '♛')); card.append(idle);
   inspect(card, () => card.getAttribute('aria-label'));
   bindMouseHover(card, () => { const entry = unitEls.get(uid), current = lastSnapshot?.[side]?.board.find(item => item.uid === uid); return entry && current ? cardTipData(current, { atk: entry.atk, hp: entry.hp, maxHp: effectiveStats(lastSnapshot, side, current).maxHp }) : null; });
 
-  els[side].lane.append(card); unitEls.set(uid, { el: card, side, slotIndex, atk: stats.atk, hp: stats.hp, atkEl: atk, hpEl: hp, badgeEls, more, dying: false }); return card;
+  els[side].lane.append(card); unitEls.set(uid, { el: card, side, slotIndex, atk: stats.atk, hp: stats.hp, atkEl: atk, hpEl: hp, badgeEls, more, status, dying: false }); return card;
 }
 export function getUnitEl(uid) { return unitEls.get(uid)?.el || null; }
 export function removeUnitEl(uid) { const entry = unitEls.get(uid); if (entry) { if (els.detail.owner === entry.el) { els.detail.hidden = true; els.detail.textContent = ''; els.detail.owner = null; } entry.el.remove(); unitEls.delete(uid); } }
@@ -428,6 +428,7 @@ export function reconcile(snapshot) {
     els[side].mana.classList.toggle('is-active', snapshot.activeSide === side);
     snapshot[side].board.forEach(unit => { const entry = unitEls.get(unit.uid); if (!entry || entry.dying) return; const stats = effectiveStats(snapshot, side, unit); if (entry.atk !== stats.atk) { entry.atk = stats.atk; entry.atkEl.textContent = String(stats.atk); } if (entry.hp !== stats.hp) { entry.hp = stats.hp; entry.hpEl.textContent = String(stats.hp); }
       toggleClass(entry.el, 'is-damaged', stats.hp < stats.maxHp); toggleClass(entry.el, 'has-shield', !!unit.shield); toggleClass(entry.el, 'has-aura', stats.atk > unit.baseAtk || stats.maxHp > unit.baseMaxHp);
+      const sick = unit.enteredTurn > 0 && unit.enteredTurn >= snapshot.turnNumber && !unit.rush; toggleClass(entry.el, 'is-summoning-sick', sick); toggleClass(entry.el, 'has-rush', !!unit.rush); setText(entry.status, sick ? 'zzz' : unit.rush ? 'RUSH' : '');
       toggleClass(entry.atkEl, 'is-buffed', stats.atk > unit.baseAtk); toggleClass(entry.hpEl, 'is-buffed', stats.maxHp > unit.baseMaxHp);
       const keys = keywordsFor(unit), visible = keys.length > 2 ? keys.slice(0, 1) : keys;
       entry.badgeEls.forEach((badge, key) => { const hidden = !visible.includes(key); if (badge.hidden !== hidden) badge.hidden = hidden; });

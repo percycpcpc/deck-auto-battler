@@ -19,8 +19,9 @@ export function makeUnit(def, side = 'player', extras = {}, rng = Math.random) {
     portraitId: def.portraitId,
     aura: def.aura, onKill: def.onKill, onDamaged: def.onDamaged, onSummonPing: def.onSummonPing,
     heal: def.heal, healOn: def.healOn, text: def.text,
+    rush: !!def.rush,
     token: !!def.token, boss: extras.boss || null,
-    summonedThisAction: false, ...extras,
+    enteredTurn: extras.enteredTurn ?? 0, summonedThisAction: false, ...extras,
   };
 }
 
@@ -151,7 +152,7 @@ function healAll(state, source) {
 
 export function summon(state, side, def, extras = {}) {
   if (state[side].board.length >= BOARD_CAP) return null;
-  const unit = makeUnit(def, side, extras, state.uidRng || Math.random);
+  const unit = makeUnit(def, side, { enteredTurn: state.turnNumber, ...extras }, state.uidRng || Math.random);
   if (side === 'enemy' && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
     unit.baseAtk += 1; unit.baseMaxHp += 1;
   }
@@ -307,7 +308,8 @@ export function exchange(state, side, attacker, defender) {
 
 function actionFor(state, side, index, acted) {
   const unit = state[side].board[index];
-  if (!unit || unit.dead || acted.has(unit.uid) || unit.summonedThisAction) return;
+  const summoningSickness = unit && unit.enteredTurn >= state.turnNumber && !unit.rush;
+  if (!unit || unit.dead || acted.has(unit.uid) || summoningSickness) return;
   acted.add(unit.uid);
   const count = unit.keywords.includes('windfury') ? 2 : 1;
   for (let hit = 0; hit < count; hit++) {
@@ -338,7 +340,9 @@ export function runRound(state) {
     actionFor(state, side, i, acted);
     if (state[side].board[i] === unit) i++;
   }
-  state.phase = 'cleanup'; resolveDeaths(state); cleanupCorpses(state, side); checkHeroEnd(state);
+  state.phase = 'cleanup'; resolveDeaths(state);
+  for (const cleanupSide of ['player', 'enemy']) cleanupCorpses(state, cleanupSide);
+  checkHeroEnd(state);
   const afterUnits = liveUnits(state.player.board).length + liveUnits(state.enemy.board).length;
   if (!state.over && side === 'enemy' && !state.player.deck.length && !state.enemy.deck.length && state.fullRoundStartLive === afterUnits) {
     state.over = true; state.winner = state.player.hp >= state.enemy.hp ? 'player' : 'enemy'; emit(state, 'stalemate', { winner: state.winner });
