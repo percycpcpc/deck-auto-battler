@@ -623,6 +623,11 @@ button.cosmetic-tile { cursor:pointer; }
 .friendly-field { display:grid; gap:7px; color:var(--gold); font:700 14px/20px system-ui; letter-spacing:.08em; text-transform:uppercase; }
 .friendly-picker__select,.friendly-picker__input { box-sizing:border-box; width:100%; min-height:48px; padding:10px 12px; border:1px solid var(--gold); border-radius:6px; background:var(--panel); color:var(--bone); font:600 16px/24px system-ui; }
 .friendly-picker__input::placeholder { color:#9a8fa8; }
+.friendly-own-deck { display:grid; gap:10px; }
+.friendly-deck-id-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; }
+.friendly-deck-id__label { color:var(--dim); font:700 12px/18px system-ui; letter-spacing:.08em; text-transform:uppercase; }
+.friendly-deck-id { overflow-wrap:anywhere; color:var(--bone); font:600 14px/20px ui-monospace,SFMono-Regular,Consolas,monospace; }
+.friendly-deck-id__copy { min-width:88px; min-height:44px; padding:8px 12px; border:1px solid #9a8fa8; border-radius:6px; background:var(--panel); color:var(--bone); cursor:pointer; font:700 14px/20px system-ui; }
 .friendly-result { text-align:center; }
 .friendly-result--win h2 { color:#7be382; }
 .friendly-result--loss h2 { color:var(--damage); }
@@ -630,7 +635,7 @@ button.cosmetic-tile { cursor:pointer; }
 .friendly-result .secondary { min-height:48px; border:1px solid #9a8fa8; border-radius:6px; background:var(--panel); color:var(--bone); font:700 16px/24px system-ui; cursor:pointer; }
 .friendly-error { margin:0; color:var(--damage); text-align:center; }
 .friendly-offline,.friendly-empty { padding:16px; color:var(--dim); text-align:center; }
-@media(max-width:560px) { .friendly-screen { width:100%; padding:24px 16px max(24px,env(safe-area-inset-bottom)); } .friendly-picker,.friendly-result { padding:18px; } }
+@media(max-width:560px) { .friendly-screen { width:100%; padding:24px 16px max(24px,env(safe-area-inset-bottom)); } .friendly-picker,.friendly-result { padding:18px; } .friendly-deck-id-row { grid-template-columns:1fr auto; } .friendly-deck-id__label { grid-column:1 / -1; } }
 .replay-viewer { min-height:100vh; min-height:100dvh; background:radial-gradient(circle at top,#2a2140,#14101c 64%); }
 .replay-header { position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px max(20px,env(safe-area-inset-right)) 12px max(20px,env(safe-area-inset-left)); border-bottom:1px solid #9a8fa873; background:#14101cf2; }
 .replay-header h1 { margin:0; font:700 clamp(16px,2vw,24px)/1.25 Georgia,serif; color:var(--bone); }

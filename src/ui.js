@@ -811,6 +811,18 @@ export async function showFriendlyScreen() {
     mySelect.setAttribute('aria-label', 'My deck');
     decks.forEach(({ deck, label }) => mySelect.append(friendlyDeckOption(deck, label)));
     myLabel.append(el('span', '', 'My deck'), mySelect);
+    const myDeckId = el('code', 'friendly-deck-id');
+    const copyDeckId = button('Copy ID', async () => {
+      try { await navigator.clipboard.writeText(mySelect.value); copyDeckId.textContent = 'Copied'; }
+      catch { copyDeckId.textContent = 'Copy unavailable'; }
+    });
+    copyDeckId.classList.add('secondary', 'friendly-deck-id__copy');
+    const updateMyDeckId = () => { myDeckId.textContent = mySelect.value; copyDeckId.textContent = 'Copy ID'; };
+    mySelect.addEventListener('change', updateMyDeckId); updateMyDeckId();
+    const myDeckGroup = el('div', 'friendly-own-deck');
+    const myDeckIdRow = el('div', 'friendly-deck-id-row');
+    myDeckIdRow.append(el('span', 'friendly-deck-id__label', 'Deck ID'), myDeckId, copyDeckId);
+    myDeckGroup.append(myLabel, myDeckIdRow);
 
     const opponentLabel = el('label', 'friendly-field');
     const opponentInput = el('input', 'friendly-picker__input');
@@ -840,7 +852,7 @@ export async function showFriendlyScreen() {
         battle.disabled = false;
       }
     });
-    form.append(myLabel, opponentLabel, battle);
+    form.append(myDeckGroup, opponentLabel, battle);
     state.append(form);
   } catch {
     state.append(el('p', 'friendly-offline', 'Friendly battles are unavailable offline. Your local run is still playable.'));
