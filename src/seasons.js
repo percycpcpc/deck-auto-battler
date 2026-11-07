@@ -26,7 +26,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('meddler', 'Meddler', 2, 2, 6, { tier: 'rare', battlecry: 'meddler', text: 'Battlecry: Return the opposite non-boss enemy to the top of its deck, stripped of changes.' }),
   card('headsman', 'Headsman', 2, 3, 8, { tier: 'rare', onKill: 2, portraitId: 'doomcaller' }),
   card('firebelcher', 'Firebelcher', 2, 2, 9, { tier: 'rare', battlecry: 'firebelch', portraitId: 'plague_bearer' }),
-  card('shield_saint', 'Shield Saint', 2, 3, 6, { tier: 'rare', keywords: ['shield'], portraitId: 'aegis_knight' }),
+  card('shield_saint', 'Pit Tender', 1, 1, 4, { tier: 'common', battlecry: 'cultist', text: 'Battlecry: destroy your leftmost other unit; gain its ATK and HP.', portraitId: 'aegis_knight' }),
   card('bristleback', 'Bristleback', 2, 1, 9, { tier: 'rare', onDamaged: 3, portraitId: 'venom_hound' }),
   card('colossus', 'Colossus', 3, 6, 9, { tier: 'common' }),
   card('inquisitor', 'Inquisitor', 3, 4, 10, { tier: 'mythic', battlecry: 'inquisitor' }),
@@ -48,7 +48,7 @@ export const BASE_STARTERS = Object.freeze([
 
 const seasonTwoCards = Object.freeze({
   ember_scout: card('ember_scout', 'Ember Scout', 1, 2, 2, { tier: 'common', heal: 1, healOn: 'action', text: 'After this acts, heal all units for 1.', portraitId: 'scout' }),
-  ashguard: card('ashguard', 'Ashguard', 1, 1, 5, { tier: 'rare', keywords: ['shield'], portraitId: 'shield_saint' }),
+  ashguard: card('ashguard', 'Ashguard', 1, 1, 5, { tier: 'common', keywords: ['shield'], aura: 'adjacentAtk', text: 'Divine Shield. Adjacent allies have +1 ATK.', portraitId: 'aegis_knight' }),
   cinder_duelist: card('cinder_duelist', 'Cinder Duelist', 1, 2, 4, { tier: 'rare', battlecry: 'duelist', portraitId: 'duelist' }),
   furnace_hound: card('furnace_hound', 'Furnace Hound', 2, 4, 4, { tier: 'rare', keywords: ['poisonous'], portraitId: 'venom_hound' }),
   pyre_keeper: card('pyre_keeper', 'Pyre Keeper', 2, 2, 8, { tier: 'rare', aura: 'adjacentAtk', portraitId: 'warlord' }),

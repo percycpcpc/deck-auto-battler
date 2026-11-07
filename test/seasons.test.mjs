@@ -45,6 +45,20 @@ await test('season 2 additions are sidegrades and all starters are valid eight-c
   }
 });
 
+await test('redundant shield carriers are one-for-one archetype bridges', () => {
+  const cards = new Map(unionPool().map(card => [card.id, card]));
+  const pitTender = cards.get('shield_saint'), ashguard = cards.get('ashguard');
+  assert.deepEqual(
+    (({ cost, atk, hp, tier, battlecry }) => ({ cost, atk, hp, tier, battlecry }))(pitTender),
+    { cost: 1, atk: 1, hp: 4, tier: 'common', battlecry: 'cultist' },
+  );
+  assert.deepEqual(
+    (({ cost, atk, hp, tier, keywords, aura }) => ({ cost, atk, hp, tier, keywords, aura }))(ashguard),
+    { cost: 1, atk: 1, hp: 5, tier: 'common', keywords: ['shield'], aura: 'adjacentAtk' },
+  );
+  assert.equal(unionPool().length, 43, 'redesigns preserve the union-pool cardinality');
+});
+
 await test('season 2 draft pool adds seven cards, restores the mana-bank package, and excludes only starter-only Oathbound', () => {
   const baseIds = new Set(SEASONS[0].starters.flatMap(starter => starter.cards));
   const poolIds = new Set(activePool().map(card => card.id));

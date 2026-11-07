@@ -39,6 +39,13 @@ Scout remains active because its live Battlecry reduces the opposing unit's ATK 
 
 ## Battlecry targeting
 - Squire gives +1/+1 to every other living friendly unit when it enters play. It never buffs itself or corpses; with no eligible ally, its Battlecry fizzles.
+- Pit Tender is the common token/sacrifice bridge. It uses the existing Cultist contract: destroy the leftmost other living ally and add that ally's current effective ATK and HP to Pit Tender's base stats. Its legacy `shield_saint` card id remains stable for saved-deck compatibility.
+
+## Archetype bridges
+- Redundant carriers are redesigned in place rather than removed, preserving union-pool size and saved-deck ids.
+- Dagger Imp is the common two-body rally bridge; its Battlecry summons a 1/1 token.
+- Ashguard is the common formation bridge: Divine Shield protects its adjacent +1 ATK aura. Its legacy `ashguard` id remains stable.
+- Scout's opposing-unit ATK reduction, Ember Scout's team heal, and the mana-bank Tax Collector/Chrono Imp/Meddler/Doomcaller package are mechanically distinct live effects; removed charger-counter proposals do not return.
 
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.

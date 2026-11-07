@@ -242,9 +242,23 @@ test('Firebelcher damages every enemy including a boss and fizzles on an empty b
   assert.equal(s.events.length, 1); assert.equal(s.events[0].type, 'battlecry'); assert.deepEqual(s.events[0].targetUids, []);
 });
 
-test('Shield Saint Divine Shield pops before HP damage', () => {
-  const s = empty(), attacker = summon(s, 'player', getCard('sellsword')), saint = summon(s, 'enemy', getCard('shield_saint'));
-  exchange(s, 'player', attacker, saint); assert.equal(saint.shield, false); assert.equal(saint.damage, 0);
+test('Ashguard protects its formation aura with Divine Shield', () => {
+  const s = empty(), attacker = summon(s, 'player', getCard('sellsword'));
+  const ashguard = summon(s, 'enemy', getCard('ashguard')), ally = summon(s, 'enemy', getCard('sellsword'));
+  assert.equal(effectiveStats(s, 'enemy', ally).atk, 3);
+  exchange(s, 'player', attacker, ashguard); assert.equal(ashguard.shield, false); assert.equal(ashguard.damage, 0);
+  assert.equal(effectiveStats(s, 'enemy', ally).atk, 3);
+});
+
+test('Pit Tender is a common sacrifice bridge using the existing Cultist event contract', () => {
+  const s = empty(), token = summon(s, 'player', { id: 'token', name: 'Token', cost: 0, atk: 1, hp: 1, token: true });
+  const tender = summon(s, 'player', getCard('shield_saint')); s.events = [];
+  triggerBattlecry(s, 'player', tender);
+  assert.equal(token.damage, 999); assert.equal(tender.baseAtk, 2); assert.equal(tender.baseMaxHp, 5);
+  assert.deepEqual(
+    (({ type, kind, targetUid, targetIndex }) => ({ type, kind, targetUid, targetIndex }))(s.events[0]),
+    { type: 'battlecry', kind: 'cultist', targetUid: token.uid, targetIndex: 0 },
+  );
 });
 
 test('Bristleback gains +3 Attack in later rounds but not when killed', () => {
@@ -751,7 +765,7 @@ test('card pool exposes the three rarity tiers and locked representative stats',
   assert.deepEqual([dagger.atk, dagger.hp], [1, 2]);
   assert.deepEqual([hexblade.cost, hexblade.atk, hexblade.hp], [2, 2, 6]);
   assert.deepEqual([copycat.cost, copycat.atk, copycat.hp], [2, 3, 6]);
-  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 6, rare: 28, mythic: 9 });
+  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 8, rare: 26, mythic: 9 });
   assert.equal(HERO_HP, 40);
 });
 

@@ -41,14 +41,15 @@ Keywords count toward the toughness budget: Divine Shield is worth roughly 2 HP,
 
 Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost is shown by the top-left cost gem.
 
-**Common (5):**
-1. Dagger Imp (cost 1) — 2/2, Rush
+**Common (6):**
+1. Dagger Imp (cost 1) — 1/2, Battlecry: summon a 1/1 token
 2. Sellsword (cost 1) — 2/3
 3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve and excluded from ordinary draft offers)
 4. Road Ogre (cost 2) — 3/6
 5. Colossus (cost 3) — 6/9
+6. Pit Tender (cost 1) — 1/4, Battlecry: destroy your leftmost other unit and gain its ATK and HP (legacy card id: `shield_saint`)
 
-**Rare (23):**
+**Rare (22):**
 1. Twinfang (cost 1) — 1/4 Rush, Windfury
 2. Brood Wisp (cost 1) — 1/4, Deathrattle: summon 1/2
 3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to the opposite unit, otherwise the rightmost enemy
@@ -58,7 +59,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 7. Leeching Tick (cost 1) — 1/5, when this kills a unit, gain +1/+1
 8. Squire (cost 1) — 1/4, Battlecry: give all other friendly units +1/+1
 9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the lowest-HP enemy unit (leftmost on ties)
-10. Scout (cost 1) — 2/4, Battlecry: reveal the identity of the enemy's charging card
+10. Scout (cost 1) — 2/4, Battlecry: the opposing unit loses 2 ATK (minimum 0)
 11. Aegis Knight (cost 2) — 2/7 Divine Shield
 12. Venom Hound (cost 2) — 3/5 Poisonous
 13. Plague Bearer (cost 2) — 2/9, Deathrattle: deal 1 to all enemies
@@ -69,9 +70,8 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 18. Meddler (cost 2) — 2/6, Battlecry: return the opposite non-boss unit to the top of its deck, stripped of changes
 19. Headsman (cost 2) — 3/8, after this kills a unit, gain +2/+2
 20. Firebelcher (cost 2) — 2/9, Battlecry: deal 1 damage to ALL enemy units
-21. Shield Saint (cost 2) — 3/6 Divine Shield
-22. Bristleback (cost 2) — 1/9, when this takes damage and survives, gain +3 Attack
-23. Quillback Elder (cost 3) — 3/10, when any other unit enters a battlefield, deal 1 damage to it
+21. Bristleback (cost 2) — 1/9, when this takes damage and survives, gain +3 Attack
+22. Quillback Elder (cost 3) — 3/10, when any other unit enters a battlefield, deal 1 damage to it
 
 **Mythic (8):**
 1. Hexblade (cost 2) — 2/6, Battlecry: set the opposite unit's base ATK and HP to 1 (keywords and auras remain)
@@ -92,7 +92,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Season 2 — Emberwake
 - Starter selection retains the three Founders March identities and adds Ember Vanguard as a fourth seasonal showcase. Every starter is an eight-card deck drawn from the cumulative legal pool.
-- Furnace Hound is a 2-cost 4/4 Poisonous sidegrade to Venom Hound's 3/5; Phoenix Matron is a 3-cost 4/9 Deathrattle sidegrade to Brood Queen's 3/10. Ember Scout's after-action team heal makes its 2/2 body mechanically distinct.
+- Furnace Hound is a 2-cost 4/4 Poisonous sidegrade to Venom Hound's 3/5; Phoenix Matron is a 3-cost 4/9 Deathrattle sidegrade to Brood Queen's 3/10. Ember Scout's after-action team heal makes its 2/2 body mechanically distinct. Ashguard is a 1-cost 1/5 Common with Divine Shield and an adjacent +1 ATK aura, making it the protected formation bridge rather than an Aegis Knight reprint.
 - Enemy Divine Shield is absent from the opening encounters, appears on teaching levels 4/5 and 9/10, is absent again on levels 11–13, then applies broadly on levels 14–20. The schedule is season config, not a global combat rule.
 
 ## Enemies (scripted, escalating)
@@ -105,7 +105,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
   - Fight 1: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt, Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
   - Fight 2: Ash Grunt, Camp Brute, Ash Grunt, Camp Brute.
   - Fight 3: Ash Grunt, Ash Grunt, Camp Brute, Ash Grunt.
-- Scout remains in the pool. Its Battlecry is a narrated fizzle: **“Already scouted — enemy order is known.”**
+- Scout remains in the pool. Its Battlecry permanently reduces the opposing living unit's base ATK by 2, floored at 0.
 
 ## Balance flags (watch in playtests)
 - Hexblade / Doomcaller are the strongest control cards (deliberate — the tall/charger answers).
