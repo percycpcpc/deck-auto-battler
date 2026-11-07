@@ -549,10 +549,10 @@ button.cosmetic-tile { cursor:pointer; }
   width:min(100%,clamp(120px,28dvh,206px));
   aspect-ratio:2 / 3;
 }
-.starter-select { place-content:start center; gap:12px; overflow-y:auto; }
-.starter-select h1 { margin:0; font-size:clamp(2rem,5vw,3.5rem); }
-.starter-select__intro { margin:0; }
-.starter-select__choices { width:min(1200px,100%); margin-inline:auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.starter-select { height:100vh; height:100dvh; display:flex; flex-direction:column; gap:12px; }
+.starter-select h1 { flex:none; margin:0; font-size:clamp(2rem,5vw,3.5rem); }
+.starter-select__intro { flex:none; margin:0; }
+.starter-select__choices { width:min(1200px,100%); min-height:0; margin-inline:auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; overflow-y:auto; }
 .starter-option { min-width:0; display:flex; flex-direction:column; align-self:start; }
 .starter-choice { width:100%; min-width:0; padding:16px; border:1px solid #5d4a70; border-radius:12px; background:#14101c; color:var(--bone); cursor:pointer; display:flex; flex-direction:column; gap:8px; align-items:stretch; transition:transform var(--starter-hover) ease,filter var(--starter-hover) ease,box-shadow var(--starter-hover) ease; }
 .starter-choice:hover,.starter-choice:focus-visible { transform:translateY(-3px); filter:brightness(1.12); }
@@ -574,7 +574,7 @@ button.cosmetic-tile { cursor:pointer; }
 .starter-deck__name { min-width:0; color:var(--bone); font:700 14px/18px system-ui; }
 .starter-deck__stats { color:var(--gold); font:700 12px/18px system-ui; white-space:nowrap; }
 .starter-deck__keyword { grid-column:1/-1; color:var(--dim); font:500 12px/16px system-ui; }
-.starter-select__actions { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin-top:4px; }
+.starter-select__actions { flex:none; display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin-top:4px; }
 .starter-select__actions .secondary { min-width:112px; min-height:44px; padding:9px 16px; border:1px solid #5d4a70; border-radius:6px; background:var(--panel); color:var(--bone); cursor:pointer; font:700 14px/20px system-ui; transition:var(--starter-hover) transform,var(--starter-hover) filter; }
 .starter-select__actions .secondary:hover,.starter-select__actions .secondary:focus-visible { transform:translateY(-2px); filter:brightness(1.15); }
 .primary { max-width:100%; }
