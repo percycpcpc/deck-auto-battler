@@ -43,6 +43,8 @@ Scout remains active because its live Battlecry reduces the opposing unit's ATK 
 
 ## Seasonal card removal and legacy legality
 - No card is removed from play before the union pool reaches approximately 60 cards. Config may mark cards deprecated, but deprecation does not remove them from the legal union or invalidate a saved deck. Legacy saved decks remain legal forever under the current soft-season model; any later Standard/Open split requires a separate ruling and migration plan.
+- A season offers at least three starter identities. New seasonal cards must be mechanical additions or sidegrades, never strict stat upgrades of an existing card at the same cost and rules text.
+- Seasonal enemy keywords are introduced on explicit encounter levels before any broad late-run rollout. A season flip changes the configured level schedule; it does not apply a keyword to every encounter by default.
 
 ## Fixed starter deck (8)
 Dagger Imp, Sellsword, Oathbound ×2, Brood Wisp, Twinfang, Hex Hurler, Road Ogre.

@@ -46,7 +46,7 @@ target architecture; every item below lands as its own scoped pass.
   (remove one card, add a random card of the **same tier**).
 - Starter deck selectable per season (swap `STARTER_IDS`; pipeline
   already supports it). No persistent card collection day one.
-- D1 live: four-week PvE config rotates starters, cumulative draft additions, and the enemy keyword without engine code changes per flip.
+- D1 live: four-week PvE config rotates at least three starter identities, cumulative mechanically distinct draft additions, and an explicit enemy-keyword encounter schedule without engine code changes per flip. Emberwake teaches Shield on levels 4/5 and 9/10 before applying it broadly from level 14 onward.
 - Level 20 = boss fight using existing pre-boarded boss mechanics.
 - Each milestone band telegraphs its next rules question through a deterministic teaching encounter and a public next-fight preview before the intervening deck choice.
 - Post-alpha deferred: deck ordering at save-time (async-safe, saved

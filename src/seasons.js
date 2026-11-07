@@ -50,19 +50,22 @@ const seasonTwoCards = Object.freeze({
   ember_scout: card('ember_scout', 'Ember Scout', 1, 2, 2, { tier: 'common', heal: 1, healOn: 'action', text: 'After this acts, heal all units for 1.', portraitId: 'scout' }),
   ashguard: card('ashguard', 'Ashguard', 1, 1, 5, { tier: 'rare', keywords: ['shield'], portraitId: 'shield_saint' }),
   cinder_duelist: card('cinder_duelist', 'Cinder Duelist', 1, 2, 4, { tier: 'rare', battlecry: 'duelist', portraitId: 'duelist' }),
-  furnace_hound: card('furnace_hound', 'Furnace Hound', 2, 3, 6, { tier: 'rare', keywords: ['poisonous'], portraitId: 'venom_hound' }),
+  furnace_hound: card('furnace_hound', 'Furnace Hound', 2, 4, 4, { tier: 'rare', keywords: ['poisonous'], portraitId: 'venom_hound' }),
   pyre_keeper: card('pyre_keeper', 'Pyre Keeper', 2, 2, 8, { tier: 'rare', aura: 'adjacentAtk', portraitId: 'warlord' }),
   coalheart: card('coalheart', 'Coalheart', 2, 2, 8, { tier: 'rare', onDamaged: 3, heal: 1, healOn: 'damaged', text: 'After this takes damage and survives, heal all units for 1.', portraitId: 'bristleback' }),
-  phoenix_matron: card('phoenix_matron', 'Phoenix Matron', 3, 4, 10, { tier: 'mythic', deathrattle: 'summon2x2', portraitId: 'brood_queen' }),
+  phoenix_matron: card('phoenix_matron', 'Phoenix Matron', 3, 4, 9, { tier: 'mythic', deathrattle: 'summon2x2', portraitId: 'brood_queen' }),
 });
 
 const seasonTwoStarter = starter('ember_vanguard', 'Ember Vanguard', 'Shielded outriders hold the line while a rekindling matron closes.', [
   'ember_scout', 'ember_scout', 'ashguard', 'cinder_duelist', 'furnace_hound', 'pyre_keeper', 'coalheart', 'phoenix_matron',
 ]);
+const seasonTwoStarters = Object.freeze([...BASE_STARTERS, seasonTwoStarter]);
+
+const seasonTwoShieldLevels = Object.freeze([4, 5, 9, 10, 14, 15, 16, 17, 18, 19, 20]);
 
 export const SEASONS = Object.freeze([
   Object.freeze({ id: 'season_1', name: 'Founders March', startsAt: '2026-11-01T00:00:00.000Z', endsAt: '2026-11-29T00:00:00.000Z', starters: BASE_STARTERS, cardDefs: Object.freeze({}), poolExtras: Object.freeze([]), enemyKeyword: null }),
-  Object.freeze({ id: 'season_2', name: 'Emberwake', startsAt: '2026-11-29T00:00:00.000Z', endsAt: '2026-12-27T00:00:00.000Z', starters: Object.freeze([seasonTwoStarter]), cardDefs: seasonTwoCards, poolExtras: Object.freeze(Object.keys(seasonTwoCards)), enemyKeyword: 'shield' }),
+  Object.freeze({ id: 'season_2', name: 'Emberwake', startsAt: '2026-11-29T00:00:00.000Z', endsAt: '2026-12-27T00:00:00.000Z', starters: seasonTwoStarters, cardDefs: seasonTwoCards, poolExtras: Object.freeze(Object.keys(seasonTwoCards)), enemyKeyword: 'shield', enemyKeywordLevels: seasonTwoShieldLevels }),
 ]);
 
 let nowOverride = null;

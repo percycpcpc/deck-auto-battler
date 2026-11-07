@@ -144,7 +144,8 @@ const enemyCard = (kind, level) => {
 };
 export function enemyDeckFor(level) {
   const safeLevel = Math.min(RUN_CONFIG.LEVELS, Math.max(1, Number(level) || 1));
-  const keyword = currentSeason().enemyKeyword;
+  const season = currentSeason();
+  const keyword = !season.enemyKeywordLevels || season.enemyKeywordLevels.includes(safeLevel) ? season.enemyKeyword : null;
   return enemyScriptFor(safeLevel).map(kind => {
     const def = enemyCard(kind, safeLevel);
     return { ...def, ...(keyword ? { keywords: [...new Set([...(def.keywords || []), keyword])] } : {}) };
