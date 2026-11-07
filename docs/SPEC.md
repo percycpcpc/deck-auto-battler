@@ -52,9 +52,9 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 1. Twinfang (cost 1) — 1/4 Rush, Windfury
 2. Brood Wisp (cost 1) — 1/4, Deathrattle: summon 1/2
 3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to the opposite unit, otherwise the rightmost enemy
-4. Tax Collector (cost 1) — 1/4, Battlecry: enemy charging card +1 turn
-5. Chrono Imp (cost 1) — 1/4, Battlecry: your charging card ticks down 1 extra
-6. Gate Crasher (cost 1) — 2/4, Battlecry: move the opposite unit to the end of its line
+4. Tax Collector (cost 1) — 1/4, Battlecry: gain 1 mana
+5. Chrono Imp (cost 1) — 1/4, Battlecry: drain 1 enemy mana (minimum 0)
+6. Gate Crasher (cost 1) — 2/4, Battlecry: push the unit opposite to the rightmost empty slot
 7. Leeching Tick (cost 1) — 1/5, when this kills a unit, gain +1/+1
 8. Squire (cost 1) — 1/4, Battlecry: the ally immediately to its left gets +1/+1
 9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the lowest-HP enemy unit (leftmost on ties)
@@ -66,7 +66,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 15. Bulwark (cost 2) — 1/9, Deathrattle: the highest-ATK enemy loses 2 ATK
 16. Duelist (cost 2) — 3/5, On deploy: gain +2/+2 if your line has no other living unit
 17. Gravedigger (cost 2) — 2/6, Battlecry: summon a 1/2 for each unit that died this combat
-18. Meddler (cost 2) — 2/6, Battlecry: put the enemy's charging card back on top of their deck
+18. Meddler (cost 2) — 2/6, Battlecry: return the opposite non-boss unit to the top of its deck, stripped of changes
 19. Headsman (cost 2) — 3/8, after this kills a unit, gain +2/+2
 20. Firebelcher (cost 2) — 2/9, Battlecry: deal 1 damage to ALL enemy units
 21. Shield Saint (cost 2) — 3/6 Divine Shield
@@ -78,7 +78,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 2. Copycat (cost 2) — 3/6, Battlecry: copy the opposite unit's current effective ATK and remaining HP as base stats (keywords are not copied)
 3. Cataclysm (cost 3) — 2/6, Battlecry: deal 2 to ALL units on both sides, including itself
 4. Cultist (cost 3) — 3/8, Battlecry: destroy your leftmost other unit, gain its ATK and HP
-5. Doomcaller (cost 3) — 4/10, Battlecry: destroy the enemy's charging card
+5. Doomcaller (cost 3) — 4/10, Battlecry: return the opposite non-boss unit to the bottom of its deck, stripped of changes
 6. Inquisitor (cost 3) — 4/10, Battlecry: deal 3 to highest-ATK enemy
 7. Overlord (cost 3) — 2/10, Aura: all your units +1/+1
 8. Brood Queen (cost 3) — 3/10, Deathrattle: summon two 2/3s
@@ -111,8 +111,8 @@ Owner tuning: 1-cost 2/4 to soften early game.
 ## Deferred (consciously, not forgotten)
 - Archetypes 4–7 (buff-combo engine, tokens+lords engine, stax engine, ramp engine) — support cards exist in the pool, engines come later.
 - Final number tuning.
-- Mana pool / multi-charger economies.
-- Card-return mechanics (harsh-requirement exceptions, none in v0 pool).
+- Player-choice mana economies beyond the deterministic Tax Collector/Chrono Imp effects.
+- Card-return mechanics beyond Meddler/Doomcaller's fixed opposite-unit destinations.
 - All meta (map, gold, shops, upgrades, card removal).
 
 ## Tech direction

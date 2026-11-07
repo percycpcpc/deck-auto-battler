@@ -14,7 +14,8 @@ export const tokenCard = (atk = 1, hp = 2) => card(`token_${atk}_${hp}`, `${atk}
 export function makeUnit(def, side = 'player', extras = {}, rng = Math.random) {
   return {
     uid: extras.uid || `${side}-${def.id}-${rng().toString(36).slice(2)}`,
-    cardId: def.id, name: def.name, side, baseAtk: def.atk, baseMaxHp: def.hp, originalMaxHp: def.hp,
+    cardId: def.id, name: def.name, side, cost: def.cost, tier: def.tier,
+    baseAtk: def.atk, baseMaxHp: def.hp, originalAtk: def.atk, originalMaxHp: def.hp,
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
     keywords: [...(def.keywords || [])], battlecry: def.battlecry, deathrattle: def.deathrattle,
     portraitId: def.portraitId,
@@ -263,6 +264,15 @@ function triggerDeathrattle(state, side, unit, oldIndex) {
 
 const liveAt = (board, index) => board[index]?.dead ? undefined : board[index];
 
+function resetCardFromUnit(unit) {
+  return card(unit.cardId, unit.name, unit.cost, unit.originalAtk, unit.originalMaxHp, {
+    tier: unit.tier, keywords: [...unit.keywords], battlecry: unit.battlecry, deathrattle: unit.deathrattle,
+    portraitId: unit.portraitId, aura: unit.aura, onKill: unit.onKill, onDamaged: unit.onDamaged,
+    onSummonPing: unit.onSummonPing, heal: unit.heal, healOn: unit.healOn, text: unit.text,
+    rush: unit.rush, token: unit.token,
+  });
+}
+
 function deployAffordable(state, side) {
   const own = state[side];
   while (own.deck.length && own.board.length < BOARD_CAP && own.mana >= own.deck[0].cost) {
@@ -279,6 +289,30 @@ export function triggerBattlecry(state, side, unit) {
   const foeSide = other(side), own = state[side], foe = state[foeSide], index = own.board.indexOf(unit), opposite = liveAt(foe.board, index);
   const event = { side, uid: unit.uid, unit: unit.name, kind: unit.battlecry };
   switch (unit.battlecry) {
+    case 'tax': {
+      const newPool = own.mana + 1;
+      emit(state, 'manaChange', { ...event, amount: 1, newPool });
+      own.mana = newPool; break;
+    }
+    case 'chrono': {
+      const newPool = Math.max(0, foe.mana - 1), amount = newPool - foe.mana;
+      emit(state, 'manaChange', { ...event, side: foeSide, sourceSide: side, amount, newPool });
+      foe.mana = newPool; break;
+    }
+    case 'meddler':
+    case 'doom': {
+      const destination = unit.battlecry === 'meddler' ? 'top' : 'bottom';
+      const target = opposite?.boss ? undefined : opposite;
+      emit(state, 'bounce', { ...event, targetSide: foeSide, targetUid: target?.uid, target: target?.name,
+        cardId: target?.cardId, destination, fizzle: !target });
+      if (target) {
+        foe.board.splice(index, 1);
+        const reset = resetCardFromUnit(target);
+        if (destination === 'top') foe.deck.unshift(reset); else foe.deck.push(reset);
+        emit(state, 'shift', { side: foeSide, removedUids: [target.uid], reason: 'bounce' });
+      }
+      break;
+    }
     case 'hex_hurler': {
       const target = opposite || [...liveUnits(foe.board)].at(-1), targetIndex = target ? foe.board.indexOf(target) : undefined;
       emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex, fallback: !!target && target !== opposite, amount: 2, fizzle: !target });

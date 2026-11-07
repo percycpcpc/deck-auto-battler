@@ -55,7 +55,7 @@ Maintain a module-level registry:
 unitEls: Map<uid, { el, side, slotIndex, atk, hp }>
 ```
 
-- A unit's `.card` element is **created exactly once**, at its DEPLOY commit, and **removed exactly once**, during the round-end cleanup/shift event. Its 400ms death animation ends in a visible inert corpse state; animation completion never removes the node.
+- A unit's `.card` element is **created exactly once**, at its DEPLOY commit, and **removed exactly once**, during the round-end cleanup/shift event or an explicit `bounce` commit. Bounce ends that uid without a corpse; if the card later redeploys, the engine assigns a fresh uid and the UI creates a fresh node. A death's 400ms animation ends in a visible inert corpse state; animation completion never removes the node.
 - State updates (ATK/HP changes, buffs, counters) **never** recreate the element. They mutate the existing node's text/styles.
 - Unit elements are absolutely positioned inside `.board-lane` with `left: 0; top: 0; transform: translate3d(slotIndex * slotPitch, 0, 0)`. Slot position is a function of the transform only — never of DOM order or parent changes. Shift-left is a transform write (§2c). This is what makes persistence and gliding compatible with scrolling.
 - `slotPitch = slotWidth + slotGap` (take both from `docs/ART_DIRECTION.md` layout constants; define once as CSS custom properties `--slot-w`, `--slot-gap` and read them into JS constants at mount).
@@ -82,7 +82,7 @@ Per event, exactly one of three operations:
 
 - **MUTATE-IN-PLACE:** tick, damage, heroHit, shield, attack (numbers + fx classes). Applied at the **start** of the event's animation so numbers land with the hit.
 - **CREATE:** deploy (one unit element, at flight commit), reveal (charger content, at flight commit), damage floaters (transient, removed after 600ms).
-- **REMOVE:** cleanup/shift — `death` adds `.fx-death`, then `.is-corpse`, disables pointer events, and leaves the node visibly fallen in its original slot. The cleanup `shift` event removes all corpse nodes absent from its snapshot in one DOM pass and deletes their registry entries before survivor transforms are written.
+- **REMOVE:** cleanup/shift or bounce — `death` adds `.fx-death`, then `.is-corpse`, disables pointer events, and leaves the node visibly fallen in its original slot. The cleanup `shift` event removes all corpse nodes absent from its snapshot in one DOM pass and deletes their registry entries before survivor transforms are written. `bounce` animates the resolved target, then removes that uid once and updates only the affected deck-top lifecycle node; it never masquerades as death or fires death UI.
 
 Deaths do not free slot-index bookkeeping. At cleanup, remove the batch of dead uids first, then glide survivors to compacted indices without recreating any survivor node.
 

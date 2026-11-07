@@ -22,8 +22,17 @@ Player always takes the first turn, then turns strictly alternate.
 - In a mutual exchange that kills both, **player's Deathrattles resolve first**, then enemy's. DR summons append subject to the physical board cap (corpses still occupy slots) and never act in the current action phase.
 - Cleanup at each player's end of turn removes all marked corpses from both sides while preserving survivor order, then emits one `shift { side, removedUids }` event per affected side. There is no second death event and no mid-sweep compaction.
 
-## Experiment card exclusions
-Tax Collector, Chrono Imp, Meddler, and Doomcaller are deprecated from draft generation because their live text depends on the removed slot. They remain legal in the union pool for saved-deck compatibility. Scout remains active because its live Battlecry now reduces the opposing unit's ATK and has no dependency on the removed system.
+## Mana-bank control and deck bounce
+Tax Collector, Chrono Imp, Meddler, and Doomcaller are active draft cards again. Their removed charger-slot effects are superseded by deterministic mana-bank and deck-bounce effects:
+
+- Tax Collector gains 1 mana for its controller. Mana remains persistent and uncapped, and the deploy loop immediately re-checks the next card.
+- Chrono Imp drains 1 mana from the opponent. Mana cannot fall below 0; the emitted amount is therefore 0 when the opponent is already empty.
+- Meddler returns the live non-boss unit opposite it to the top of that unit's deck. Doomcaller returns that target to the bottom instead.
+- A bounced unit is recreated from its printed card definition: damage, base-stat changes, poison, consumed shield state, and other runtime status are stripped. The old board uid ends at the bounce; a later deployment receives a fresh uid.
+- Pre-boarded bosses are immune to bounce. A missing or boss target emits a deterministic fizzle. Top bounce may be redeployed as soon as that side next runs its normal affordable-deploy loop; no artificial delay is added.
+- `manaChange` and `bounce` events are emitted before mutation and consume no RNG.
+
+Scout remains active because its live Battlecry reduces the opposing unit's ATK and has no dependency on the removed system.
 
 ## Tokens
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap. Hivematron has an additional cap of three living Hive tokens; once one dies and is cleaned up, a later attack may refill the open Hive slot.

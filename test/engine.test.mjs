@@ -459,6 +459,52 @@ test('positional card copy matches the targeting rules contract', () => {
   assert.equal(battlecryText(getCard('hex_hurler')), 'On deploy: deal 2 damage to the opposing unit, otherwise the rightmost enemy.');
 });
 
+test('Tax Collector gains mana before mutation and enables another immediate deploy', () => {
+  const s = createFight({ playerDeck: [getCard('tax_collector'), getCard('sellsword')], enemyDeck: [], rng: () => 0.999 });
+  runRound(s);
+  assert.deepEqual(s.player.board.map(unit => unit.cardId), ['tax_collector', 'sellsword']);
+  const change = s.events.find(event => event.type === 'manaChange');
+  assert.equal(change.amount, 1); assert.equal(change.newPool, 1); assert.equal(change.state.player.mana, 0);
+  assert.equal(s.player.mana, 0);
+});
+
+test('Chrono Imp drains enemy mana with a zero floor and emits the resolved delta before mutation', () => {
+  const s = empty(), chrono = summon(s, 'player', getCard('chrono_imp'));
+  s.enemy.mana = 2; s.events = []; triggerBattlecry(s, 'player', chrono);
+  let change = s.events[0]; assert.equal(change.type, 'manaChange'); assert.equal(change.side, 'enemy');
+  assert.equal(change.amount, -1); assert.equal(change.newPool, 1); assert.equal(change.state.enemy.mana, 2); assert.equal(s.enemy.mana, 1);
+  s.enemy.mana = 0; s.events = []; triggerBattlecry(s, 'player', chrono);
+  change = s.events[0]; assert.equal(change.amount, 0); assert.equal(change.newPool, 0); assert.equal(s.enemy.mana, 0);
+});
+
+test('Meddler top-bounces an opposite unit as a stripped fresh card', () => {
+  const s = empty(), meddler = summon(s, 'player', getCard('meddler'));
+  const target = summon(s, 'enemy', getCard('aegis_knight'));
+  target.baseAtk += 5; target.baseMaxHp += 4; target.damage = 3; target.poisoned = true; target.shield = false;
+  s.enemy.deck.push(getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', meddler);
+  const bounce = s.events[0]; assert.equal(bounce.type, 'bounce'); assert.equal(bounce.targetUid, target.uid);
+  assert.equal(bounce.destination, 'top'); assert.equal(bounce.fizzle, false); assert.equal(bounce.state.enemy.board[0].uid, target.uid);
+  assert.equal(s.enemy.board.length, 0); assert.deepEqual(s.enemy.deck.map(card => card.id), ['aegis_knight', 'colossus']);
+  assert.deepEqual(s.events[1].removedUids, [target.uid]); assert.equal(s.events[1].reason, 'bounce');
+  assert.equal(s.enemy.deck[0].atk, 2); assert.equal(s.enemy.deck[0].hp, 7); assert.ok(s.enemy.deck[0].keywords.includes('shield'));
+  assert.equal('damage' in s.enemy.deck[0], false); assert.equal('poisoned' in s.enemy.deck[0], false);
+});
+
+test('Doomcaller bottom-bounces, fizzles without a target, and cannot bounce bosses', () => {
+  let s = empty(), doom = summon(s, 'player', getCard('doomcaller'));
+  const target = summon(s, 'enemy', getCard('sellsword')); s.enemy.deck.push(getCard('road_ogre'));
+  s.events = []; triggerBattlecry(s, 'player', doom);
+  assert.deepEqual(s.enemy.deck.map(card => card.id), ['road_ogre', 'sellsword']); assert.equal(s.events[0].destination, 'bottom');
+
+  s = empty(); doom = summon(s, 'player', getCard('doomcaller')); s.events = []; triggerBattlecry(s, 'player', doom);
+  assert.equal(s.events[0].fizzle, true); assert.equal(s.events[0].targetUid, undefined);
+
+  s = empty(); doom = summon(s, 'player', getCard('doomcaller'));
+  const boss = summon(s, 'enemy', { id: 'boss_test', name: 'Boss', cost: 0, atk: 1, hp: 8 }, { boss: 'herald' });
+  s.events = []; triggerBattlecry(s, 'player', doom);
+  assert.equal(s.events[0].fizzle, true); assert.equal(s.enemy.board[0], boss); assert.equal(s.enemy.deck.length, 0);
+});
+
 test('deck-out does nothing and stalemate valve draws on equal HP', () => {
   const s = empty(); runRound(s); assert.equal(s.over, false); runRound(s); assert.equal(s.over, true); assert.equal(s.winner, 'draw'); assert.equal(s.player.hp, HERO_HP);
 });
