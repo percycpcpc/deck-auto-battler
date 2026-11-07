@@ -13,7 +13,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('squire', 'Squire', 1, 1, 4, { tier: 'rare', battlecry: 'squire' }),
   card('spiteful_imp', 'Spiteful Imp', 1, 1, 4, { tier: 'rare', deathrattle: 'spite' }),
   card('scout', 'Scout', 1, 2, 4, { tier: 'rare', battlecry: 'oppositeAtkDown2', text: 'Battlecry: the opposing unit gets −2 ATK.' }),
-  card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight' }),
+  card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight', draftExcluded: true }),
   card('road_ogre', 'Road Ogre', 2, 3, 6, { tier: 'common' }),
   card('aegis_knight', 'Aegis Knight', 2, 2, 7, { tier: 'rare', keywords: ['shield'] }),
   card('venom_hound', 'Venom Hound', 2, 3, 5, { tier: 'rare', keywords: ['poisonous'] }),
@@ -36,7 +36,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('overlord', 'Overlord', 3, 2, 10, { tier: 'mythic', aura: 'all' }),
   card('cultist', 'Cultist', 3, 3, 8, { tier: 'mythic', battlecry: 'cultist' }),
   card('cataclysm', 'Cataclysm', 3, 2, 6, { tier: 'mythic', battlecry: 'cataclysm', text: 'Battlecry: deal 2 damage to every unit, including this one.' }),
-  card('quillback_elder', 'Quillback Elder', 3, 3, 13, { tier: 'rare', onSummonPing: 1, portraitId: 'warlord' }),
+  card('quillback_elder', 'Quillback Elder', 3, 3, 10, { tier: 'rare', onSummonPing: 1, portraitId: 'warlord' }),
 ]);
 
 export const STARTER_IDS = Object.freeze(['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre']);
@@ -82,7 +82,7 @@ export const activeStarters = now => currentSeason(now).starters;
 export function activePool(now) {
   const activeIndex = SEASONS.indexOf(currentSeason(now));
   const ids = new Set([...BASE_CARD_POOL.map(cardDef => cardDef.id), ...SEASONS.slice(0, activeIndex + 1).flatMap(season => season.poolExtras)]);
-  return unionPool().filter(cardDef => ids.has(cardDef.id) && !cardDef.deprecated);
+  return unionPool().filter(cardDef => ids.has(cardDef.id) && !cardDef.deprecated && !cardDef.draftExcluded);
 }
 export function unionPool() {
   return Object.freeze([...BASE_CARD_POOL, ...SEASONS.flatMap(season => Object.values(season.cardDefs))]);

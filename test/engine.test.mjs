@@ -612,6 +612,14 @@ test('draft offers follow the seeded 50/35/15 tier weighting', () => {
   assert.ok(counts.mythic >= 60 && counts.mythic <= 120, `mythic=${counts.mythic}`);
 });
 
+test('starter-keystone Oathbound is never offered by ordinary drafts', () => {
+  let value = 2026; const rng = () => ((value = value * 48271 % 2147483647) - 1) / 2147483646;
+  const offered = Array.from({ length: 500 }, () => draftOffers(rng)).flat();
+  assert.equal(offered.some(card => card.id === 'oathbound'), false);
+  assert.deepEqual([getCard('sellsword').atk, getCard('sellsword').hp], [2, 3]);
+  assert.deepEqual([getCard('quillback_elder').atk, getCard('quillback_elder').hp], [3, 10]);
+});
+
 test('draft offers always contain exactly three distinct cards', () => {
   for (let seed = 1; seed <= 200; seed++) {
     let value = seed; const rng = () => ((value = value * 48271 % 2147483647) - 1) / 2147483646;

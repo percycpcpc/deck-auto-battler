@@ -39,6 +39,7 @@ Scout remains active because its live Battlecry reduces the opposing unit's ATK 
 
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
+- Oathbound is a starter-only keystone and is excluded from ordinary draft offers. It remains legal in starter and saved decks.
 - Soft seasons only add cards to the active draft pool; draft cadence and 50/35/15 tier weighting do not change as the pool grows.
 
 ## Seasonal card removal and legacy legality
