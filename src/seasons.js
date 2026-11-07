@@ -43,7 +43,7 @@ export const STARTER_IDS = Object.freeze(['dagger_imp', 'sellsword', 'oathbound'
 export const BASE_STARTERS = Object.freeze([
   starter('oathbound_line', 'Oathbound Line', 'A steady line of proven fighters built to hold and answer.', STARTER_IDS),
   starter('rat_pack', 'Rat Pack', 'Fast, vicious bodies overwhelm the line before it can settle.', ['dagger_imp', 'dagger_imp', 'twinfang', 'sellsword', 'hex_hurler', 'leeching_tick', 'road_ogre', 'duelist']),
-  starter('iron_bastion', 'Iron Bastion', 'Durable defenders blunt the assault and win the long battle.', ['oathbound', 'sellsword', 'twinfang', 'brood_wisp', 'aegis_knight', 'bulwark', 'plague_bearer', 'squire']),
+  starter('iron_bastion', 'Iron Bastion', 'Durable defenders blunt the assault and win the long battle.', ['oathbound', 'dagger_imp', 'twinfang', 'brood_wisp', 'aegis_knight', 'dagger_imp', 'dagger_imp', 'squire']),
 ]);
 
 const seasonTwoCards = Object.freeze({

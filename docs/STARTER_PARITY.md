@@ -57,3 +57,9 @@ Draft dependence compares the unchanged eight-card starter with that starter plu
 ## Existing standard-band drift
 
 The repository-standard `node tools/balance_sim.mjs 1 200` check reports a 100% fight-1 win rate on current `origin/main`, reproduced twice. This pass has no diff in `src/engine.js`, `src/seasons.js`, or `tools/balance_sim.mjs`. A detached worktree at SHA `11542d9` reports 70% for the same fight/sample size, inside the historical 65–78% band. The out-of-band current result therefore predates this evidence-only pass and remains an owner-evaluation tuning concern rather than a regression introduced here.
+
+## Iron Bastion fight-1 band adjustment (#28)
+
+The owner-ratified final batch authorized a local Iron Bastion tuning change after the Sellsword 3/3 correction still produced a 100% fight-1 win rate over 200 deterministic seeds. One- and two-slot starter substitutions also remained at 100%, so the smallest effective starter-only adjustment replaced its Sellsword, Bulwark, and Plague Bearer slots with Dagger Imps while retaining Oathbound, Aegis Knight, and Squire as the defensive core.
+
+`node tools/balance_sim.mjs 1 200 iron_bastion` then reported fight 1 at **66%** (132/200), inside the 65–78% target band: turns min/P25/median/P75/max **19/26/39/54/91**, median margin **36**, best margin **41**. The same run reported fight 2 at 67% and fight 3 at 90%; only fight 1 is the #28 acceptance band.
