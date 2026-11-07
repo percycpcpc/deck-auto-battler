@@ -2,7 +2,7 @@ const card = (id, name, cost, atk, hp, extra = {}) => Object.freeze({ id, name, 
 const starter = (id, name, blurb, cards) => Object.freeze({ id, name, blurb, cards: Object.freeze(cards), ids: Object.freeze(cards) });
 
 export const BASE_CARD_POOL = Object.freeze([
-  card('dagger_imp', 'Dagger Imp', 1, 2, 2, { tier: 'common', rush: true, text: 'Rush' }), card('sellsword', 'Sellsword', 1, 2, 3, { tier: 'common' }),
+  card('dagger_imp', 'Dagger Imp', 1, 1, 2, { tier: 'common', battlecry: 'summon11', text: 'Battlecry: summon a 1/1 token.' }), card('sellsword', 'Sellsword', 1, 2, 3, { tier: 'common' }),
   card('twinfang', 'Twinfang', 1, 1, 4, { tier: 'rare', keywords: ['windfury'], rush: true, text: 'Rush. Windfury.' }),
   card('brood_wisp', 'Brood Wisp', 1, 1, 4, { tier: 'rare', deathrattle: 'summon1' }),
   card('hex_hurler', 'Hex Hurler', 1, 1, 5, { tier: 'rare', battlecry: 'hex_hurler' }),

@@ -191,6 +191,7 @@ async function showProfile() {
 }
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
+  summon11: 'Battlecry: summon a 1/1 token.',
   hex_hurler: 'On deploy: deal 2 damage to the opposing unit, otherwise the rightmost enemy.',
   gate: 'On deploy: move the opposing unit to the end of its line.',
   squire: 'On deploy: give the ally immediately to the left +1/+1.',

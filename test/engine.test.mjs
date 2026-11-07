@@ -142,7 +142,7 @@ test('summoning sickness defers a deployed unit until its controller next turn',
 });
 
 test('Rush acts during the combat sweep of its entry turn', () => {
-  const s = createFight({ playerDeck: [getCard('dagger_imp')], enemyDeck: [] });
+  const s = createFight({ playerDeck: [getCard('twinfang')], enemyDeck: [] });
   runRound(s); const unit = s.player.board[0]; assert.equal(unit.rush, true); assert.equal(s.events.some(event => event.type === 'attack' && event.uid === unit.uid), true);
 });
 
@@ -548,6 +548,21 @@ test('enemy order is identical across 100 runs of the same fight', () => {
   }
 });
 
+test('Dagger Imp summons a 1/1 that waits through deploy round and acts next round', () => {
+  const dagger = getCard('dagger_imp');
+  assert.deepEqual([dagger.cost, dagger.atk, dagger.hp, dagger.battlecry], [1, 1, 2, 'summon11']);
+  assert.equal(battlecryText(dagger), 'Battlecry: summon a 1/1 token.');
+  const s = createFight({ playerDeck: [dagger], enemyDeck: [{ ...getCard('colossus'), cost: 99 }] });
+  summon(s, 'enemy', { id: 'dummy', name: 'Dummy', cost: 0, atk: 0, hp: 100 });
+  runRound(s);
+  const token = s.player.board.find(unit => unit.token);
+  assert.ok(token); assert.deepEqual([token.baseAtk, token.baseMaxHp], [1, 1]);
+  assert.ok(s.events.some(event => event.type === 'battlecry' && event.kind === 'summon11'));
+  assert.equal(s.events.some(event => event.type === 'attack' && event.uid === token.uid), false);
+  runRound(s); runRound(s);
+  assert.equal(s.events.some(event => event.type === 'attack' && event.uid === token.uid), true);
+});
+
 test('every scripted enemy card is common tier with per-fight stats', () => {
   for (const fight of [1, 2, 3]) assert.ok(enemyDeckFor(fight).every(card => card.tier === 'common'));
   const grunt = enemyDeckFor(1).find(card => card.id === 'enemy_grunt');
@@ -733,7 +748,7 @@ test('fight-2 entry buff applies to tokens, not the pre-boarded boss', () => {
 test('card pool exposes the three rarity tiers and locked representative stats', () => {
   const oathbound = getCard('oathbound'), dagger = getCard('dagger_imp'), hexblade = getCard('hexblade'), copycat = getCard('copycat');
   assert.deepEqual([oathbound.atk, oathbound.hp], [2, 6]);
-  assert.deepEqual([dagger.atk, dagger.hp], [2, 2]);
+  assert.deepEqual([dagger.atk, dagger.hp], [1, 2]);
   assert.deepEqual([hexblade.cost, hexblade.atk, hexblade.hp], [2, 2, 6]);
   assert.deepEqual([copycat.cost, copycat.atk, copycat.hp], [2, 3, 6]);
   assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 6, rare: 28, mythic: 9 });

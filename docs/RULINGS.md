@@ -86,6 +86,7 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 Replays are full-information: both decks and all events are visible to anyone with the link. Live-scouting invariants (`UI_ARCHITECTURE.md`) apply ONLY to in-run fights.
 
 ## Numeric decisions
+- **Summon timing:** a unit cannot act during the round in which it was summoned.
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
 - **Global toughness pass (owner): all unit HP ×1.5 half-up, min +1; ATK unchanged; hero HP unchanged.**
 - **Stalemate safety valve**: if both decks are empty and a full round passes with no meaningful combat-state change, the fight ends immediately. Progress includes hero HP and each live unit's identity, base stats, damage, and shield state; turn counters and persistent mana alone are not progress. Higher hero HP wins and equal HP is a symmetric draw. A separate 400-turn limit uses the same result rule so pathological progressing fights still terminate. Corpses alone never delay the valve.

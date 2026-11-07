@@ -290,6 +290,8 @@ export function triggerBattlecry(state, side, unit) {
   const foeSide = other(side), own = state[side], foe = state[foeSide], index = own.board.indexOf(unit), opposite = liveAt(foe.board, index);
   const event = { side, uid: unit.uid, unit: unit.name, kind: unit.battlecry };
   switch (unit.battlecry) {
+    case 'summon11':
+      emit(state, 'battlecry', event); summon(state, side, tokenCard(1, 1), { summonedThisAction: true }); break;
     case 'tax': {
       const newPool = own.mana + 1;
       emit(state, 'manaChange', { ...event, amount: 1, newPool });
