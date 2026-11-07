@@ -87,7 +87,7 @@ Dark-fantasy "infernal war-room": a gritty, painterly-but-flat storybook look �
 | `#B08D57` | Cost-1 frame trim (bronze) |
 | `#C0C6D4` | Cost-2 frame trim (silver) |
 | `#E8B84B` | Cost-3 frame trim (gold) |
-| `#FF5A3C` | Damage flash, ATK number |
+| `#FF5A3C` | Damage flash, reduced ATK/HP number |
 | `#7BE382` | Heal / buff flash |
 | `#FFD966` | Divine Shield bubble, shield icon |
 | `#6FCF3F` | Poison tint, Poisonous icon |
@@ -98,7 +98,7 @@ Dark-fantasy "infernal war-room": a gritty, painterly-but-flat storybook look �
 - **Art window**: centered, 200×176, top ~56px, gently arched top.
 - **Name banner**: horizontal plaque below art window, 224×36, `#1E1830` fill, cost-trim 2px outline, name centered in bone text.
 - **Keyword badges**: up to two 40×40 circular icons stacked on the **right edge** of the art window, half-overlapping the frame.
-- **ATK / HP**: 52px circles, bottom-left (ATK, `#FF5A3C` number) and bottom-right (HP, `#EDE6D6` number, circle tinted `#D64550` when damaged).
+- **ATK / HP**: 52px circles, bottom-left and bottom-right. Both numbers are bone `#EDE6D6` at their printed base, damage orange `#FF5A3C` below it, and buff green `#7BE382` above it; the HP circle is additionally tinted `#D64550` when damaged.
 - **Hidden charging card**: card back (see asset list) at reduced saturation, with the **cost dot pip top-left** and a large **turn counter numeral dead-center** in `#EDE6D6`; enemy chargers show nothing else. Player's own charger renders as the real card at 60% opacity with the counter overlaid center.
 - Frames are **one design recolored three ways** — do not generate three structurally different frames.
 

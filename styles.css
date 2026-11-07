@@ -718,11 +718,13 @@ button.cosmetic-tile { cursor:pointer; }
 #battle-screen .boss .card__name { bottom:calc(var(--name-bottom) + 54px); }
 #battle-screen .card__trait { position:absolute; left:12%; right:12%; bottom:var(--name-bottom); min-height:44px; margin:0; padding:3px 5px; display:grid; place-items:center; overflow:hidden; z-index:3; border:1px solid #b08d57; border-radius:4px; background:var(--panel); color:var(--bone); font:500 11px/13px system-ui,sans-serif; text-align:center; }
 #battle-screen .card__atk,#battle-screen .card__hp { position:absolute; bottom:4px; width:var(--pip-size); height:var(--pip-size); display:grid; place-items:center; border:2px solid var(--dim); border-radius:50%; background:var(--bg); font:800 var(--stat-size)/1 system-ui; z-index:4; }
-#battle-screen .card__atk { left:8px; color:var(--damage); } #battle-screen .card__hp { right:8px; color:var(--bone); }
+#battle-screen .card__atk { left:8px; } #battle-screen .card__hp { right:8px; }
+#battle-screen .card__atk,#battle-screen .card__hp { color:var(--bone); }
 #battle-screen[data-card-tier=large] .card__atk::before,#battle-screen[data-card-tier=large] .card__hp::before { position:absolute; bottom:100%; background:var(--panel); color:var(--bone); font:500 14px/20px system-ui; }
 #battle-screen[data-card-tier=large] .card__atk::before { content:'ATK'; } #battle-screen[data-card-tier=large] .card__hp::before { content:'HP'; }
 #battle-screen .is-damaged .card__hp { border-color:var(--red); } #battle-screen .is-damaged .card__hp::after { content:''; position:absolute; width:8px; height:4px; background:var(--red); top:0; }
-#battle-screen .is-buffed { box-shadow:0 3px #7be382; } #battle-screen .is-buffed::after { content:'+'; position:absolute; right:-4px; top:-4px; color:#7be382; background:var(--bg); font-size:14px; }
+#battle-screen .is-buffed { color:#7be382; box-shadow:0 3px #7be382; } #battle-screen .is-buffed::after { content:'+'; position:absolute; right:-4px; top:-4px; color:#7be382; background:var(--bg); font-size:14px; }
+#battle-screen .is-reduced { color:var(--damage); }
 #battle-screen .has-aura { border-bottom:2px solid #7be382; } #battle-screen .has-shield { outline:2px solid #ffd966; box-shadow:0 0 12px #ffd9664d; }
 #battle-screen .card__badges { position:absolute; right:0; top:21%; display:grid; gap:4px; z-index:5; }
 #battle-screen .card__badge { width:var(--badge-size); height:var(--badge-size); background:var(--panel); border-radius:50%; }

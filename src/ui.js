@@ -432,10 +432,10 @@ export function reconcile(snapshot) {
     const boardEmptyHidden = snapshot[side].board.length > 0; if (els[side].empty.hidden !== boardEmptyHidden) els[side].empty.hidden = boardEmptyHidden;
     setText(els[side].mana, `MANA ${snapshot[side].mana}`);
     els[side].mana.classList.toggle('is-active', snapshot.activeSide === side);
-    snapshot[side].board.forEach(unit => { const entry = unitEls.get(unit.uid); if (!entry || entry.dying) return; const stats = effectiveStats(snapshot, side, unit); if (entry.atk !== stats.atk) { entry.atk = stats.atk; entry.atkEl.textContent = String(stats.atk); } if (entry.hp !== stats.hp) { entry.hp = stats.hp; entry.hpEl.textContent = String(stats.hp); }
+    snapshot[side].board.forEach(unit => { const entry = unitEls.get(unit.uid); if (!entry || entry.dying) return; const stats = effectiveStats(snapshot, side, unit), definition = definitionFor(unit), baseAtk = definition.atk ?? unit.baseAtk, baseHp = definition.hp ?? unit.baseMaxHp; if (entry.atk !== stats.atk) { entry.atk = stats.atk; entry.atkEl.textContent = String(stats.atk); } if (entry.hp !== stats.hp) { entry.hp = stats.hp; entry.hpEl.textContent = String(stats.hp); }
       toggleClass(entry.el, 'is-damaged', stats.hp < stats.maxHp); toggleClass(entry.el, 'has-shield', !!unit.shield); toggleClass(entry.el, 'has-aura', stats.atk > unit.baseAtk || stats.maxHp > unit.baseMaxHp);
       const sick = unit.enteredTurn > 0 && unit.enteredTurn >= snapshot.turnNumber && !unit.rush; toggleClass(entry.el, 'is-summoning-sick', sick); toggleClass(entry.el, 'has-rush', !!unit.rush); setText(entry.status, sick ? 'zzz' : unit.rush ? 'RUSH' : '');
-      toggleClass(entry.atkEl, 'is-buffed', stats.atk > unit.baseAtk); toggleClass(entry.hpEl, 'is-buffed', stats.maxHp > unit.baseMaxHp);
+      toggleClass(entry.atkEl, 'is-buffed', stats.atk > baseAtk); toggleClass(entry.atkEl, 'is-reduced', stats.atk < baseAtk); toggleClass(entry.hpEl, 'is-buffed', stats.hp > baseHp); toggleClass(entry.hpEl, 'is-reduced', stats.hp < baseHp);
       const keys = keywordsFor(unit), visible = keys.length > 2 ? keys.slice(0, 1) : keys;
       entry.badgeEls.forEach((badge, key) => { const hidden = !visible.includes(key); if (badge.hidden !== hidden) badge.hidden = hidden; });
       if (entry.more.hidden !== (keys.length <= 2)) entry.more.hidden = keys.length <= 2; setText(entry.more, keys.length > 2 ? `+${keys.length - 1}` : '');
