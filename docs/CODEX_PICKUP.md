@@ -11,6 +11,16 @@ commits and never moves board items.
    Phase order: M → A → B → C → D (M1 first; within a phase, lowest
    issue number first). Respect dependencies listed in the issue body
    (e.g. C1 requires A1) — never start a blocked item.
+   **Bounce-and-continue (owner-ratified 2026-11-07):** if the top
+   candidate is blocked — unresolved dependency, Definition of Ready
+   not met, or an apparent contradiction in the ticket — comment the
+   evidence on the issue, return the item to Todo, and continue to the
+   next candidate. Maximum 3 evaluations per turn; implement the first
+   actionable item found (stop after one implementation). A stop
+   because every candidate bounced must list all bounces in the final
+   report. **Owner rulings pinned in issue comments supersede the
+   ticket body** — check comments before judging a ticket
+   contradictory.
 2. Move the item to **In Progress** on the board.
 3. Confirm no other pass is in flight with an overlapping write scope
    (`git status --short`; if a pass touches the same files, fold both
