@@ -1003,7 +1003,8 @@ async function beginFight() {
     if (!response.ok) throw Object.assign(new Error(`solo simulation failed (${response.status})`), { response });
     result = await response.json();
   } catch (caught) {
-    if (caught?.response && caught.response.status < 500) {
+    // 404 means the sim API simply isn't deployed (static hosting) — fall back to the local engine like any outage.
+    if (caught?.response && caught.response.status < 500 && caught.response.status !== 404) {
       if (els?.banner) els.banner.textContent = 'FIGHT UNAVAILABLE';
       return;
     }
