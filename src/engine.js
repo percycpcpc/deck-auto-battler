@@ -42,9 +42,9 @@ export function effectiveStats(state, side, unit) {
 export const liveUnits = board => board.filter(unit => !unit.dead);
 
 export const fightBoss = (fight, rng = Math.random, milestonesOnly = false) => ((!milestonesOnly && fight === 2) || [5, 15].includes(fight))
-  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, fight === 15 ? 3 : 5), 'enemy', { boss: 'herald', text: 'Friendly units enter play with +1/+1.' }, rng)
+  ? makeUnit(card('boss_warherald', 'Warherald', 0, 1, 8), 'enemy', { boss: 'herald', text: 'Recruitment: new allies permanently gain +1/+1.' }, rng)
   : ((!milestonesOnly && fight === 3) || fight === 10)
-    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 0, 4), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 token.' }, rng)
+    ? makeUnit(card('boss_hivematron', 'Hivematron', 0, 1, 8), 'enemy', { boss: 'hive', text: 'After this attacks, summon a 1/2 Hive (max 3 living).' }, rng)
     : fight === 20
       ? makeUnit(card('boss_broodmother', 'Broodmother', 0, 0, 5, { tier: 'mythic', aura: 'all' }), 'enemy', { boss: 'broodmother', text: 'Aura: all friendly units have +1/+1.' }, rng)
       : null;
@@ -86,6 +86,25 @@ const EARLY_SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 
 const SCRIPT_PATTERN = Object.freeze(['grunt', 'grunt', 'brute', 'grunt', 'grunt']);
 const RARE_SCRIPT_PATTERN = Object.freeze(['grunt', 'rare', 'brute', 'grunt', 'brute']);
 const MYTHIC_SCRIPT_PATTERN = Object.freeze(['grunt', 'rare', 'brute', 'mythic', 'grunt']);
+const LESSON_SCRIPTS = Object.freeze({
+  4: Object.freeze(['grunt', 'shield', 'brute', 'shield', 'grunt', 'brute']),
+  9: Object.freeze(['grunt', 'deathrattle', 'brute', 'deathrattle', 'rare', 'grunt', 'brute', 'grunt', 'rare', 'brute']),
+  14: Object.freeze(['grunt', 'poison', 'brute', 'rare', 'poison', 'mythic', 'brute', 'grunt']),
+  19: Object.freeze(['grunt', 'formation', 'brute', 'rare', 'formation', 'mythic', 'grunt', 'brute', 'rare', 'grunt']),
+});
+export function encounterGuideFor(level) {
+  const guides = {
+    4: { lesson: 'SHIELD BREAKING', text: 'Divine Shields stop one damage instance. Break them before committing Poisonous or heavy hits.' },
+    5: { lesson: 'RECRUITMENT ENGINE', text: 'Warherald permanently strengthens each later recruit. Killing it stops future buffs; existing buffs remain.' },
+    9: { lesson: 'DEATH CHAINS', text: 'Cinder Wisps leave bodies behind. Plan lanes for the tokens that follow.' },
+    10: { lesson: 'TOKEN CONTROL', text: 'Hivematron produces up to three living Hives. Poisonous can remove its sturdy body quickly.' },
+    14: { lesson: 'POISON PROTECTION', text: 'Divine Shield prevents Poisonous if it absorbs the hit. Pop protection before the lethal exchange.' },
+    15: { lesson: 'REINFORCEMENT WINDOW', text: 'Warherald repeats its recruitment lesson with a stronger support script. Stop it before more allies arrive.' },
+    19: { lesson: 'FORMATION DISRUPTION', text: 'Banner Captains strengthen adjacent allies only while alive. Remove or isolate the aura source.' },
+    20: { lesson: 'REMOVABLE AURA', text: 'Broodmother buffs every other ally only while alive. Killing it removes the aura immediately.' },
+  };
+  return guides[level] || null;
+}
 function levelDeckSize(level) {
   if (level === 1) return 8;
   if (level >= 16) return 10;
@@ -96,6 +115,7 @@ function levelDeckSize(level) {
 }
 function enemyScriptFor(level) {
   if (level === 1) return LEVEL_ONE_SCRIPT;
+  if (LESSON_SCRIPTS[level]) return LESSON_SCRIPTS[level];
   const size = levelDeckSize(level);
   const SCRIPT = level <= 4 ? EARLY_SCRIPT_PATTERN
     : level <= 5 ? SCRIPT_PATTERN
@@ -107,7 +127,14 @@ const enemyCard = (kind, level) => {
   if (level === 1) return kind === 'brute'
     ? card('enemy_brute', 'Camp Brute', 2, 2, 6, { tier: 'common' })
     : card('enemy_grunt', 'Ash Grunt', 1, 2, 3, { tier: 'common' });
+  if ([2, 3].includes(level)) return kind === 'brute'
+    ? card('enemy_brute', 'Camp Brute', 2, 2, 5, { tier: 'common' })
+    : card('enemy_grunt', 'Ash Grunt', 1, 2, 2, { tier: 'common' });
   const band = level <= 6 ? 1 : level <= 12 ? 2 : level <= 19 ? 3 : 4;
+  if (kind === 'shield') return card('enemy_shieldbearer', 'Ash Shieldbearer', 2, 2, 4 + band, { tier: 'rare', keywords: ['shield'] });
+  if (kind === 'deathrattle') return card('enemy_cinder_wisp', 'Cinder Wisp', 1, 1, 2 + band, { tier: 'rare', deathrattle: 'summon11' });
+  if (kind === 'poison') return card('enemy_venomguard', 'Venomguard', 2, 2, 3 + band, { tier: 'rare', keywords: ['poisonous', 'shield'] });
+  if (kind === 'formation') return card('enemy_banner_captain', 'Banner Captain', 2, 2, 5 + band, { tier: 'rare', aura: 'adjacentAtk' });
   if (kind === 'rare') return card('enemy_raider', 'Ash Raider', 2, 2 + Math.ceil(band / 2), 4 + band, { tier: 'rare' });
   if (kind === 'mythic') return card('enemy_colossus', 'Ash Colossus', 3, 3 + Math.ceil(band / 2), 5 + band, { tier: 'mythic' });
   return kind === 'brute'
@@ -117,7 +144,10 @@ const enemyCard = (kind, level) => {
 export function enemyDeckFor(level) {
   const safeLevel = Math.min(RUN_CONFIG.LEVELS, Math.max(1, Number(level) || 1));
   const keyword = currentSeason().enemyKeyword;
-  return enemyScriptFor(safeLevel).map(kind => ({ ...enemyCard(kind, safeLevel), ...(keyword ? { keywords: [keyword] } : {}) }));
+  return enemyScriptFor(safeLevel).map(kind => {
+    const def = enemyCard(kind, safeLevel);
+    return { ...def, ...(keyword ? { keywords: [...new Set([...(def.keywords || []), keyword])] } : {}) };
+  });
 }
 
 export function gapKind(level) {
@@ -325,7 +355,9 @@ function actionFor(state, side, index, acted) {
     emit(state, 'attack', { side, unit: unit.name, uid: unit.uid, target: target?.name || 'hero', targetUid: target?.uid });
     if (target) exchange(state, side, unit, target);
     else { state[foe].hp -= effectiveStats(state, side, unit).atk; emit(state, 'heroHit', { side: foe, amount: effectiveStats(state, side, unit).atk }); }
-    if (unit.boss === 'hive') summon(state, side, tokenCard(), { summonedThisAction: true });
+    if (unit.boss === 'hive' && liveUnits(state[side].board).filter(candidate => candidate.hiveToken).length < 3) {
+      summon(state, side, tokenCard(), { summonedThisAction: true, hiveToken: true });
+    }
     checkHeroEnd(state); if (state.over) break;
   }
   if (unit.healOn === 'action' && !unit.dead) healAll(state, unit);

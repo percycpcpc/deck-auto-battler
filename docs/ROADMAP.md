@@ -48,6 +48,7 @@ target architecture; every item below lands as its own scoped pass.
   already supports it). No persistent card collection day one.
 - D1 live: four-week PvE config rotates starters, cumulative draft additions, and the enemy keyword without engine code changes per flip.
 - Level 20 = boss fight using existing pre-boarded boss mechanics.
+- Each milestone band telegraphs its next rules question through a deterministic teaching encounter and a public next-fight preview before the intervening deck choice.
 - Post-alpha deferred: deck ordering at save-time (async-safe, saved
   with the deck), player-choice event screen, hard rotation.
 

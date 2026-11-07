@@ -26,7 +26,7 @@ Player always takes the first turn, then turns strictly alternate.
 Tax Collector, Chrono Imp, Meddler, and Doomcaller are deprecated from draft generation because their live text depends on the removed slot. They remain legal in the union pool for saved-deck compatibility. Scout remains active because its live Battlecry now reduces the opposing unit's ATK and has no dependency on the removed system.
 
 ## Tokens
-- All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap.
+- All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap. Hivematron has an additional cap of three living Hive tokens; once one dies and is cleaned up, a later attack may refill the open Hive slot.
 
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
@@ -68,12 +68,13 @@ Replays are full-information: both decks and all events are visible to anyone wi
 - **Hero HP stays 40** (owner number) — but it is a single config constant; K3's model predicts ~18–25 round fights at 40 and recommends 30 as the first tuning dial.
 - **Global toughness pass (owner): all unit HP ×1.5 half-up, min +1; ATK unchanged; hero HP unchanged.**
 - **Stalemate safety valve**: if both decks are empty and a full round passes with no meaningful combat-state change, the fight ends immediately. Progress includes hero HP and each live unit's identity, base stats, damage, and shield state; turn counters and persistent mana alone are not progress. Higher hero HP wins and equal HP is a symmetric draw. A separate 400-turn limit uses the same result rule so pathological progressing fights still terminate. Corpses alone never delay the valve.
-- **Enemy decks**: Fight 1 uses six pumped Common 2/3 Ash Grunts (cost 1) + two pumped Common 2/6 Camp Brutes (cost 2). Fights 2–3 use fixed, thinned support scripts with the legacy weaker Common 2/2 Grunts + Common 2/5 Brutes, alongside the pre-boarded 1/8 boss documented in `SPEC.md`, so the boss fights stay easier.
+- **Enemy decks**: Fight 1 uses six pumped Common 2/3 Ash Grunts (cost 1) + two pumped Common 2/6 Camp Brutes (cost 2). Fights 2–3 use fixed, thinned support scripts with the legacy weaker Common 2/2 Grunts + Common 2/5 Brutes, alongside the pre-boarded 1/8 boss documented in `SPEC.md`, so the boss fights stay easier. The 20-level run remains deterministic and adds fixed lesson scripts immediately before milestones: level 4 shields, level 9 Deathrattle tokens, level 14 shielded Poisonous units, and level 19 adjacency formation auras. Milestone Warherald and Hivematron bodies use the documented 1/8 baseline; Broodmother remains the level-20 dynamic-aura boss.
 
 ## Information
 - Owner sees their own charging card's identity only (not the card beneath it). Opponent sees cost dot + counter only.
 - Scout's Battlecry reveals the enemy charger's identity until it deploys (no persistent effect).
 
 ## Wording fixes to the spec
-- Fight-2 boss aura: "**friendly** units enter play with +1/+1" (one-time base-stat mod on entry, including tokens; the boss itself is not retroactively buffed).
+- Warherald recruitment: "**friendly** units enter play with +1/+1" is a one-time base-stat modification on entry, including tokens; Warherald itself is not retroactively buffed. Those modifications remain after Warherald dies. This is not an aura.
+- Broodmother is the removable-aura contrast: its +1/+1 bonus is dynamic, excludes itself, and disappears immediately when it dies.
 - Fights 2–3 boss: occupies enemy column 1, acts in the first action phase.
