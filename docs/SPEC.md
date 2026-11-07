@@ -122,5 +122,6 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Tech direction
 - Web (browser), dependency-light, prototype quality.
+- The title screen exposes a client-only card gallery listing every `activePool()` card with its name, cost, printed ATK/HP, tier, keywords, and rules text; Back returns to the title screen.
 - Solo fight resolution is server-authoritative. The authenticated `POST /api/sim/solo` endpoint accepts the ordered player card ids, a uint32 seed, and the fight number; the server validates union-pool legality, derives the seasonal enemy line, runs the deterministic engine to completion, and returns `{winner, rounds, events}`. The client mounts the battle once and only replays that event log through the shared replay animation pipeline. If the server is unreachable, the same seeded engine inputs may run locally as an explicit offline fallback; this fallback is not authoritative online.
 - Combat must be watchable: clear reveal → charge → action sequencing with readable timing.

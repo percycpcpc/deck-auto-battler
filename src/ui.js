@@ -1,6 +1,7 @@
 import { BOARD_CAP, CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, encounterGuideFor, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 import { SPEEDS, durationAtSpeed, isSpeedAvailable } from './speeds.js';
+import { activePool } from './seasons.js';
 
 // CONSTANTS
 export const TIMING = Object.freeze({ deploy: 400, battlecry: 300, summonPing: 250, statChange: 250, captionFade: 300, turnIndicator: 150, attack: 350, impactDelay: 140, hitStop: 75, idle: 2400, emberMin: 9000, emberStep: 420, damage: 200, death: 400, deathFallback: 500, shift: 300, heroHit: 200, shield: 250, summon: 250, stalemate: 400, cleanup: 55, stagger: 40, floater: 600, pop: 250, hp: 250, hover: 200, bannerIn: 250, bannerHold: 500, bannerOut: 250, betweenRounds: 600, windfuryGap: 150 });
@@ -866,6 +867,7 @@ function showTitle() {
   const actions = el('div', 'title-actions');
   actions.append(button('Start Run', showStarterSelection));
   actions.append(button('Bazar', () => void showBazar()));
+  actions.append(button('Gallery', showGallery));
   if (authUser?.provider === 'mock') {
     const status = el('p', 'auth-status', `Signed in as ${authUser.name || 'Mock Warrior'}`);
     if (premiumEntitled) status.append(el('span', 'premium-badge', 'PREMIUM'));
@@ -901,6 +903,28 @@ function showTitle() {
     actions.append(signIn);
   }
   screen.append(el('div', 'title-mark', 'DECK AUTO BATTLER'), el('p', '', 'Build a warband. Watch the line break. Carry every wound.'), actions);
+  app.replaceChildren(screen);
+}
+function galleryCard(card) {
+  const item = el('article', `gallery-card gallery-card--${card.tier}`), visual = el('div', 'gallery-card__visual');
+  visual.append(img('gallery-card__art', unitPortrait(card), ''), img('gallery-card__frame', frameFor(card.tier), ''), createCostDot(card.cost));
+  const keywords = printedKeywordsFor(card).map(key => KEYWORD_NAMES[key] || key);
+  item.append(
+    visual,
+    el('h2', '', card.name),
+    el('p', 'gallery-card__stats', `Cost ${card.cost} · ATK ${card.atk} · HP ${card.hp}`),
+    el('p', 'gallery-card__tier', card.tier),
+    el('p', 'gallery-card__keywords', keywords.length ? keywords.join(' · ') : 'No keywords'),
+    el('p', 'gallery-card__rules', descriptorText(card) || 'No special rules.'),
+  );
+  return item;
+}
+export function showGallery() {
+  stopRankedPolling(); stopped = true;
+  const screen = el('section', 'screen gallery-screen'), grid = el('div', 'gallery-grid');
+  grid.append(...activePool().map(galleryCard));
+  const back = button('Back', showTitle); back.classList.add('secondary');
+  screen.append(el('h1', '', 'CARD GALLERY'), el('p', 'gallery-intro', 'Every card in the active draft pool.'), grid, back);
   app.replaceChildren(screen);
 }
 function showStarterSelection() {
