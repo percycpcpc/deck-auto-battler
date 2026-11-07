@@ -16,7 +16,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('oathbound', 'Oathbound', 1, 2, 6, { tier: 'common', portraitId: 'aegis_knight', draftExcluded: true }),
   card('road_ogre', 'Road Ogre', 2, 3, 6, { tier: 'common' }),
   card('aegis_knight', 'Aegis Knight', 2, 2, 7, { tier: 'rare', keywords: ['shield'] }),
-  card('venom_hound', 'Venom Hound', 2, 3, 5, { tier: 'rare', keywords: ['poisonous'] }),
+  card('venom_hound', 'Venom Hound', 2, 1, 5, { tier: 'rare', keywords: ['poisonous'] }),
   card('plague_bearer', 'Plague Bearer', 2, 2, 9, { tier: 'rare', deathrattle: 'plague' }),
   card('warlord', 'Warlord', 2, 2, 9, { tier: 'rare', aura: 'adjacentAtk' }),
   card('bulwark', 'Bulwark', 2, 1, 9, { tier: 'rare', deathrattle: 'oppositeAtkDown', text: 'Deathrattle: the highest-ATK enemy loses 2 ATK.' }),

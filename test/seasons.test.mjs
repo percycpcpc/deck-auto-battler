@@ -30,12 +30,12 @@ await test('season 2 preserves the three established starters, adds Ember Vangua
   assert.deepEqual(SEASONS[1].enemyKeywordLevels, [4, 5, 9, 10, 14, 15, 16, 17, 18, 19, 20]);
 });
 
-await test('season 2 additions are sidegrades and all starters are valid eight-card decks', () => {
+await test('season 2 additions preserve their intended contrasts and all starters are valid eight-card decks', () => {
   const cards = new Map(unionPool().map(card => [card.id, card]));
   const furnace = cards.get('furnace_hound'), venom = cards.get('venom_hound');
   const phoenix = cards.get('phoenix_matron'), brood = cards.get('brood_queen');
   assert.ok(furnace.atk > venom.atk && furnace.hp < venom.hp);
-  assert.equal(furnace.atk + furnace.hp, venom.atk + venom.hp);
+  assert.deepEqual([venom.atk, venom.hp, venom.keywords], [1, 5, ['poisonous']]);
   assert.ok(phoenix.atk > brood.atk && phoenix.hp < brood.hp);
   assert.equal(phoenix.atk + phoenix.hp, brood.atk + brood.hp);
   assert.equal(SEASONS[1].starters.length, 4);

@@ -61,7 +61,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the lowest-HP enemy unit (leftmost on ties)
 10. Scout (cost 1) — 2/4, Battlecry: the opposing unit loses 2 ATK (minimum 0)
 11. Aegis Knight (cost 2) — 2/7 Divine Shield
-12. Venom Hound (cost 2) — 3/5 Poisonous
+12. Venom Hound (cost 2) — 1/5 Poisonous
 13. Plague Bearer (cost 2) — 2/9, Deathrattle: deal 1 to all enemies
 14. Warlord (cost 2) — 2/9, Aura: adjacent +1/+0
 15. Bulwark (cost 2) — 1/9, Deathrattle: the highest-ATK enemy loses 2 ATK
@@ -92,7 +92,7 @@ Owner tuning: 1-cost 2/4 to soften early game.
 
 ## Season 2 — Emberwake
 - Starter selection retains the three Founders March identities and adds Ember Vanguard as a fourth seasonal showcase. Every starter is an eight-card deck drawn from the cumulative legal pool.
-- Furnace Hound is a 2-cost 4/4 Poisonous sidegrade to Venom Hound's 3/5; Phoenix Matron is a 3-cost 4/9 Deathrattle sidegrade to Brood Queen's 3/10. Ember Scout's after-action team heal makes its 2/2 body mechanically distinct. Ashguard is a 1-cost 1/5 Common with Divine Shield and an adjacent +1 ATK aura, making it the protected formation bridge rather than an Aegis Knight reprint.
+- Furnace Hound is a higher-pressure 2-cost 4/4 Poisonous alternative to Venom Hound's defensive 1/5 body; Phoenix Matron is a 3-cost 4/9 Deathrattle sidegrade to Brood Queen's 3/10. Ember Scout's after-action team heal makes its 2/2 body mechanically distinct. Ashguard is a 1-cost 1/5 Common with Divine Shield and an adjacent +1 ATK aura, making it the protected formation bridge rather than an Aegis Knight reprint.
 - Enemy Divine Shield is absent from the opening encounters, appears on teaching levels 4/5 and 9/10, is absent again on levels 11–13, then applies broadly on levels 14–20. The schedule is season config, not a global combat rule.
 
 ## Enemies (scripted, escalating)
