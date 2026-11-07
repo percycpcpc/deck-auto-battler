@@ -3,7 +3,7 @@ import {
   CARD_POOL, HERO_HP, MAX_COMBAT_TURNS, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
   draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, resolveDeaths, runEndSnapshot, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
-import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
+import { battlecryText, createDeckEventFlow, createDraftFlow } from '../src/ui.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -351,8 +351,8 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); unit = summon(s, 'player', getCard('inquisitor')); summon(s, 'enemy', getCard('sellsword')); const strongest = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.targetUid, strongest.uid); assert.equal(event.targetIndex, 1); assert.equal(s.events[1].type, 'damage');
 
-  s = empty(); summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
-  event = s.events[0]; assert.deepEqual(event.neighborIndices, [0]); assert.equal(event.targetUids.length, 1);
+  s = empty(); const leftAlly = summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.equal(event.targetUid, leftAlly.uid); assert.equal(event.targetIndex, 0); assert.deepEqual(event.targetUids, [leftAlly.uid]); assert.equal(event.fizzle, false);
 
   s = empty(); unit = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(unit.baseAtk, 5); assert.equal(unit.baseMaxHp, 7); assert.equal(effectiveStats(s, 'player', unit).hp, 7); assert.equal(event.targetUid, unit.uid); assert.equal(event.amount, 2); assert.equal(event.applied, true); assert.equal(event.fizzle, false);
@@ -366,6 +366,57 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); unit = summon(s, 'player', getCard('gate_crasher')); const moved = summon(s, 'enemy', getCard('sellsword')); summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.targetUid, moved.uid); assert.equal(event.fromIndex, 0); assert.equal(event.toIndex, 1);
 
+});
+
+test('positional effects resolve deterministic fallbacks and ignore corpse lanes', () => {
+  let s = empty();
+  const livingLeft = summon(s, 'player', getCard('sellsword'));
+  const corpse = summon(s, 'player', getCard('road_ogre')); corpse.dead = true;
+  const squire = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', squire);
+  assert.equal(s.events[0].fizzle, true); assert.equal(livingLeft.baseAtk, 2); assert.equal(livingLeft.baseMaxHp, 3);
+
+  s = empty();
+  const hurler = summon(s, 'player', getCard('hex_hurler'));
+  const deadOpposite = summon(s, 'enemy', getCard('sellsword')); deadOpposite.dead = true;
+  const rightmost = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', hurler);
+  let event = s.events[0]; assert.equal(event.targetUid, rightmost.uid); assert.equal(event.targetIndex, 1); assert.equal(event.fallback, true); assert.equal(event.fizzle, false); assert.equal(rightmost.damage, 2);
+
+  s = empty(); const loneHurler = summon(s, 'player', getCard('hex_hurler')); s.events = []; triggerBattlecry(s, 'player', loneHurler);
+  event = s.events[0]; assert.equal(event.targetUid, undefined); assert.equal(event.fallback, false); assert.equal(event.fizzle, true);
+});
+
+test('Spiteful Imp deathrattle hits lowest effective HP with a leftmost tie break', () => {
+  const s = empty();
+  const imp = summon(s, 'player', getCard('spiteful_imp'));
+  const tiedLeft = summon(s, 'enemy', getCard('sellsword')); tiedLeft.damage = 1;
+  const tiedRight = summon(s, 'enemy', getCard('road_ogre')); tiedRight.damage = 4;
+  const corpse = summon(s, 'enemy', { ...getCard('oathbound'), hp: 1 }); corpse.dead = true;
+  imp.damage = 99; s.events = []; resolveDeaths(s);
+  const damage = s.events.find(item => item.type === 'damage');
+  assert.equal(damage.uid, tiedLeft.uid); assert.equal(damage.sourceUid, imp.uid); assert.equal(damage.source, 'Spiteful Imp');
+  assert.equal(tiedLeft.damage, 2); assert.equal(tiedRight.damage, 4); assert.equal(corpse.damage, 0);
+});
+
+test('Duelist recovery bonus requires it to be the only living allied unit', () => {
+  const s = empty();
+  const living = summon(s, 'player', getCard('sellsword'));
+  const corpse = summon(s, 'player', getCard('road_ogre')); corpse.dead = true;
+  const duelist = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', duelist);
+  assert.equal(duelist.baseAtk, 3); assert.equal(duelist.baseMaxHp, 5); assert.equal(s.events[0].applied, false); assert.deepEqual(s.events[0].targetUids, [living.uid]);
+});
+
+test('Hexblade and Copycat remain exact-opposite without fallback', () => {
+  for (const id of ['hexblade', 'copycat']) {
+    const s = empty(), unit = summon(s, 'player', getCard(id));
+    const corpse = summon(s, 'enemy', getCard('sellsword')); corpse.dead = true;
+    const fallbackCandidate = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
+    assert.equal(s.events[0].targetUid, undefined, id); assert.equal(fallbackCandidate.baseAtk, 6, id); assert.equal(fallbackCandidate.baseMaxHp, 9, id);
+  }
+});
+
+test('positional card copy matches the targeting rules contract', () => {
+  assert.equal(battlecryText(getCard('squire')), 'On deploy: give the ally immediately to the left +1/+1.');
+  assert.equal(battlecryText(getCard('hex_hurler')), 'On deploy: deal 2 damage to the opposing unit, otherwise the rightmost enemy.');
 });
 
 test('deck-out does nothing and stalemate valve draws on equal HP', () => {
@@ -564,13 +615,13 @@ test('a later attacker treats an opposite corpse as an empty lane and hits the h
   assert.equal(attack.target, 'hero'); assert.equal(attack.targetUid, undefined); assert.equal(s.enemy.hp, HERO_HP - 3);
 });
 
-test('corpses provide no aura and are invalid opposite battlecry targets', () => {
+test('corpses provide no aura and Hex Hurler falls back from a corpse lane', () => {
   const s = empty(), ally = summon(s, 'player', getCard('sellsword')), overlord = summon(s, 'player', getCard('overlord'));
   assert.equal(effectiveStats(s, 'player', ally).atk, 3);
   exchange(s, 'enemy', makeUnit({ id: 'finisher', name: 'Finisher', cost: 0, atk: 10, hp: 10 }, 'enemy'), overlord);
   assert.equal(overlord.dead, true); assert.equal(effectiveStats(s, 'player', ally).atk, 2);
   summon(s, 'enemy', getCard('sellsword')); const hurler = summon(s, 'enemy', getCard('hex_hurler')); s.events = []; triggerBattlecry(s, 'enemy', hurler);
-  assert.equal(s.events[0].targetUid, undefined); assert.equal(s.events.some(event => event.type === 'damage'), false);
+  assert.equal(s.events[0].targetUid, ally.uid); assert.equal(s.events[0].fallback, true); assert.equal(s.events.find(event => event.type === 'damage').uid, ally.uid);
 });
 
 test('cleanup emits one batch shift for an affected side', () => {
