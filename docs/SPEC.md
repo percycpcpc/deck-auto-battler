@@ -76,7 +76,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 **Mythic (8):**
 1. Hexblade (cost 2) — 2/6, Battlecry: set the opposite unit's base ATK and HP to 1 (keywords and auras remain)
 2. Copycat (cost 2) — 3/6, Battlecry: copy the opposite unit's current effective ATK and remaining HP as base stats (keywords are not copied)
-3. Cataclysm (cost 3) — 2/6, Battlecry: deal 2 to ALL units on both sides, including itself
+3. Cataclysm (cost 3) — 2/6, Battlecry: deal 3 to all other units on both sides
 4. Cultist (cost 3) — 3/8, Battlecry: destroy your leftmost other unit, gain its ATK and HP
 5. Doomcaller (cost 3) — 4/10, Battlecry: return the opposite non-boss unit to the bottom of its deck, stripped of changes
 6. Inquisitor (cost 3) — 4/10, Battlecry: deal 5 to highest-ATK enemy

@@ -35,7 +35,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('copycat', 'Copycat', 2, 3, 6, { tier: 'mythic', battlecry: 'copycat', text: "Battlecry: copy the opposing unit's current ATK and remaining HP." }),
   card('overlord', 'Overlord', 3, 2, 10, { tier: 'mythic', aura: 'all' }),
   card('cultist', 'Cultist', 3, 3, 8, { tier: 'mythic', battlecry: 'cultist' }),
-  card('cataclysm', 'Cataclysm', 3, 2, 6, { tier: 'mythic', battlecry: 'cataclysm', text: 'Battlecry: deal 2 damage to every unit, including this one.' }),
+  card('cataclysm', 'Cataclysm', 3, 2, 6, { tier: 'mythic', battlecry: 'cataclysm', text: 'Battlecry: deal 3 damage to every other unit.' }),
   card('quillback_elder', 'Quillback Elder', 3, 3, 10, { tier: 'rare', onSummonPing: 1, portraitId: 'warlord' }),
 ]);
 

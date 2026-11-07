@@ -350,11 +350,12 @@ test('Copycat copies effective ATK and remaining HP but no keywords', () => {
   assert.equal(copycat.shield, false); assert.deepEqual(copycat.keywords, []);
 });
 
-test('Cataclysm damages every living unit including itself', () => {
+test('Cataclysm deals 3 damage to every other living unit and excludes itself', () => {
   const s = empty(); const ally = summon(s, 'player', getCard('sellsword')); const cataclysm = summon(s, 'player', getCard('cataclysm')); const enemy = summon(s, 'enemy', getCard('road_ogre'));
   s.events = []; triggerBattlecry(s, 'player', cataclysm);
-  assert.equal(ally.damage, 2); assert.equal(cataclysm.damage, 2); assert.equal(enemy.damage, 2);
-  assert.deepEqual(s.events[0].targetUids, [ally.uid, cataclysm.uid, enemy.uid]);
+  assert.equal(ally.damage, 3); assert.equal(cataclysm.damage, 0); assert.equal(enemy.damage, 3);
+  assert.deepEqual(s.events[0].targetUids, [ally.uid, enemy.uid]);
+  assert.equal(s.events[0].amount, 3);
 });
 
 test('Bulwark Deathrattle reduces leftmost highest-ATK enemy by 2 even when its opposite is dead', () => {
@@ -372,7 +373,7 @@ test('the five corrected cards publish the binding rules text', () => {
   assert.equal(getCard('bulwark').text, 'Deathrattle: the highest-ATK enemy loses 2 ATK.');
   assert.equal(getCard('gate_crasher').text, 'Battlecry: move the opposing unit to the end of its line.');
   assert.equal(getCard('copycat').text, "Battlecry: copy the opposing unit's current ATK and remaining HP.");
-  assert.equal(getCard('cataclysm').text, 'Battlecry: deal 2 damage to every unit, including this one.');
+  assert.equal(getCard('cataclysm').text, 'Battlecry: deal 3 damage to every other unit.');
   assert.equal(getCard('hexblade').text, "Battlecry: set the opposing unit's base ATK and HP to 1.");
 });
 

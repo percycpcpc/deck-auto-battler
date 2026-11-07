@@ -205,7 +205,7 @@ const BATTLECRY_TEXT = Object.freeze({
   gravedigger: 'On deploy: summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.',
   copycat: "On deploy: copy the opposing unit's current ATK and remaining HP.",
   cultist: 'On deploy: devour your leftmost other unit and gain its stats.',
-  cataclysm: 'On deploy: deal 2 damage to every unit, including this one.',
+  cataclysm: 'On deploy: deal 3 damage to every other unit.',
   firebelch: 'On deploy: deal 1 damage to ALL enemy units.',
 });
 const DEATHRATTLE_TEXT = Object.freeze({
@@ -510,7 +510,7 @@ function battlecryCaption(event) {
   if (event.kind === 'copycat') return target ? `Battlecry: copy ${target}'s stats` : 'Battlecry: no opposing unit';
   if (event.kind === 'cultist') return target ? `Battlecry: devour ${target}` : 'Battlecry: no ally to devour';
   if (event.kind === 'gate') return event.moved ? `Battlecry: shove ${target} right` : 'Battlecry: no unit to shove';
-  if (event.kind === 'cataclysm') return 'Battlecry: 2 damage to all units';
+  if (event.kind === 'cataclysm') return 'Battlecry: 3 damage to all other units';
   if (event.kind === 'firebelch') return event.targetUids?.length ? 'Battlecry: 1 damage to all enemies' : 'Battlecry: no enemy units';
   if (event.kind === 'squire') return event.targetUid ? 'Battlecry: left ally gains +1/+1' : 'Battlecry: no ally to the left';
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';

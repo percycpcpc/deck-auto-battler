@@ -371,9 +371,9 @@ export function triggerBattlecry(state, side, unit) {
       if (victim) { const e = effectiveStats(state, side, victim); unit.baseAtk += e.atk; unit.baseMaxHp += e.hp; victim.damage = 999; } break;
     }
     case 'cataclysm': {
-      const targets = [...liveUnits(state.player.board), ...liveUnits(state.enemy.board)];
-      emit(state, 'battlecry', { ...event, all: true, targetUids: targets.map(target => target.uid), amount: 2 });
-      for (const target of targets) dealDamage(state, unit, target, 2); break;
+      const targets = [...liveUnits(state.player.board), ...liveUnits(state.enemy.board)].filter(target => target !== unit);
+      emit(state, 'battlecry', { ...event, all: true, targetUids: targets.map(target => target.uid), amount: 3 });
+      for (const target of targets) dealDamage(state, unit, target, 3); break;
     }
     case 'firebelch': {
       const targets = liveUnits(foe.board);
