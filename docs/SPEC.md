@@ -31,7 +31,10 @@ Fixed 8-card starter deck → auto-combat vs scripted enemy → draft pick 1-of-
 - **Rush** — can act in the combat sweep of the turn it enters (ignores summoning sickness).
 - **Battlecry** — triggers when the unit ENTERS PLAY (lands on the board), NOT when revealed/charging.
 
-## Card pool (36)
+- **Damage-survival triggers** resolve after damage lands only if the source survives and is not Poisoned. Rupture Brood summons a 1/1 immediately to its left; Aegis Warden grants Divine Shield to its live immediate neighbors.
+- **Scoped healing** heals only eligible damaged living units and never exceeds printed HP. Field Medic heals friendly units only; existing unscoped healers still heal both sides.
+
+## Card pool (40)
 Stat scale tuned for 40 hero HP and small decks.
 
 ### Rarity tiers
@@ -41,15 +44,16 @@ Keywords count toward the toughness budget: Divine Shield is worth roughly 2 HP,
 
 Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost is shown by the top-left cost gem.
 
-**Common (6):**
+**Common (7):**
 1. Dagger Imp (cost 1) — 1/2, Battlecry: summon a 1/1 token
 2. Sellsword (cost 1) — 3/3
 3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve and excluded from ordinary draft offers)
 4. Road Ogre (cost 2) — 3/6
 5. Colossus (cost 3) — 6/9
 6. Pit Tender (cost 1) — 1/4, Battlecry: destroy your leftmost other unit and gain its ATK and HP (legacy card id: `shield_saint`)
+7. Field Medic (cost 1) — 2/2, after this acts, heal your units for 1
 
-**Rare (22):**
+**Rare (25):**
 1. Twinfang (cost 1) — 1/4 Rush, Windfury
 2. Brood Wisp (cost 1) — 1/4, Deathrattle: summon 1/2
 3. Hex Hurler (cost 1) — 1/5, Battlecry: deal 2 to the opposite unit, otherwise the rightmost enemy
@@ -72,6 +76,9 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 20. Firebelcher (cost 2) — 2/9, Battlecry: deal 1 damage to ALL enemy units
 21. Bristleback (cost 2) — 1/9, when this takes damage and survives, gain +3 Attack
 22. Quillback Elder (cost 3) — 3/10, when any other unit enters a battlefield, deal 1 damage to it
+23. Rupture Brood (cost 2) — 1/7, after this takes damage and survives, summon a 1/1 token immediately to its left
+24. Standard Bearer (cost 2) — 2/6, Battlecry: the unit on its left gains Divine Shield
+25. Aegis Warden (cost 2) — 1/6, after this takes damage and survives, its live immediate left and right neighbors gain Divine Shield
 
 **Mythic (8):**
 1. Hexblade (cost 2) — 2/6, Battlecry: set the opposite unit's base ATK and HP to 1 (keywords and auras remain)

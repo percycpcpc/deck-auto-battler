@@ -19,8 +19,9 @@ export function makeUnit(def, side = 'player', extras = {}, rng = Math.random) {
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
     keywords: [...(def.keywords || [])], battlecry: def.battlecry, battlecryAmount: def.battlecryAmount, deathrattle: def.deathrattle,
     portraitId: def.portraitId,
-    aura: def.aura, onKill: def.onKill, onDamaged: def.onDamaged, onSummonPing: def.onSummonPing,
-    heal: def.heal, healOn: def.healOn, text: def.text,
+    aura: def.aura, onKill: def.onKill, onDamaged: def.onDamaged, onDamagedSummon: def.onDamagedSummon,
+    onDamagedShield: def.onDamagedShield, onSummonPing: def.onSummonPing,
+    heal: def.heal, healOn: def.healOn, healScope: def.healScope, text: def.text,
     rush: !!def.rush,
     token: !!def.token, boss: extras.boss || null,
     enteredTurn: extras.enteredTurn ?? 0, summonedThisAction: false, ...extras,
@@ -171,7 +172,10 @@ const emit = (s, type, data = {}) => s.events.push({ round: s.round, turnNumber:
 
 function healAll(state, source) {
   if (!source?.heal || source.dead) return;
-  for (const target of [...liveUnits(state.player.board), ...liveUnits(state.enemy.board)]) {
+  const targets = source.healScope === 'friendly'
+    ? liveUnits(state[source.side].board)
+    : [...liveUnits(state.player.board), ...liveUnits(state.enemy.board)];
+  for (const target of targets) {
     const currentHp = effectiveStats(state, target.side, target).hp;
     const amount = Math.min(source.heal, target.damage, Math.max(0, target.originalMaxHp - currentHp));
     if (amount <= 0) continue;
@@ -189,7 +193,9 @@ export function summon(state, side, def, extras = {}) {
   if (side === 'enemy' && liveUnits(state.enemy.board).some(u => u.boss === 'herald') && unit.boss !== 'herald') {
     unit.baseAtk += 1; unit.baseMaxHp += 1;
   }
-  state[side].board.push(unit); emit(state, 'summon', { side, unit: unit.name, uid: unit.uid });
+  const atIndex = Number.isInteger(extras.atIndex) && extras.atIndex >= 0 && extras.atIndex <= state[side].board.length ? extras.atIndex : null;
+  if (atIndex === null) state[side].board.push(unit); else state[side].board.splice(atIndex, 0, unit);
+  emit(state, 'summon', { side, unit: unit.name, uid: unit.uid });
   const pingers = [...liveUnits(state.player.board), ...liveUnits(state.enemy.board)].filter(source => source !== unit && source.onSummonPing);
   for (const source of pingers) {
     emit(state, 'summonPing', { side: source.side, uid: source.uid, unit: source.name, targetSide: side, targetUid: unit.uid, target: unit.name, amount: source.onSummonPing });
@@ -211,6 +217,17 @@ function dealDamage(state, source, target, amount) {
     target.baseAtk += target.onDamaged;
     const stats = effectiveStats(state, target.side, target);
     emit(state, 'statChange', { side: target.side, uid: target.uid, unit: target.name, atk: stats.atk, hp: stats.hp, amount: target.onDamaged, reason: 'onDamaged' });
+  }
+  if (target.onDamagedSummon && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) {
+    const board = state[target.side].board, atIndex = board.indexOf(target), fizzle = board.length >= BOARD_CAP;
+    emit(state, 'damagedSummon', { side: target.side, uid: target.uid, unit: target.name, ...(fizzle ? { fizzle: true } : {}) });
+    if (!fizzle) summon(state, target.side, tokenCard(1, 1), { summonedThisAction: true, atIndex });
+  }
+  if (target.onDamagedShield === 'adjacent' && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) {
+    const board = state[target.side].board, index = board.indexOf(target);
+    const targets = [board[index - 1], board[index + 1]].filter(neighbor => neighbor && !neighbor.dead);
+    emit(state, 'damagedShield', { side: target.side, uid: target.uid, unit: target.name, targetUids: targets.map(neighbor => neighbor.uid), targets: targets.map(neighbor => neighbor.name) });
+    for (const neighbor of targets) neighbor.shield = true;
   }
   if (target.healOn === 'damaged' && !target.poisoned && effectiveStats(state, target.side, target).hp > 0) healAll(state, target);
   return true;
@@ -269,7 +286,8 @@ function resetCardFromUnit(unit) {
   return card(unit.cardId, unit.name, unit.cost, unit.originalAtk, unit.originalMaxHp, {
     tier: unit.tier, keywords: [...unit.keywords], battlecry: unit.battlecry, deathrattle: unit.deathrattle,
     portraitId: unit.portraitId, aura: unit.aura, onKill: unit.onKill, onDamaged: unit.onDamaged,
-    onSummonPing: unit.onSummonPing, heal: unit.heal, healOn: unit.healOn, text: unit.text,
+    onDamagedSummon: unit.onDamagedSummon, onDamagedShield: unit.onDamagedShield,
+    onSummonPing: unit.onSummonPing, heal: unit.heal, healOn: unit.healOn, healScope: unit.healScope, text: unit.text,
     rush: unit.rush, token: unit.token,
   });
 }
@@ -292,6 +310,11 @@ export function triggerBattlecry(state, side, unit) {
   switch (unit.battlecry) {
     case 'summon11':
       emit(state, 'battlecry', event); summon(state, side, tokenCard(1, 1), { summonedThisAction: true }); break;
+    case 'shieldLeft': {
+      const target = own.board[index - 1]?.dead ? undefined : own.board[index - 1];
+      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: index - 1, fizzle: !target });
+      if (target) target.shield = true; break;
+    }
     case 'tax': {
       const newPool = own.mana + 1;
       emit(state, 'manaChange', { ...event, amount: 1, newPool });

@@ -56,14 +56,14 @@ await test('redundant shield carriers are one-for-one archetype bridges', () => 
     (({ cost, atk, hp, tier, keywords, aura }) => ({ cost, atk, hp, tier, keywords, aura }))(ashguard),
     { cost: 1, atk: 1, hp: 5, tier: 'common', keywords: ['shield'], aura: 'adjacentAtk' },
   );
-  assert.equal(unionPool().length, 43, 'redesigns preserve the union-pool cardinality');
+  assert.equal(unionPool().length, 47, 'redesigns preserve the union-pool cardinality');
 });
 
 await test('season 2 draft pool adds seven cards, restores the mana-bank package, and excludes only starter-only Oathbound', () => {
   const baseIds = new Set(SEASONS[0].starters.flatMap(starter => starter.cards));
   const poolIds = new Set(activePool().map(card => card.id));
   const scout = unionPool().find(card => card.id === 'scout');
-  assert.equal(activePool().length, 42);
+  assert.equal(activePool().length, 46);
   assert.deepEqual(unionPool().filter(card => card.deprecated).map(card => card.id), []);
   assert.ok(['tax_collector', 'chrono_imp', 'meddler', 'doomcaller'].every(id => poolIds.has(id)));
   assert.ok(unionPool().find(card => card.id === 'scout') && !unionPool().find(card => card.id === 'scout').deprecated);

@@ -193,6 +193,7 @@ async function showProfile() {
 const keywordsFor = unit => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry'].filter(key => key === 'shield' ? unit.shield : unit[key] || unit.keywords?.includes(key));
 const BATTLECRY_TEXT = Object.freeze({
   summon11: 'Battlecry: summon a 1/1 token.',
+  shieldLeft: 'Battlecry: the unit on its left gains Divine Shield.',
   hex_hurler: 'On deploy: deal 2 damage to the opposing unit, otherwise the rightmost enemy.',
   gate: 'On deploy: move the opposing unit to the end of its line.',
   squire: 'On deploy: give the ally immediately to the left +1/+1.',
@@ -218,7 +219,7 @@ const DEATHRATTLE_TEXT = Object.freeze({
 });
 const AURA_TEXT = Object.freeze({ adjacentAtk: 'Aura: adjacent allies have +1 ATK.', all: 'Aura: your other units have +1/+1.' });
 const bossText = card => card?.text || '';
-const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
+const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onDamagedSummon ? 'After this takes damage and survives, summon a 1/1 token to its left.' : card?.onDamagedShield ? 'After this takes damage and survives, the units on its left and right gain Divine Shield.' : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', rush: 'Rush', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura', heal: 'Heal' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry', 'heal'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
 export const battlecryText = card => (card?.battlecry || card?.kind) === 'inquisitor'
@@ -514,6 +515,7 @@ function battlecryCaption(event) {
   if (event.kind === 'cataclysm') return 'Battlecry: 3 damage to all other units';
   if (event.kind === 'firebelch') return event.targetUids?.length ? 'Battlecry: 1 damage to all enemies' : 'Battlecry: no enemy units';
   if (event.kind === 'squire') return event.targetUid ? 'Battlecry: left ally gains +1/+1' : 'Battlecry: no ally to the left';
+  if (event.kind === 'shieldLeft') return event.fizzle ? 'Battlecry: no ally to the left' : 'Battlecry: left ally gains Divine Shield';
   if (event.kind === 'gravedigger') return event.count ? `Battlecry: summon ${event.count} token${event.count === 1 ? '' : 's'}` : 'Battlecry: no fallen units';
   if (event.kind === 'duelist') return event.applied ? 'Battlecry: lone fighter gains +2/+2' : 'Battlecry: another living ally prevents gain';
   if (event.kind === 'tax') return 'Battlecry: gain 1 mana';
@@ -584,6 +586,8 @@ async function playEvent(event, deployUids) {
     return;
   }
   if (event.type === 'summonPing') { pulse(getUnitEl(event.uid), 'fx-battlecry-source', TIMING.summonPing); pulse(getUnitEl(event.targetUid), 'fx-battlecry-target', TIMING.summonPing); await wait(TIMING.summonPing); return; }
+  if (event.type === 'damagedSummon') { pulse(getUnitEl(event.uid), 'fx-battlecry-source', TIMING.summon); await wait(TIMING.summon); return; }
+  if (event.type === 'damagedShield') { pulse(getUnitEl(event.uid), 'fx-battlecry-source', TIMING.shield); for (const uid of event.targetUids || []) pulse(getUnitEl(uid), 'fx-shield', TIMING.shield); reconcile(event.state); await wait(TIMING.shield); return; }
   if (event.type === 'summon') { if (!deployUids.has(event.uid)) { const unit = event.state[event.side].board.find(item => item.uid === event.uid), index = event.state[event.side].board.findIndex(item => item.uid === event.uid); if (unit) pulse(createUnitEl(unit.uid, unit, event.side, index, event.state), 'fx-deploy-pop', TIMING.summon); } reconcile(event.state); await wait(TIMING.summon); return; }
   if (event.type === 'attack') return playAttack(event);
   if (event.type === 'damage') { const target = getUnitEl(event.uid), rect = target?.getBoundingClientRect(); reconcile(event.state); pulse(target, 'fx-hit', TIMING.damage); damageFloater(target, event.amount, rect); await wait(TIMING.damage); return; }
@@ -618,6 +622,8 @@ function appendEventLog(event) {
   if (event.type === 'manaChange') appendLog(`${event.unit} changes ${event.side === 'player' ? 'your' : 'enemy'} mana by ${event.amount}.`);
   if (event.type === 'bounce') appendLog(event.fizzle ? `${event.unit} finds no unit to return.` : `${event.unit} returns ${event.target} to deck ${event.destination}.`);
   if (event.type === 'summonPing') appendLog(`${event.unit} pings ${event.target} for ${event.amount}.`);
+  if (event.type === 'damagedSummon') appendLog(event.fizzle ? `${event.unit} has no room to summon.` : `${event.unit} summons a 1/1 token to its left.`);
+  if (event.type === 'damagedShield') appendLog(event.targetUids?.length ? `${event.unit} grants Divine Shield to ${event.targets.join(' and ')}.` : `${event.unit} has no adjacent unit to shield.`);
   if (event.type === 'statChange' && event.reason === 'onDamaged') appendLog(`${event.unit} gains +${event.amount} Attack.`);
   if (event.type === 'statChange' && event.reason === 'onKill') appendLog(`${event.unit} gains +${event.amount}/+${event.amount}.`);
   if (event.type === 'turn') appendLog(`— ${event.side === 'player' ? 'Your' : 'Enemy'} turn —`);

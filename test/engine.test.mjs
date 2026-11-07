@@ -776,7 +776,7 @@ test('card pool exposes the three rarity tiers and locked representative stats',
   assert.deepEqual([dagger.atk, dagger.hp], [1, 2]);
   assert.deepEqual([hexblade.cost, hexblade.atk, hexblade.hp], [2, 2, 6]);
   assert.deepEqual([copycat.cost, copycat.atk, copycat.hp], [2, 3, 6]);
-  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 8, rare: 26, mythic: 9 });
+  assert.deepEqual(Object.fromEntries(['common', 'rare', 'mythic'].map(tier => [tier, CARD_POOL.filter(card => card.tier === tier).length])), { common: 9, rare: 29, mythic: 9 });
   assert.equal(HERO_HP, 40);
 });
 
@@ -920,5 +920,77 @@ test('run-end snapshot records won and lost run flags', () => {
   assert.deepEqual([snapshot.won, snapshot.lost], [false, true]);
 });
 
-assert.equal(CARD_POOL.length, 43);
+test('Rupture Brood inserts an uncapped 1/1 to its left and observes fizzles and summon pings', () => {
+  let s = empty(), brood = summon(s, 'player', getCard('rupture_brood'));
+  const ping = summon(s, 'enemy', { id: 'ping', name: 'Ping', cost: 0, atk: 1, hp: 20 });
+  s.events = []; exchange(s, 'enemy', ping, brood); exchange(s, 'enemy', ping, brood);
+  assert.deepEqual(s.player.board.map(unit => unit.cardId), ['token_1_1', 'token_1_1', 'rupture_brood']);
+  assert.equal(s.events.filter(event => event.type === 'damagedSummon' && event.uid === brood.uid).length, 2);
+
+  s = empty(); brood = summon(s, 'player', getCard('rupture_brood'));
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'lethal', name: 'Lethal', cost: 0, atk: 7, hp: 20 }), brood);
+  assert.equal(s.events.some(event => event.type === 'damagedSummon'), false);
+  s = empty(); brood = summon(s, 'player', getCard('rupture_brood'));
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'poison', name: 'Poison', cost: 0, atk: 1, hp: 20, keywords: ['poisonous'] }), brood);
+  assert.equal(s.events.some(event => event.type === 'damagedSummon'), false);
+
+  s = empty(); brood = summon(s, 'player', getCard('rupture_brood'));
+  for (let i = 1; i < 20; i++) summon(s, 'player', { id: `filler_${i}`, name: `Filler ${i}`, cost: 0, atk: 0, hp: 20 });
+  s.events = []; exchange(s, 'enemy', summon(s, 'enemy', { id: 'tap', name: 'Tap', cost: 0, atk: 1, hp: 20 }), brood);
+  assert.equal(s.player.board.length, 20); assert.equal(s.events.find(event => event.type === 'damagedSummon')?.fizzle, true);
+
+  s = empty(); brood = summon(s, 'player', getCard('rupture_brood'));
+  summon(s, 'enemy', getCard('quillback_elder')); s.events = [];
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'tap2', name: 'Tap 2', cost: 0, atk: 1, hp: 20 }), brood);
+  const tokenSummon = s.events.find(event => event.type === 'summon' && event.unit === '1/1 Token');
+  assert.ok(tokenSummon); assert.ok(s.events.some(event => event.type === 'summonPing' && event.targetUid === tokenSummon.uid));
+});
+
+test('Field Medic heals only damaged friendly living units after acting', () => {
+  const s = empty(), medic = summon(s, 'player', getCard('field_medic'));
+  const hurt = summon(s, 'player', getCard('road_ogre')), capped = summon(s, 'player', getCard('sellsword')), healthy = summon(s, 'player', getCard('oathbound'));
+  const enemy = summon(s, 'enemy', { id: 'dummy', name: 'Dummy', cost: 0, atk: 0, hp: 20 });
+  hurt.damage = 2; capped.damage = 1; enemy.damage = 2;
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); s.events = []; runRound(s);
+  assert.deepEqual([hurt.damage, capped.damage, healthy.damage, enemy.damage], [1, 0, 0, 4]);
+  const heals = s.events.filter(event => event.type === 'heal' && event.sourceUid === medic.uid);
+  assert.deepEqual(heals.map(event => event.uid), [hurt.uid, capped.uid]); assert.ok(heals.every(event => event.side === 'player' && event.amount === 1));
+});
+
+test('Standard Bearer grants a one-time shield left and fizzles at the edge', () => {
+  let s = empty(), ally = summon(s, 'player', getCard('sellsword')), bearer = summon(s, 'player', getCard('standard_bearer'));
+  s.events = []; triggerBattlecry(s, 'player', bearer); assert.equal(ally.shield, true); assert.equal(s.events[0].targetIndex, 0);
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'tap', name: 'Tap', cost: 0, atk: 1, hp: 20 }), ally);
+  assert.equal(ally.shield, false); assert.equal(ally.damage, 0); assert.ok(s.events.some(event => event.type === 'shield' && event.uid === ally.uid));
+  s = empty(); bearer = summon(s, 'player', getCard('standard_bearer')); s.events = []; triggerBattlecry(s, 'player', bearer);
+  assert.equal(s.events[0].fizzle, true); assert.equal(bearer.shield, false);
+});
+
+test('Aegis Warden shields only live adjacent units after each surviving non-poison hit', () => {
+  let s = empty(), left = summon(s, 'player', getCard('sellsword')), warden = summon(s, 'player', getCard('aegis_warden')), right = summon(s, 'player', getCard('road_ogre'));
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'tap', name: 'Tap', cost: 0, atk: 1, hp: 20 }), warden);
+  assert.deepEqual([left.shield, warden.shield, right.shield], [true, false, true]);
+  assert.deepEqual(s.events.find(event => event.type === 'damagedShield').targetUids, [left.uid, right.uid]);
+  left.shield = true; exchange(s, 'enemy', summon(s, 'enemy', { id: 'tap2', name: 'Tap 2', cost: 0, atk: 1, hp: 20 }), warden); assert.equal(left.shield, true);
+
+  s = empty(); warden = summon(s, 'player', getCard('aegis_warden')); right = summon(s, 'player', getCard('road_ogre'));
+  s.events = []; exchange(s, 'enemy', summon(s, 'enemy', { id: 'edge_tap', name: 'Edge Tap', cost: 0, atk: 1, hp: 20 }), warden);
+  assert.deepEqual(s.events.find(event => event.type === 'damagedShield').targetUids, [right.uid]);
+  s = empty(); left = summon(s, 'player', getCard('sellsword')); warden = summon(s, 'player', getCard('aegis_warden'));
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'lethal', name: 'Lethal', cost: 0, atk: 6, hp: 20 }), warden); assert.equal(left.shield, false);
+  s = empty(); left = summon(s, 'player', getCard('sellsword')); warden = summon(s, 'player', getCard('aegis_warden'));
+  exchange(s, 'enemy', summon(s, 'enemy', { id: 'poison', name: 'Poison', cost: 0, atk: 1, hp: 20, keywords: ['poisonous'] }), warden); assert.equal(left.shield, false);
+});
+
+test('bounce reset preserves new damage triggers and friendly heal scope', () => {
+  const s = empty(), meddler = summon(s, 'player', getCard('meddler'));
+  summon(s, 'enemy', { id: 'round_trip', name: 'Round Trip', cost: 1, atk: 1, hp: 5, onDamagedSummon: 1, onDamagedShield: 'adjacent', heal: 1, healOn: 'action', healScope: 'friendly' });
+  triggerBattlecry(s, 'player', meddler);
+  assert.deepEqual(
+    [s.enemy.deck[0].onDamagedSummon, s.enemy.deck[0].onDamagedShield, s.enemy.deck[0].healScope],
+    [1, 'adjacent', 'friendly'],
+  );
+});
+
+assert.equal(CARD_POOL.length, 47);
 console.log(`# ${passed} tests passed`);

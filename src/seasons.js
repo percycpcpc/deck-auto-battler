@@ -37,6 +37,10 @@ export const BASE_CARD_POOL = Object.freeze([
   card('cultist', 'Cultist', 3, 3, 8, { tier: 'mythic', battlecry: 'cultist' }),
   card('cataclysm', 'Cataclysm', 3, 2, 6, { tier: 'mythic', battlecry: 'cataclysm', text: 'Battlecry: deal 3 damage to every other unit.' }),
   card('quillback_elder', 'Quillback Elder', 3, 3, 10, { tier: 'rare', onSummonPing: 1, portraitId: 'warlord' }),
+  card('rupture_brood', 'Rupture Brood', 2, 1, 7, { tier: 'rare', onDamagedSummon: 1, text: 'After this takes damage and survives, summon a 1/1 token to its left.', portraitId: 'brood_wisp' }),
+  card('field_medic', 'Field Medic', 1, 2, 2, { tier: 'common', heal: 1, healOn: 'action', healScope: 'friendly', text: 'After this acts, heal your units for 1.', portraitId: 'scout' }),
+  card('standard_bearer', 'Standard Bearer', 2, 2, 6, { tier: 'rare', battlecry: 'shieldLeft', text: 'Battlecry: the unit on its left gains Divine Shield.', portraitId: 'aegis_knight' }),
+  card('aegis_warden', 'Aegis Warden', 2, 1, 6, { tier: 'rare', onDamagedShield: 'adjacent', text: 'After this takes damage and survives, the units on its left and right gain Divine Shield.', portraitId: 'aegis_knight' }),
 ]);
 
 export const STARTER_IDS = Object.freeze(['dagger_imp', 'sellsword', 'oathbound', 'brood_wisp', 'twinfang', 'hex_hurler', 'oathbound', 'road_ogre']);

@@ -36,10 +36,12 @@ Scout remains active because its live Battlecry reduces the opposing unit's ATK 
 
 ## Tokens
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap. Hivematron has an additional cap of three living Hive tokens; once one dies and is cleaned up, a later attack may refill the open Hive slot.
+- Rupture Brood is the positional exception: every damage instance it survives summons a 1/1 at Rupture Brood's current index, placing the token immediately to its left. A full board emits a fizzle and summons nothing.
 
 ## Battlecry targeting
 - Squire gives +1/+1 to every other living friendly unit when it enters play. It never buffs itself or corpses; with no eligible ally, its Battlecry fizzles.
 - Pit Tender is the common token/sacrifice bridge. It uses the existing Cultist contract: destroy the leftmost other living ally and add that ally's current effective ATK and HP to Pit Tender's base stats. Its legacy `shield_saint` card id remains stable for saved-deck compatibility.
+- Standard Bearer's `shieldLeft` is a one-time Battlecry grant to the live unit immediately to its left, not an aura. It fizzles in the leftmost position. A granted shield is consumed permanently when it blocks damage.
 
 ## Archetype bridges
 - Redundant carriers are redesigned in place rather than removed, preserving union-pool size and saved-deck ids.
@@ -76,10 +78,17 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 
 ## Positional targeting
 - Corpses never satisfy an opposite, adjacent, fallback, or lowest-HP target query.
+- "Left" and "right" mean lower and higher board index respectively for Rupture Brood token insertion, Standard Bearer's `shieldLeft`, and Aegis Warden adjacency. Neighbors are resolved live at trigger time; corpses and empty lanes count for nothing.
 - Hex Hurler targets its live opposite first. If that lane is empty or holds a corpse, it targets the rightmost live enemy instead. It fizzles only when no live enemy exists.
 - Spiteful Imp's Deathrattle targets the live enemy with the lowest effective remaining HP; ties resolve to the leftmost unit.
 - Hexblade and Copycat are deliberately exact-opposite effects and have no fallback target.
 - Duelist is a recovery card: its deploy bonus applies only when its line contains no other living unit. Corpses do not prevent the bonus.
+
+## Damage-survival triggers and healing scope
+- `onDamagedSummon` and `onDamagedShield` are uncapped under the owner ruling of 2026-11-07: they fire for every damage instance the unit survives, including multiple instances in one round. Poisoned units do not trigger them, and there is no per-round limit.
+- Both triggers check survival after damage resolves. A lethal hit summons nothing and grants no shield; the dead source and corpses receive nothing.
+- Aegis Warden's `onDamagedShield: 'adjacent'` grants Divine Shield only to its live immediate neighbors at trigger time, never to itself. With no live neighbors it still emits an event with an empty target list.
+- `healScope: 'friendly'` restricts a heal source to living units on its own side. Enemy units are excluded entirely and emit no heal events. The default remains unscoped, so Ember Scout and Coalheart continue healing both sides unchanged.
 
 ## Card text contract
 - **Bulwark** targets the leftmost enemy tied for highest effective ATK when its Deathrattle resolves and permanently reduces that unit's base ATK by 2, floored at 0. It does not depend on Bulwark's former opposite lane still being occupied.
