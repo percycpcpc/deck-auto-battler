@@ -312,6 +312,46 @@ test('Hexblade sets base stats and aura reapplies', () => {
   assert.equal(target.baseAtk, 1); assert.equal(effectiveStats(s, 'enemy', target).atk, 2);
 });
 
+test('Hexblade changes base stats without removing keywords or status', () => {
+  const s = empty(); const hex = summon(s, 'player', getCard('hexblade')); const target = summon(s, 'enemy', getCard('aegis_knight'));
+  target.poisoned = true; target.damage = 3; s.events = []; triggerBattlecry(s, 'player', hex);
+  assert.equal(target.baseAtk, 1); assert.equal(target.baseMaxHp, 1); assert.equal(target.damage, 0);
+  assert.equal(target.shield, true); assert.equal(target.poisoned, true);
+});
+
+test('Copycat copies effective ATK and remaining HP but no keywords', () => {
+  const s = empty(); const copycat = summon(s, 'player', getCard('copycat')); const target = summon(s, 'enemy', getCard('aegis_knight'));
+  target.baseAtk += 3; target.damage = 2; s.events = []; triggerBattlecry(s, 'player', copycat);
+  assert.equal(copycat.baseAtk, 5); assert.equal(copycat.baseMaxHp, 5); assert.equal(copycat.damage, 0);
+  assert.equal(copycat.shield, false); assert.deepEqual(copycat.keywords, []);
+});
+
+test('Cataclysm damages every living unit including itself', () => {
+  const s = empty(); const ally = summon(s, 'player', getCard('sellsword')); const cataclysm = summon(s, 'player', getCard('cataclysm')); const enemy = summon(s, 'enemy', getCard('road_ogre'));
+  s.events = []; triggerBattlecry(s, 'player', cataclysm);
+  assert.equal(ally.damage, 2); assert.equal(cataclysm.damage, 2); assert.equal(enemy.damage, 2);
+  assert.deepEqual(s.events[0].targetUids, [ally.uid, cataclysm.uid, enemy.uid]);
+});
+
+test('Bulwark Deathrattle reduces leftmost highest-ATK enemy by 2 even when its opposite is dead', () => {
+  const s = empty(); const bulwark = summon(s, 'player', getCard('bulwark')); const deadOpposite = summon(s, 'enemy', getCard('sellsword'));
+  const firstStrongest = summon(s, 'enemy', getCard('colossus')); const tiedStrongest = summon(s, 'enemy', getCard('colossus'));
+  deadOpposite.dead = true; bulwark.damage = 99; s.events = []; resolveDeaths(s);
+  assert.equal(firstStrongest.baseAtk, 4); assert.equal(tiedStrongest.baseAtk, 6);
+  assert.deepEqual(
+    (({ type, side, uid, unit, sourceUid, source, amount, reason }) => ({ type, side, uid, unit, sourceUid, source, amount, reason }))(s.events.find(event => event.type === 'statChange')),
+    { type: 'statChange', side: 'enemy', uid: firstStrongest.uid, unit: 'Colossus', sourceUid: bulwark.uid, source: 'Bulwark', amount: -2, reason: 'deathrattle' },
+  );
+});
+
+test('the five corrected cards publish the binding rules text', () => {
+  assert.equal(getCard('bulwark').text, 'Deathrattle: the highest-ATK enemy loses 2 ATK.');
+  assert.equal(getCard('gate_crasher').text, 'Battlecry: move the opposing unit to the end of its line.');
+  assert.equal(getCard('copycat').text, "Battlecry: copy the opposing unit's current ATK and remaining HP.");
+  assert.equal(getCard('cataclysm').text, 'Battlecry: deal 2 damage to every unit, including this one.');
+  assert.equal(getCard('hexblade').text, "Battlecry: set the opposing unit's base ATK and HP to 1.");
+});
+
 test('Gravedigger summons at most three times for friendly non-token deaths without consuming the log', () => {
   const s = empty();
   assert.equal(getCard('gravedigger').text, 'Summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.');

@@ -250,7 +250,15 @@ function triggerDeathrattle(state, side, unit, oldIndex) {
     dealDamage(state, unit, target, 1);
   }
   if (unit.deathrattle === 'plague') for (const target of liveUnits(state[foe].board)) dealDamage(state, unit, target, 1);
-  if (unit.deathrattle === 'oppositeAtkDown') { const t = liveAt(state[foe].board, oldIndex); if (t) t.baseAtk = Math.max(0, t.baseAtk - 1); }
+  if (unit.deathrattle === 'oppositeAtkDown') {
+    const targets = liveUnits(state[foe].board);
+    const highest = targets.length ? Math.max(...targets.map(target => effectiveStats(state, foe, target).atk)) : null;
+    const target = highest === null ? null : targets.find(candidate => effectiveStats(state, foe, candidate).atk === highest);
+    if (target) {
+      emit(state, 'statChange', { side: foe, uid: target.uid, unit: target.name, sourceUid: unit.uid, source: unit.name, amount: -2, reason: 'deathrattle' });
+      target.baseAtk = Math.max(0, target.baseAtk - 2);
+    }
+  }
 }
 
 const liveAt = (board, index) => board[index]?.dead ? undefined : board[index];
