@@ -1,0 +1,69 @@
+# GitHub Actions auto-deploy for the two Railway services serving this repo.
+# Wired 2026-11-07. Requires repo secret RAILWAY_TOKEN (Railway workspace token).
+# Deploys both services pinned to the pushed SHA, then polls Railway's own
+# deployment status (HTTP 200 alone is not proof — the old build serves it
+# while the new one deploys).
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Railway deploys (client + legacy)
+        run: |
+          deploy() { # $1 envId $2 serviceId
+            for i in 1 2 3; do
+              resp=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+                -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -H "User-Agent: Mozilla/5.0" \
+                -d "{\"query\":\"mutation { serviceInstanceDeploy(environmentId: \\\"$1\\\", serviceId: \\\"$2\\\", commitSha: \\\"${{ github.sha }}\\\") }\"}")
+              echo "attempt $i ($2): $resp"
+              echo "$resp" | grep -q '"serviceInstanceDeploy":true' && return 0
+              sleep 15
+            done
+            return 1
+          }
+          deploy "654cce49-dc7b-4b8b-92ab-c3f24e68e0ad" "f0598172-e2d5-48f4-8f3a-6718d8d3c311"
+          deploy "04d14f0d-39b9-4521-bb41-2f6b0feb75b8" "53562468-f748-4238-9067-04bcbbf88aca"
+
+      - name: Wait for deployment SUCCESS (first-edge poll)
+        run: |
+          wait_svc() { # $1 envId $2 serviceId
+            for i in $(seq 1 24); do
+              body=$(cat <<EOF
+          {"query":"query { deployments(input: {environmentId: \"$1\", serviceId: \"$2\"}, first: 1) { edges { node { status createdAt } } } }"}
+          EOF
+          )
+              st=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+                -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -H "User-Agent: Mozilla/5.0" \
+                -d "$body" | grep -o '"status":"[A-Z]*"' | head -1)
+              echo "poll $i ($2): $st"
+              case "$st" in
+                *SUCCESS*) return 0 ;;
+                *FAILED*|*CRASHED*) return 1 ;;
+              esac
+              sleep 15
+            done
+            return 1
+          }
+          wait_svc "654cce49-dc7b-4b8b-92ab-c3f24e68e0ad" "f0598172-e2d5-48f4-8f3a-6718d8d3c311"
+          wait_svc "04d14f0d-39b9-4521-bb41-2f6b0feb75b8" "53562468-f748-4238-9067-04bcbbf88aca"
+
+      - name: Verify live
+        run: |
+          for i in $(seq 1 12); do
+            c1=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://deck-auto-battler-client-production.up.railway.app/)
+            c2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://deck-auto-battler-production.up.railway.app/)
+            echo "check $i: client=$c1 legacy=$c2"
+            [ "$c1" = "200" ] && [ "$c2" = "200" ] && exit 0
+            sleep 15
+          done
+          exit 1
