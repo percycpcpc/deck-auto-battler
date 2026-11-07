@@ -986,9 +986,6 @@ export function buildReplayFight({ deckCardIds, seed, fight: fightNumber = 1, en
   const built = startRunFight(replayRun); built.uidRng = replayRun.rng; return built;
 }
 function soloSeed() { return crypto.getRandomValues(new Uint32Array(1))[0]; }
-async function playLocalFight(localFight) {
-  while (!localFight.over && !stopped) { runRound(localFight); await playEvents(localFight.events); await wait(TIMING.betweenRounds); }
-}
 async function dismissOpeningPreview() {
   if (!els?.openingPreview || els.openingPreview.classList.contains('is-dismissed')) return;
   els.openingPreview.classList.add('is-dismissed'); await wait(TIMING.bannerOut);
@@ -1003,16 +1000,9 @@ async function beginFight() {
     if (!response.ok) throw Object.assign(new Error(`solo simulation failed (${response.status})`), { response });
     result = await response.json();
   } catch (caught) {
-    // 404 means the sim API simply isn't deployed (static hosting) — fall back to the local engine like any outage.
-    if (caught?.response && caught.response.status < 500 && caught.response.status !== 404) {
-      if (els?.banner) els.banner.textContent = 'FIGHT UNAVAILABLE';
-      return;
-    }
-    if (els?.banner) els.banner.textContent = 'OFFLINE — LOCAL FIGHT';
-    await wait(TIMING.bannerHold); if (els?.banner) els.banner.hidden = true;
-    await dismissOpeningPreview();
-    await playLocalFight(fight);
-    result = { winner: fight.winner, rounds: fight.round, events: fight.events };
+    // Webgame: no offline play. Any sim failure (4xx, 5xx, network) hard-stops the fight.
+    if (els?.banner) els.banner.textContent = 'SERVER UNAVAILABLE';
+    return;
   }
   if (stopped) return;
   if (els?.banner) els.banner.hidden = true;
