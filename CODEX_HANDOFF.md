@@ -1,46 +1,39 @@
 # CODEX_HANDOFF
 
-## Project Goal
+## Goal and phase
 
-Ship issue #33: progress-aware stalemate detection with side-symmetric draws across local fights, replays, friendlies, and ranked scoring.
+- Goal: issue #31, owner-selected Squire Option A.
+- Phase: maintenance balance pass, ready for review.
+- Branch: `pass/31-squire-battlecry-rework`.
 
-## Current Phase
+## Implemented
 
-- Phase: maintenance
-- Status: implemented; shipping blocked by the required 65–78% fight-1 balance gate
-
-## Latest Completed Work
-
-- Replaced live-unit-count stalemate detection with a deterministic full-round combat fingerprint covering hero HP and live-unit identity/stats/damage/shields.
-- Added a 400-turn safety valve and explicit `noProgress` / `turnLimit` event reasons.
-- Equal-HP valves now resolve as `draw`; ranked ELO scores draws 0.5/0.5.
-- Added draw-safe battle-log, replay, friendly, and ranked result copy.
-- Updated `SPEC.md`, binding `RULINGS.md`, and stale implementation-ledger wording.
-- Captured desktop/mobile draw-state evidence in `refs/ui-audit/stalemate-draw/`.
-
-## Important Modified Files
-
-- `src/engine.js`, `src/ui.js`
-- `server/src/ranked.js`
-- `test/engine.test.mjs`, `server/test/ranked.test.mjs`, `server/test/sim.test.mjs`
-- `docs/SPEC.md`, `docs/RULINGS.md`, `docs/WAR_LEDGER_IMPLEMENTATION.md`
+- Squire now gives +1/+1 to every other living friendly unit, including non-adjacent allies.
+- Squire excludes itself and corpses; a lone Squire emits `fizzle: true`.
+- The `battlecry` event records target indices/uids/names before stat mutation.
+- Squire's card text, `docs/SPEC.md`, and binding `docs/RULINGS.md` match the implementation.
+- Focused engine coverage verifies broad targeting, exclusions, pre-mutation snapshots, and fizzle behavior.
 
 ## Verification
 
-- `node test/engine.test.mjs`: 75/75 passed
-- Full server suite: 48/48 passed
-- `node tools/event_snapshot_check.mjs`: PASS
-- `node tools/ui_invariants_check.mjs`: PASS
-- Real-browser invariants: checks 1, 2, 3, 6, 8, 10, 11 PASS
-- Draw smoke: `winner=draw`, `reason=noProgress`, battle log contains `Stalemate: draw`
-- Static syntax checks and `git diff --check`: PASS
-- `node tools/balance_sim.mjs 1 200`: fight 1 92%, fight 2 77%, fight 3 100%; historical 65–78% band remains broken by the owner-evaluation alternating-turn spine, bisected to `3cf09cc` + `7a51c50`. This ticket improves fight 1 from current-main baseline 100% to 92% by allowing progressing combat to continue.
+- `node test/engine.test.mjs`: 72/72 passed.
+- `node test/seasons.test.mjs`: 6/6 passed.
+- `node test/speed_gating.test.mjs`: 3/3 passed.
+- `node tools/event_snapshot_check.mjs`: PASS.
+- `node tools/ui_invariants_check.mjs`: PASS.
+- Real-browser `tools/deferred_shift_audit.py` against this worktree on port 8324: PASS, including `INVARIANTS: PASS`.
+- `node tools/balance_sim.mjs 1 200`: Oathbound fight 1 remains 100%, outside the legacy 65–78% band.
+- Baseline bisect at untouched `cc8c04b`: fight-1 win rates were Oathbound 100%, Rat Pack 93%, Iron Bastion 100%, Ember Vanguard 100%.
+- Changed tree: the same 100% / 93% / 100% / 100%. Iron Bastion median margin moved 20 → 24; all other fight-1 summaries were unchanged.
+- `git diff --check`: PASS (line-ending warnings only).
 
-## Known Risks / Untested Areas
+## Risks and boundaries
 
-- Balance is not in the historical fight-1 band; this is a pre-existing experiment-level blocker, not introduced by #33.
-- Draw result labels were browser-smoked in battle playback; ranked/friendly draw panels are covered by shared result-contract logic but not forced through live D1 matchmaking in-browser.
+- The out-of-band win rates predate this pass and come from the owner-evaluation alternating-turn spine. This pass does not worsen any starter's fight-1 win rate, but it strengthens Iron Bastion's median margin by four HP as intended.
+- No UI/DOM, raster art, server, entitlement, persistence, or timing code changed.
+- The owner-evaluation combat experiment and its existing documented revert path remain intact.
+- `DEBUG_HANDOFF.md` was not created because no unresolved defect or repeated failed hypothesis remains.
 
-## Next Safest Task
+## Next safest task
 
-Ratify a new alternating-turn balance band or land a dedicated encounter/combat rebalance, then rerun the battery and ship #33 from `pass/33-stalemate-detection`.
+Review the draft PR and decide whether the intended Iron Bastion margin increase is acceptable while the alternating-turn baseline remains under owner evaluation.

@@ -56,7 +56,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 5. Chrono Imp (cost 1) — 1/4, Battlecry: drain 1 enemy mana (minimum 0)
 6. Gate Crasher (cost 1) — 2/4, Battlecry: push the unit opposite to the rightmost empty slot
 7. Leeching Tick (cost 1) — 1/5, when this kills a unit, gain +1/+1
-8. Squire (cost 1) — 1/4, Battlecry: the ally immediately to its left gets +1/+1
+8. Squire (cost 1) — 1/4, Battlecry: give all other friendly units +1/+1
 9. Spiteful Imp (cost 1) — 1/4, Deathrattle: deal 1 to the lowest-HP enemy unit (leftmost on ties)
 10. Scout (cost 1) — 2/4, Battlecry: reveal the identity of the enemy's charging card
 11. Aegis Knight (cost 2) — 2/7 Divine Shield

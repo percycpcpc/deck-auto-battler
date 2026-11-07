@@ -391,8 +391,24 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   s = empty(); unit = summon(s, 'player', getCard('inquisitor')); summon(s, 'enemy', getCard('sellsword')); const strongest = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(event.targetUid, strongest.uid); assert.equal(event.targetIndex, 1); assert.equal(s.events[1].type, 'damage');
 
-  s = empty(); const leftAlly = summon(s, 'player', getCard('sellsword')); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
-  event = s.events[0]; assert.equal(event.targetUid, leftAlly.uid); assert.equal(event.targetIndex, 0); assert.deepEqual(event.targetUids, [leftAlly.uid]); assert.equal(event.fizzle, false);
+  s = empty();
+  const firstAlly = summon(s, 'player', getCard('sellsword'));
+  const squireCorpse = summon(s, 'player', getCard('road_ogre')); squireCorpse.dead = true;
+  const distantAlly = summon(s, 'player', getCard('oathbound'));
+  unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0];
+  assert.deepEqual(event.targetIndices, [0, 2]);
+  assert.deepEqual(event.targetUids, [firstAlly.uid, distantAlly.uid]);
+  assert.equal(event.fizzle, false);
+  assert.equal(event.state.player.board[0].baseAtk, 2);
+  assert.equal(event.state.player.board[2].baseAtk, 2);
+  assert.equal(firstAlly.baseAtk, 3); assert.equal(firstAlly.baseMaxHp, 4);
+  assert.equal(distantAlly.baseAtk, 3); assert.equal(distantAlly.baseMaxHp, 7);
+  assert.equal(squireCorpse.baseAtk, 3); assert.equal(squireCorpse.baseMaxHp, 6);
+  assert.equal(unit.baseAtk, 1); assert.equal(unit.baseMaxHp, 4);
+
+  s = empty(); unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
+  event = s.events[0]; assert.deepEqual(event.targetUids, []); assert.equal(event.fizzle, true);
 
   s = empty(); unit = summon(s, 'player', getCard('duelist')); s.events = []; triggerBattlecry(s, 'player', unit);
   event = s.events[0]; assert.equal(unit.baseAtk, 5); assert.equal(unit.baseMaxHp, 7); assert.equal(effectiveStats(s, 'player', unit).hp, 7); assert.equal(event.targetUid, unit.uid); assert.equal(event.amount, 2); assert.equal(event.applied, true); assert.equal(event.fizzle, false);
@@ -413,7 +429,10 @@ test('positional effects resolve deterministic fallbacks and ignore corpse lanes
   const livingLeft = summon(s, 'player', getCard('sellsword'));
   const corpse = summon(s, 'player', getCard('road_ogre')); corpse.dead = true;
   const squire = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', squire);
-  assert.equal(s.events[0].fizzle, true); assert.equal(livingLeft.baseAtk, 2); assert.equal(livingLeft.baseMaxHp, 3);
+  assert.equal(s.events[0].fizzle, false); assert.deepEqual(s.events[0].targetUids, [livingLeft.uid]);
+  assert.equal(livingLeft.baseAtk, 3); assert.equal(livingLeft.baseMaxHp, 4);
+  assert.equal(corpse.baseAtk, 3); assert.equal(corpse.baseMaxHp, 6);
+  assert.equal(squire.baseAtk, 1); assert.equal(squire.baseMaxHp, 4);
 
   s = empty();
   const hurler = summon(s, 'player', getCard('hex_hurler'));

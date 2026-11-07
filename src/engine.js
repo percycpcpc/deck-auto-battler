@@ -325,9 +325,18 @@ export function triggerBattlecry(state, side, unit) {
       if (moved) { foe.board.splice(index, 1); foe.board.push(opposite); } break;
     }
     case 'squire': {
-      const targetIndex = index - 1, target = liveAt(own.board, targetIndex);
-      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: target ? targetIndex : undefined, targetUids: target ? [target.uid] : [], amount: target ? 1 : 0, fizzle: !target });
-      if (target) { target.baseAtk++; target.baseMaxHp++; } break;
+      const targets = own.board
+        .map((target, targetIndex) => ({ target, targetIndex }))
+        .filter(({ target }) => target !== unit && !target.dead);
+      emit(state, 'battlecry', {
+        ...event,
+        targetIndices: targets.map(({ targetIndex }) => targetIndex),
+        targetUids: targets.map(({ target }) => target.uid),
+        targets: targets.map(({ target }) => target.name),
+        amount: 1,
+        fizzle: targets.length === 0,
+      });
+      for (const { target } of targets) { target.baseAtk++; target.baseMaxHp++; } break;
     }
     case 'oppositeAtkDown2':
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined, amount: -2 });

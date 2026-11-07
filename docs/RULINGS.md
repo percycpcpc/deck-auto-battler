@@ -37,6 +37,9 @@ Scout remains active because its live Battlecry reduces the opposing unit's ATK 
 ## Tokens
 - All tokens (Brood Wisp, Brood Queen, Gravedigger, boss hive) enter the leftmost empty slot; lost if the board is full. Tokens have summoning sickness and cannot act during the turn they enter unless they have Rush. Tokens count as units for Gravedigger, Cultist, Cataclysm, and the 20-slot cap. Hivematron has an additional cap of three living Hive tokens; once one dies and is cleaned up, a later attack may refill the open Hive slot.
 
+## Battlecry targeting
+- Squire gives +1/+1 to every other living friendly unit when it enters play. It never buffs itself or corpses; with no eligible ally, its Battlecry fizzles.
+
 ## Draft
 - Each draft = two sequential pick-1-of-3 (pick → fresh set of 3). Every offer contains three distinct cards; each slot first rolls a tier (Common 50%, Rare 35%, Mythic 15%), then chooses uniformly within that tier and re-rolls duplicates. Starter cards are never removed. Deck grows 8 → 10 → 12.
 - Oathbound is a starter-only keystone and is excluded from ordinary draft offers. It remains legal in starter and saved decks.
@@ -66,7 +69,6 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 
 ## Positional targeting
 - Corpses never satisfy an opposite, adjacent, fallback, or lowest-HP target query.
-- Squire targets only the live ally immediately to its left when it enters; it does not search farther left and can never have a right neighbor at leftmost-empty deployment time.
 - Hex Hurler targets its live opposite first. If that lane is empty or holds a corpse, it targets the rightmost live enemy instead. It fizzles only when no live enemy exists.
 - Spiteful Imp's Deathrattle targets the live enemy with the lowest effective remaining HP; ties resolve to the leftmost unit.
 - Hexblade and Copycat are deliberately exact-opposite effects and have no fallback target.
