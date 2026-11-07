@@ -1,4 +1,4 @@
-import { BOARD_CAP, CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
+import { BOARD_CAP, CARD_POOL, HERO_HP, RUN_CONFIG, STARTERS, createRun, draftOffers, effectiveStats, encounterGuideFor, fightBoss, finishRunFight, gapKind, getCard, makeRng, runEndSnapshot, runRound, snapshotView, startRunFight } from './engine.js';
 import { initAudio, isMuted, playSfx, setMuted } from './audio.js';
 import { SPEEDS, durationAtSpeed, isSpeedAvailable } from './speeds.js';
 
@@ -608,11 +608,12 @@ function updateEnemyQueuePanel() {
 }
 export function createEnemyPreview(fightNumber, queue) {
   const panel = el('aside', 'enemy-preview');
-  const boss = fightBoss(fightNumber, Math.random, true), bossBlock = boss && el('div', 'enemy-preview__boss');
+  const boss = fightBoss(fightNumber, Math.random, true), bossBlock = boss && el('div', 'enemy-preview__boss'), guide = encounterGuideFor(fightNumber);
   if (boss) bossBlock.append(el('strong', '', `${boss.name} · ${boss.baseAtk}/${boss.baseMaxHp}`), el('p', '', boss.text));
   const list = el('ul', 'enemy-preview__units');
   queue.forEach((unit, index) => list.append(el('li', '', `${index + 1}. ${unit.name} · ${unit.cost} cost · ${unit.atk}/${unit.hp}`)));
   panel.append(el('h2', 'enemy-preview__title', `FIGHT ${fightNumber} · ENEMY DRAW ORDER`));
+  if (guide) panel.append(el('p', 'enemy-preview__lesson', `${guide.lesson} · ${guide.text}`));
   if (bossBlock) panel.append(bossBlock);
   panel.append(list); return panel;
 }

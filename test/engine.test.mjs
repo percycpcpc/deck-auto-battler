@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  CARD_POOL, HERO_HP, MAX_COMBAT_TURNS, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, exchange, finishRunFight,
+  CARD_POOL, HERO_HP, MAX_COMBAT_TURNS, RUN_CONFIG, STARTERS, STARTER_IDS, createFight, createRun, effectiveStats, encounterGuideFor, exchange, finishRunFight,
   draftOffers, enemyDeckFor, gapKind, getCard, makeUnit, resolveDeaths, runEndSnapshot, runRound, startRunFight, summon, tokenCard, triggerBattlecry,
 } from '../src/engine.js';
 import { createDeckEventFlow, createDraftFlow } from '../src/ui.js';
@@ -400,14 +400,14 @@ test('every scripted enemy card is common tier with per-fight stats', () => {
   assert.deepEqual([brute.cost, brute.atk, brute.hp], [2, 2, 6]);
   for (const fight of [2, 3]) {
     const support = enemyDeckFor(fight);
-    assert.ok(support.filter(card => card.id === 'enemy_grunt').every(card => card.cost === 1 && card.atk === 2 && card.hp === 3 && card.tier === 'common'));
-    assert.ok(support.filter(card => card.id === 'enemy_brute').every(card => card.cost === 2 && card.atk === 2 && card.hp === 6 && card.tier === 'common'));
+    assert.ok(support.filter(card => card.id === 'enemy_grunt').every(card => card.cost === 1 && card.atk === 2 && card.hp === 2 && card.tier === 'common'));
+    assert.ok(support.filter(card => card.id === 'enemy_brute').every(card => card.cost === 2 && card.atk === 2 && card.hp === 5 && card.tier === 'common'));
   }
 });
 
 test('level-1 enemy script remains byte-identical to the pre-pass snapshot', () => {
   assert.equal(JSON.stringify(enemyDeckFor(1)), '[{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_brute","name":"Camp Brute","cost":2,"atk":2,"hp":6,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"},{"id":"enemy_brute","name":"Camp Brute","cost":2,"atk":2,"hp":6,"tier":"common"},{"id":"enemy_grunt","name":"Ash Grunt","cost":1,"atk":2,"hp":3,"tier":"common"}]');
-  for (let level = 1; level <= 5; level++) assert.ok(enemyDeckFor(level).every(card => card.tier === 'common'));
+  for (const level of [1, 2, 3, 5]) assert.ok(enemyDeckFor(level).every(card => card.tier === 'common'));
   for (let level = 6; level <= 10; level++) {
     const tiers = enemyDeckFor(level).map(card => card.tier);
     assert.ok(tiers.includes('common')); assert.ok(tiers.includes('rare')); assert.ok(!tiers.includes('mythic'));
@@ -419,6 +419,19 @@ test('level-1 enemy script remains byte-identical to the pre-pass snapshot', () 
   for (let level = 16; level <= RUN_CONFIG.LEVELS; level++) {
     assert.ok(enemyDeckFor(level).length > STARTERS[0].ids.length, `level ${level} deck should be thicker than the default player deck`);
   }
+});
+
+test('pre-milestone encounter scripts teach shield, death, poison, and formation mechanics', () => {
+  const shield = enemyDeckFor(4).filter(card => card.id === 'enemy_shieldbearer');
+  const death = enemyDeckFor(9).filter(card => card.id === 'enemy_cinder_wisp');
+  const poison = enemyDeckFor(14).filter(card => card.id === 'enemy_venomguard');
+  const formation = enemyDeckFor(19).filter(card => card.id === 'enemy_banner_captain');
+  assert.equal(shield.length, 2); assert.ok(shield.every(card => card.keywords.includes('shield')));
+  assert.equal(death.length, 2); assert.ok(death.every(card => card.deathrattle === 'summon11'));
+  assert.equal(poison.length, 2); assert.ok(poison.every(card => card.keywords.includes('poisonous') && card.keywords.includes('shield')));
+  assert.equal(formation.length, 2); assert.ok(formation.every(card => card.aura === 'adjacentAtk'));
+  assert.match(encounterGuideFor(5).text, /permanently/);
+  assert.match(encounterGuideFor(20).text, /removes the aura/);
 });
 
 test('gap cadence drafts normally and alternates remove then transform events', () => {
@@ -522,7 +535,7 @@ test('next enemy script is previewed once and reused by the following fight', ()
 
 test('fight-2 boss pre-board and scripted trickle deck coexist', () => {
   const state = createFight({ fight: 2 });
-  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].name, 'Warherald'); assert.equal(state.enemy.board[0].boss, 'herald'); assert.equal(state.enemy.board[0].baseMaxHp, 5);
+  assert.equal(state.enemy.board.length, 1); assert.equal(state.enemy.board[0].name, 'Warherald'); assert.equal(state.enemy.board[0].boss, 'herald'); assert.equal(state.enemy.board[0].baseMaxHp, 8);
   assert.deepEqual(state.enemy.deck.map(card => card.id), ['enemy_grunt', 'enemy_grunt', 'enemy_brute', 'enemy_grunt', 'enemy_brute', 'enemy_grunt']);
   assert.equal(state.enemy.deck.length, 6); runRound(state); runRound(state);
   assert.ok(state.enemy.board.some(unit => unit.boss === 'herald')); assert.ok(state.enemy.board.some(unit => unit.cardId === 'enemy_grunt')); assert.equal(state.enemy.deck.length, 5);
@@ -536,9 +549,21 @@ test('fight-3 boss token appears only after attack damage and only with room', (
   assert.ok(attackAt >= 0 && summonAt > attackAt);
 });
 
+test('Hivematron has its documented body and caps living Hive tokens at three', () => {
+  const s = createFight({ fight: 3, playerDeck: [], enemyDeck: [] });
+  const boss = s.enemy.board[0];
+  assert.deepEqual([boss.baseAtk, boss.baseMaxHp], [1, 8]);
+  for (let i = 0; i < 3; i++) summon(s, 'enemy', tokenCard(), { hiveToken: true });
+  s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 });
+  runRound(s); runRound(s);
+  assert.equal(s.enemy.board.filter(unit => !unit.dead && unit.hiveToken).length, 3);
+});
+
 test('fight-2 entry buff applies to tokens, not the pre-boarded boss', () => {
   const s = createFight({ fight: 2, playerDeck: [], enemyDeck: [] }); const boss = s.enemy.board[0], token = summon(s, 'enemy', tokenCard());
-  assert.equal(boss.baseAtk, 1); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 3);
+  assert.deepEqual([boss.baseAtk, boss.baseMaxHp], [1, 8]); assert.equal(token.baseAtk, 2); assert.equal(token.baseMaxHp, 3);
+  boss.damage = 99; resolveDeaths(s);
+  assert.deepEqual([token.baseAtk, token.baseMaxHp], [2, 3]);
 });
 
 test('card pool exposes the three rarity tiers and locked representative stats', () => {
