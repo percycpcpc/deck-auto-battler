@@ -2,7 +2,7 @@ const card = (id, name, cost, atk, hp, extra = {}) => Object.freeze({ id, name, 
 const starter = (id, name, blurb, cards) => Object.freeze({ id, name, blurb, cards: Object.freeze(cards), ids: Object.freeze(cards) });
 
 export const BASE_CARD_POOL = Object.freeze([
-  card('dagger_imp', 'Dagger Imp', 1, 1, 2, { tier: 'common', battlecry: 'summon11', text: 'Battlecry: summon a 1/1 token.' }), card('sellsword', 'Sellsword', 1, 2, 3, { tier: 'common' }),
+  card('dagger_imp', 'Dagger Imp', 1, 1, 2, { tier: 'common', battlecry: 'summon11', text: 'Battlecry: summon a 1/1 token.' }), card('sellsword', 'Sellsword', 1, 3, 3, { tier: 'common' }),
   card('twinfang', 'Twinfang', 1, 1, 4, { tier: 'rare', keywords: ['windfury'], rush: true, text: 'Rush. Windfury.' }),
   card('brood_wisp', 'Brood Wisp', 1, 1, 4, { tier: 'rare', deathrattle: 'summon1' }),
   card('hex_hurler', 'Hex Hurler', 1, 1, 5, { tier: 'rare', battlecry: 'hex_hurler' }),
@@ -29,7 +29,7 @@ export const BASE_CARD_POOL = Object.freeze([
   card('shield_saint', 'Pit Tender', 1, 1, 4, { tier: 'common', battlecry: 'cultist', text: 'Battlecry: destroy your leftmost other unit; gain its ATK and HP.', portraitId: 'aegis_knight' }),
   card('bristleback', 'Bristleback', 2, 1, 9, { tier: 'rare', onDamaged: 3, portraitId: 'venom_hound' }),
   card('colossus', 'Colossus', 3, 6, 9, { tier: 'common' }),
-  card('inquisitor', 'Inquisitor', 3, 4, 10, { tier: 'mythic', battlecry: 'inquisitor' }),
+  card('inquisitor', 'Inquisitor', 3, 4, 10, { tier: 'mythic', battlecry: 'inquisitor', battlecryAmount: 5 }),
   card('brood_queen', 'Brood Queen', 3, 3, 10, { tier: 'mythic', deathrattle: 'summon2x2' }),
   card('doomcaller', 'Doomcaller', 3, 4, 10, { tier: 'mythic', battlecry: 'doom', text: 'Battlecry: Return the opposite non-boss enemy to the bottom of its deck, stripped of changes.' }),
   card('copycat', 'Copycat', 2, 3, 6, { tier: 'mythic', battlecry: 'copycat', text: "Battlecry: copy the opposing unit's current ATK and remaining HP." }),

@@ -2,38 +2,38 @@
 
 ## Goal and phase
 
-- Goal: issue #41, replace redundant carriers with accessible archetype bridges without enlarging the pool.
+- Goal: issue #48, make Sellsword a distinct aggressive common and strengthen Inquisitor's mythic battlecry.
 - Phase: maintenance balance/content pass, pre-ship verification complete.
-- Branch: `pass/41-archetype-bridges`.
+- Branch: `pass/48-inquisitor-sellsword-balance`.
 
 ## Implemented
 
-- `shield_saint` is redesigned in place as Pit Tender, a common 1/1/4 using the existing deterministic Cultist sacrifice contract.
-- Ashguard is redesigned in place as a common 1/1/5 Divine Shield formation bridge with an adjacent +1 ATK aura.
-- Card ids and union-pool cardinality remain stable for saved-deck legality.
-- Binding docs now record the bridge decisions and align stale Dagger Imp/Scout descriptions with landed behavior.
-- Added deterministic 13-draft package-access evidence and a real-browser desktop/mobile audit.
+- Sellsword is now 3/3 in card data.
+- Inquisitor now carries `battlecryAmount: 5`; runtime units, damage resolution, emitted events, card text, and battle narration consume the configured amount.
+- `SPEC.md` and `RULINGS.md` match the owner-locked behavior.
+- Focused tests pin the card data, five-damage result/event, and rendered rules text; generic combat fixtures no longer depend on Sellsword's tuned stats.
+- Added a real-browser desktop/mobile audit with draft and battle screenshots.
 
 ## Verification
 
-- Engine: 94/94 passed.
+- Engine: 95/95 passed.
 - Seasons: 8/8 passed.
 - Speed gating: 3/3 passed.
 - Starter parity: 4/4 passed.
 - UI event: 1/1 passed.
 - `event_snapshot_check.mjs`, `invariants_check.mjs`, `ui_invariants_check.mjs`: PASS.
-- `archetype_bridge_check.mjs 1000 13`: every package assembled in seeded runs; token/sacrifice 99.7%, wide rally 100%, ping/pain 47.2%, mana tempo 42.9%, formation/windfury 68.3%.
-- Real-browser Chrome audit: desktop/mobile screenshots, Pit Tender sacrifice contract, and invariants checks 1/2/3/6/8/10/11 PASS.
-- Balance baseline and changed tree are byte-identical for Oathbound simulations: fight 1 98%, fight 2 99%, fight 3 100%. The documented 65–78% fight-1 band is pre-existingly broken and this pass introduces zero measured drift.
+- Real-browser Chrome audit: Sellsword 3/3, Inquisitor five-damage rules/event/caption, desktop/mobile screenshots, and invariants checks PASS.
+- Changed-tree `balance_sim 1 200`: fight 1 99%, fight 2 99%, fight 3 100%.
+- `origin/main` baseline from detached `6e285df`: fight 1 98%, fight 2 99%, fight 3 100%. The documented 65–78% fight-1 band is pre-existingly broken; measured delta is +1 point, and the owner explicitly ruled the drift out of scope.
 - `git diff --check`: PASS (line-ending warnings only).
 
 ## Risks and boundaries
 
-- The 65–78% fight-1 band remains broken on untouched main; this pass does not worsen it.
-- No new engine trigger, RNG path, server behavior, entitlement, persistence, timing, DOM lifecycle, or raster asset was introduced.
-- The owner-evaluation combat experiment and its documented revert path remain intact.
+- The fight-1 target band remains broken on main; this pass does not chase it per the pinned owner ruling.
+- No targeting, event ordering, RNG, server, entitlement, persistence, timing, DOM lifecycle, pool membership, or save-identity contract changed.
+- No raster asset was generated or edited.
 - `DEBUG_HANDOFF.md` was not created because no repeated failed hypothesis or unresolved defect remains.
 
 ## Next safest task
 
-Commit, rebase onto `origin/main`, rerun the full battery, and land only if the rebased state stays green.
+Commit, rebase onto `origin/main`, rerun the full battery on the rebased commit, and land only if it remains green.

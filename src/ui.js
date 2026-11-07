@@ -203,7 +203,6 @@ const BATTLECRY_TEXT = Object.freeze({
   duelist: 'On deploy: gain +2/+2 if your line has no other living unit.',
   hexblade: "On deploy: set the opposing unit's base ATK and HP to 1.",
   gravedigger: 'On deploy: summon a 1/2 for each friendly non-token unit that died this combat, maximum 3.',
-  inquisitor: "On deploy: deal 3 damage to the enemy's strongest unit.",
   copycat: "On deploy: copy the opposing unit's current ATK and remaining HP.",
   cultist: 'On deploy: devour your leftmost other unit and gain its stats.',
   cataclysm: 'On deploy: deal 2 damage to every unit, including this one.',
@@ -221,7 +220,9 @@ const bossText = card => card?.text || '';
 const triggerText = card => card?.onKill ? `After this kills a unit, gain +${card.onKill === 'grow' ? 1 : card.onKill}/+${card.onKill === 'grow' ? 1 : card.onKill}.` : card?.onDamaged ? `When this takes damage and survives, gain +${card.onDamaged} Attack.` : card?.onSummonPing ? 'When any other unit enters a battlefield, deal 1 damage to it.' : '';
 const KEYWORD_NAMES = Object.freeze({ shield: 'Divine Shield', poisonous: 'Poisonous', windfury: 'Windfury', rush: 'Rush', battlecry: 'Battlecry', deathrattle: 'Deathrattle', aura: 'Aura', heal: 'Heal' });
 const printedKeywordsFor = card => ['shield', 'aura', 'poisonous', 'windfury', 'rush', 'deathrattle', 'battlecry', 'heal'].filter(key => key === 'shield' ? card.keywords?.includes('shield') || definitionFor(card)?.keywords?.includes('shield') : card[key] || card.keywords?.includes(key));
-export const battlecryText = card => BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
+export const battlecryText = card => (card?.battlecry || card?.kind) === 'inquisitor'
+  ? `On deploy: deal ${card.battlecryAmount ?? card.amount} damage to the enemy's strongest unit.`
+  : BATTLECRY_TEXT[card?.battlecry || card?.kind] || '';
 const descriptorText = card => bossText(card) || [battlecryText(card), DEATHRATTLE_TEXT[card?.deathrattle], AURA_TEXT[card?.aura], triggerText(card)].filter(Boolean).join(' ');
 const describeUnit = (unit, stats, keys) => `Inspect ${unit.boss ? 'boss ' : ''}${unit.name}, ATK ${stats.atk}, HP ${stats.hp}${keys.length ? ', ' + keys.join(', ') : ''}${descriptorText(unit) ? `. ${descriptorText(unit)}` : ''}`;
 function inspect(node, describe) {
@@ -504,7 +505,7 @@ function pulse(node, className, duration) { if (node) { const scaled = dur(durat
 function battlecryCaption(event) {
   const target = event.target || event.targets?.join(' and ');
   if (event.kind === 'hex_hurler') return target ? `Battlecry: 2 damage → ${target}${event.fallback ? ' (rightmost fallback)' : ''}` : 'Battlecry: no enemy unit';
-  if (event.kind === 'inquisitor') return target ? 'Battlecry: 3 damage → strongest enemy' : 'Battlecry: no enemy units';
+  if (event.kind === 'inquisitor') return target ? `Battlecry: ${event.amount} damage → strongest enemy` : 'Battlecry: no enemy units';
   if (event.kind === 'hexblade') return target ? `Battlecry: ${target} becomes 1/1` : 'Battlecry: no opposing unit';
   if (event.kind === 'copycat') return target ? `Battlecry: copy ${target}'s stats` : 'Battlecry: no opposing unit';
   if (event.kind === 'cultist') return target ? `Battlecry: devour ${target}` : 'Battlecry: no ally to devour';

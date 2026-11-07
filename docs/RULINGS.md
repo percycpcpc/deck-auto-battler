@@ -71,7 +71,7 @@ Owner tuning: fights 2/3 enemy support decks thinned to 4 so the player can out-
 - Hexblade sets the target's **base** stats to 1/1 (an adjacent Warlord then makes it effectively 2/1).
 - Copycat copies the opposite unit's current **effective** stats as its new base.
 - Cultist gains the destroyed unit's current effective stats added to its base.
-- Inquisitor tiebreak: **leftmost** among tied highest-ATK units (effective ATK, post-aura).
+- Inquisitor deals **5 damage** to the highest-ATK enemy; ties resolve to the **leftmost** unit (effective ATK, post-aura). The damage amount is card data so future tuning does not require an engine-rule edit.
 - Gravedigger counts **all unit deaths on both sides** since the fight began, including tokens and deaths before Gravedigger entered, excluding itself.
 
 ## Positional targeting

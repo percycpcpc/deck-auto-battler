@@ -12,6 +12,13 @@ function test(name, fn) {
 }
 const empty = () => createFight({ playerDeck: [], enemyDeck: [] });
 
+test('owner-locked Sellsword and Inquisitor tuning is card-data driven', () => {
+  const sellsword = getCard('sellsword'), inquisitor = getCard('inquisitor');
+  assert.deepEqual([sellsword.atk, sellsword.hp], [3, 3]);
+  assert.equal(inquisitor.battlecryAmount, 5);
+  assert.equal(battlecryText(inquisitor), "On deploy: deal 5 damage to the enemy's strongest unit.");
+});
+
 test('starter registry contains three valid eight-card decks and preserves the legacy default', () => {
   assert.equal(STARTERS.length, 3);
   assert.deepEqual(STARTERS[0].ids, STARTER_IDS);
@@ -55,7 +62,8 @@ test('turn ordering and cost-1 deploys during active-side upkeep', () => {
 });
 
 test('mutual exchange: 2/3 versus 2/3 survive once and die on the second trade', () => {
-  const s = empty(), a = summon(s, 'player', getCard('sellsword')), b = summon(s, 'enemy', getCard('sellsword'));
+  const fighter = { id: 'fighter', name: 'Fighter', cost: 1, atk: 2, hp: 3 };
+  const s = empty(), a = summon(s, 'player', fighter), b = summon(s, 'enemy', fighter);
   exchange(s, 'player', a, b); assert.equal(!!a.dead, false); assert.equal(!!b.dead, false);
   exchange(s, 'player', a, b); assert.equal(s.player.board.length, 1); assert.equal(s.enemy.board.length, 1); assert.equal(a.dead, true); assert.equal(b.dead, true);
 });
@@ -243,8 +251,9 @@ test('Firebelcher damages every enemy including a boss and fizzles on an empty b
 });
 
 test('Ashguard protects its formation aura with Divine Shield', () => {
-  const s = empty(), attacker = summon(s, 'player', getCard('sellsword'));
-  const ashguard = summon(s, 'enemy', getCard('ashguard')), ally = summon(s, 'enemy', getCard('sellsword'));
+  const fighter = { id: 'fighter', name: 'Fighter', cost: 1, atk: 2, hp: 3 };
+  const s = empty(), attacker = summon(s, 'player', fighter);
+  const ashguard = summon(s, 'enemy', getCard('ashguard')), ally = summon(s, 'enemy', fighter);
   assert.equal(effectiveStats(s, 'enemy', ally).atk, 3);
   exchange(s, 'player', attacker, ashguard); assert.equal(ashguard.shield, false); assert.equal(ashguard.damage, 0);
   assert.equal(effectiveStats(s, 'enemy', ally).atk, 3);
@@ -312,7 +321,8 @@ test('player Deathrattle resolves first and its summon waits until next round', 
 });
 
 test('dynamic adjacent aura recomputes after shift-left', () => {
-  const s = empty(); const left = summon(s, 'player', getCard('sellsword')); const war = summon(s, 'player', getCard('warlord')); const right = summon(s, 'player', getCard('sellsword'));
+  const fighter = { id: 'fighter', name: 'Fighter', cost: 1, atk: 2, hp: 3 };
+  const s = empty(); const left = summon(s, 'player', fighter); const war = summon(s, 'player', getCard('warlord')); const right = summon(s, 'player', fighter);
   assert.equal(effectiveStats(s, 'player', right).atk, 3); left.damage = 99; s.phase = 'cleanup';
   // Resolve via an exchange-free round helper path.
   s.player.deck.push({ ...getCard('colossus'), cost: 99 }); s.enemy.deck.push({ ...getCard('colossus'), cost: 99 }); runRound(s);
@@ -403,10 +413,10 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
   event = s.events[0]; assert.equal(event.targetUid, opposite.uid); assert.equal(event.amount, 2); assert.equal(s.events[1].type, 'damage');
 
   s = empty(); unit = summon(s, 'player', getCard('inquisitor')); summon(s, 'enemy', getCard('sellsword')); const strongest = summon(s, 'enemy', getCard('colossus')); s.events = []; triggerBattlecry(s, 'player', unit);
-  event = s.events[0]; assert.equal(event.targetUid, strongest.uid); assert.equal(event.targetIndex, 1); assert.equal(s.events[1].type, 'damage');
+  event = s.events[0]; assert.equal(unit.battlecryAmount, 5); assert.equal(event.targetUid, strongest.uid); assert.equal(event.targetIndex, 1); assert.equal(event.amount, 5); assert.equal(strongest.damage, 5); assert.equal(s.events[1].type, 'damage');
 
   s = empty();
-  const firstAlly = summon(s, 'player', getCard('sellsword'));
+  const firstAlly = summon(s, 'player', { id: 'fighter', name: 'Fighter', cost: 1, atk: 2, hp: 3 });
   const squireCorpse = summon(s, 'player', getCard('road_ogre')); squireCorpse.dead = true;
   const distantAlly = summon(s, 'player', getCard('oathbound'));
   unit = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', unit);
@@ -440,7 +450,7 @@ test('battlecries emit ordered source, target, change, and fizzle details', () =
 
 test('positional effects resolve deterministic fallbacks and ignore corpse lanes', () => {
   let s = empty();
-  const livingLeft = summon(s, 'player', getCard('sellsword'));
+  const livingLeft = summon(s, 'player', { id: 'fighter', name: 'Fighter', cost: 1, atk: 2, hp: 3 });
   const corpse = summon(s, 'player', getCard('road_ogre')); corpse.dead = true;
   const squire = summon(s, 'player', getCard('squire')); s.events = []; triggerBattlecry(s, 'player', squire);
   assert.equal(s.events[0].fizzle, false); assert.deepEqual(s.events[0].targetUids, [livingLeft.uid]);
@@ -664,7 +674,7 @@ test('starter-keystone Oathbound is never offered by ordinary drafts', () => {
   let value = 2026; const rng = () => ((value = value * 48271 % 2147483647) - 1) / 2147483646;
   const offered = Array.from({ length: 500 }, () => draftOffers(rng)).flat();
   assert.equal(offered.some(card => card.id === 'oathbound'), false);
-  assert.deepEqual([getCard('sellsword').atk, getCard('sellsword').hp], [2, 3]);
+  assert.deepEqual([getCard('sellsword').atk, getCard('sellsword').hp], [3, 3]);
   assert.deepEqual([getCard('quillback_elder').atk, getCard('quillback_elder').hp], [3, 10]);
 });
 
@@ -783,7 +793,7 @@ test('a later attacker treats an opposite corpse as an empty lane and hits the h
 });
 
 test('corpses provide no aura and Hex Hurler falls back from a corpse lane', () => {
-  const s = empty(), ally = summon(s, 'player', getCard('sellsword')), overlord = summon(s, 'player', getCard('overlord'));
+  const s = empty(), ally = summon(s, 'player', { id: 'fighter', name: 'Fighter', cost: 1, atk: 2, hp: 3 }), overlord = summon(s, 'player', getCard('overlord'));
   assert.equal(effectiveStats(s, 'player', ally).atk, 3);
   exchange(s, 'enemy', makeUnit({ id: 'finisher', name: 'Finisher', cost: 0, atk: 10, hp: 10 }, 'enemy'), overlord);
   assert.equal(overlord.dead, true); assert.equal(effectiveStats(s, 'player', ally).atk, 2);

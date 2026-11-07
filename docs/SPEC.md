@@ -43,7 +43,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 
 **Common (6):**
 1. Dagger Imp (cost 1) — 1/2, Battlecry: summon a 1/1 token
-2. Sellsword (cost 1) — 2/3
+2. Sellsword (cost 1) — 3/3
 3. Oathbound (cost 1) — 2/6 (starter keystone wall; intentionally above curve and excluded from ordinary draft offers)
 4. Road Ogre (cost 2) — 3/6
 5. Colossus (cost 3) — 6/9
@@ -79,7 +79,7 @@ Card frames denote rarity (bronze = Common, silver = Rare, gold = Mythic); cost 
 3. Cataclysm (cost 3) — 2/6, Battlecry: deal 2 to ALL units on both sides, including itself
 4. Cultist (cost 3) — 3/8, Battlecry: destroy your leftmost other unit, gain its ATK and HP
 5. Doomcaller (cost 3) — 4/10, Battlecry: return the opposite non-boss unit to the bottom of its deck, stripped of changes
-6. Inquisitor (cost 3) — 4/10, Battlecry: deal 3 to highest-ATK enemy
+6. Inquisitor (cost 3) — 4/10, Battlecry: deal 5 to highest-ATK enemy
 7. Overlord (cost 3) — 2/10, Aura: all your units +1/+1
 8. Brood Queen (cost 3) — 3/10, Deathrattle: summon two 2/3s
 

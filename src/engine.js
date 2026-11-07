@@ -17,7 +17,7 @@ export function makeUnit(def, side = 'player', extras = {}, rng = Math.random) {
     cardId: def.id, name: def.name, side, cost: def.cost, tier: def.tier,
     baseAtk: def.atk, baseMaxHp: def.hp, originalAtk: def.atk, originalMaxHp: def.hp,
     damage: 0, shield: (def.keywords || []).includes('shield'), poisoned: false,
-    keywords: [...(def.keywords || [])], battlecry: def.battlecry, deathrattle: def.deathrattle,
+    keywords: [...(def.keywords || [])], battlecry: def.battlecry, battlecryAmount: def.battlecryAmount, deathrattle: def.deathrattle,
     portraitId: def.portraitId,
     aura: def.aura, onKill: def.onKill, onDamaged: def.onDamaged, onSummonPing: def.onSummonPing,
     heal: def.heal, healOn: def.healOn, text: def.text,
@@ -359,8 +359,8 @@ export function triggerBattlecry(state, side, unit) {
     case 'inquisitor': {
       const targets = liveUnits(foe.board), highest = targets.length ? Math.max(...targets.map(t => effectiveStats(state, foeSide, t).atk)) : null;
       const target = highest === null ? null : targets.find(t => effectiveStats(state, foeSide, t).atk === highest);
-      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: target ? targets.indexOf(target) : undefined, amount: 3 });
-      dealDamage(state, unit, target, 3); break;
+      emit(state, 'battlecry', { ...event, targetUid: target?.uid, target: target?.name, targetIndex: target ? targets.indexOf(target) : undefined, amount: unit.battlecryAmount });
+      dealDamage(state, unit, target, unit.battlecryAmount); break;
     }
     case 'copycat':
       emit(state, 'battlecry', { ...event, targetUid: opposite?.uid, target: opposite?.name, targetIndex: opposite ? index : undefined });
